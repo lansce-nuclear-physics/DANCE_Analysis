@@ -12,9 +12,6 @@
 using namespace std;
 
 
-TFile *fout2 = new TFile("fout.root","RECREATE");
-
-
 /* HISTOGRAMS */
 TH1D *hID;  //ID's present in datastream
 TH2D *hCoinCAEN;  //coincidence matrix
@@ -26,6 +23,10 @@ TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal
 //Time Deviations
 TH2D *hTimeDev_Rel0;  //Time deviations of all crystals to crystal 0
 TH2D *hTimeDev;  //Time deviations relative to adjacent crystals
+
+//Energy Histograms
+TH2D *ADC_calib;  //2D PSD Plot 
+
 
 //Energies
 
@@ -51,15 +52,6 @@ int totalindex; //Number of TMatrix Pairs read in
 
 //misc
 int crap_counter=0;
-
-
-int Read_BaF2_Calibrations() {
-  
-
-  
-  return 0;
-}
-
 
 
 int Read_TMatrix() {
@@ -106,7 +98,7 @@ int Read_TMatrix() {
 }
 
 
-int CreateHistograms() {
+int Create_Analyzer_Histograms() {
   
   cout<<"Creating Histograms"<<endl;
 
@@ -122,6 +114,8 @@ int CreateHistograms() {
   hEventLength = new TH1D("EventLength","EventLength",10000,0,10000);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
   
+  //Energy Histograms
+  ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
 
   // for(int eye=0; eye<162; eye++) {
     //cout<<"eye: "<<eye<<"  reftoindex1: "<< reftoindex1[eye] <<"  reftoindex2: "<< reftoindex2[eye] <<"     "<< index1[reftoindex1[eye]]<<"  "<<index2[reftoindex1[eye]]<<endl;
@@ -133,7 +127,7 @@ int CreateHistograms() {
 }
 
 
-int WriteHistograms(TFile *fout) {
+int Write_Analyzer_Histograms(TFile *fout) {
   
   cout<<"Writing Histograms"<<endl;
   
@@ -146,6 +140,7 @@ int WriteHistograms(TFile *fout) {
   hEventLength->Write();
   hTimeBetweenCrystals->Write();
   
+  ADC_calib->Write();
 
   /*
   TDirectory *cdTimeDev = fout->mkdir("TimeDeviations");
@@ -163,9 +158,7 @@ int WriteHistograms(TFile *fout) {
     cout<<eye<<"  "<<hTimeDev[eye]->GetMean()<<"  "<<total_dev<<endl;
   }
   */
-  
-  fout->Write();
-
+ 
   return 0;
 }
 
@@ -175,7 +168,7 @@ int Initialize_Analyzer() {
   cout<<"Initializing Analyzer"<<endl;
 
   totalindex = Read_TMatrix();
-  CreateHistograms();
+  Create_Analyzer_Histograms();
   
   for(int eye=0; eye<162; eye++) {
     last_timestamp[eye]=0;
@@ -199,7 +192,13 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
   //Loop over event 
   for(int eye=0; eye<eventvector.size(); eye++) {
     
+    //Fill ID histogram
     hID->Fill(eventvector[eye].ID);
+
+    //Fill ADC Calib
+    ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
+
+    
 
     int id_eye=eventvector[eye].ID;
     

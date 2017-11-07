@@ -87,23 +87,21 @@ typedef struct{
 
 
 typedef struct {
-    uint64_t timestamp;  // timestamp
-    uint16_t Ns;         // number of samples in waveform
-    uint16_t sgate;      // short gate
-    uint16_t lgate;      // long gate
-    uint16_t baseline;   // baseline
-    uint8_t board;       // board number
-    uint8_t channel;     // channel number
-    //uint16_t wf[300];
-    uint64_t N;
-    uint64_t EVTS;
-    
-    
-    double TOF;
-    double Eslow;
-    double Efast;
-    int ID;
-    int Valid;
+  uint64_t timestamp;  // timestamp
+  uint16_t Ns;         // number of samples in waveform
+  uint16_t sgate;      // short gate
+  uint16_t lgate;      // long gate
+  uint16_t baseline;   // baseline
+  uint8_t board;       // board number
+  uint8_t channel;     // channel number
+  //uint16_t wf[300];
+  uint64_t N;
+  uint64_t EVTS;
+  double TOF;
+  double Eslow;
+  double Efast;
+  int ID;
+  int Valid;
 } DEVT_BANK_wWF;
 
 #endif

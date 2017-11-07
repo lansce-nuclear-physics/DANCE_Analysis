@@ -41,5 +41,11 @@
 
 #define FITTIMEDEV 0  //this turns on finding time deviations
 
+#define Blocking_Time 2500 //this is the minimum time (in ns) between crystal hits that will be valid in the unpacker
+
+
+#define HAVE_Threshold 1 //1 is yes 0 is no
+#define Energy_Threshold 0.15 //MeV
+
 
 #endif

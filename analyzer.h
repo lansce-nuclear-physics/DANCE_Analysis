@@ -12,9 +12,9 @@
 int Read_TMatrix();
 int Initialize_Analyzer();
 int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector);
-int WriteHistograms(TFile *fout);
-int Read_BaF2_Calibrations();
-int CreateHistograms();
+int Write_Analyzer_Histograms(TFile *fout);
+int Read_Energy_Calibrations(int RunNumber);
+int Create_Analyzer_Histograms();
 
 //Histograms
 
