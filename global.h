@@ -48,4 +48,9 @@
 #define Energy_Threshold 0.15 //MeV
 
 
+//PI Gates
+#define GAMMAGATE "Gamma.dat"
+#define ALPHAGATE "Alpha.dat"
+
+
 #endif

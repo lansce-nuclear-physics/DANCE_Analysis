@@ -6,6 +6,7 @@
 #include "TFile.h"
 #include "TH1.h"
 #include "TH2.h"
+#include "TCutG.h"
 
 #include <iostream>
 
@@ -27,12 +28,17 @@ TH2D *hTimeDev;  //Time deviations relative to adjacent crystals
 //Energy Histograms
 TH2D *ADC_calib;  //2D PSD Plot 
 
+//Alpha Spectra
+TH2D *hAlpha;
+TH2D *hAlphaCalib;
 
-//Energies
+//Cuts
+
+TCutG *Gamma_Gate;
+TCutG *Alpha_Gate;
 
 
 /* VARIABLES */
-
 
 double last_timestamp[2000];
 double current_timestamp[2000];
@@ -50,8 +56,101 @@ int index2[200];
 int totalindex; //Number of TMatrix Pairs read in
 
 
-//misc
-int crap_counter=0;
+//DMatrix Things
+int DetMat1[167];		      
+int DetMat2[167];
+int DetMat3[167];
+int DetMat4[167];
+int DetMat5[167];
+int DetMat6[167];
+int DetMat7[167];
+
+
+int Read_PI_Gates() {
+
+  char name[200];
+  int Nalphacut=0;
+  int Ngammacut=0;
+  double x_alphacut[200];
+  double y_alphacut[200];
+  double x_gammacut[200];
+  double y_gammacut[200];
+
+  sprintf(name,"Gates/%s",ALPHAGATE);
+  ifstream alphacutin(name);
+  if(alphacutin.is_open()) {
+    cout << "--> Reading AlphaCut : " << name << endl;
+    while(!alphacutin.eof()){
+      alphacutin  >> x_alphacut[Nalphacut] >> y_alphacut[Nalphacut];
+      Nalphacut++;
+      if(alphacutin.eof()) break;
+    }
+    cout<<Nalphacut<<endl;
+    alphacutin.close();
+  }
+  else {
+    cout << " Alpha PI cut " << name << "  file not found." << endl;
+  }
+  
+  
+  sprintf(name,"Gates/%s",GAMMAGATE);
+  ifstream gammacutin(name);
+  if(gammacutin.is_open()) {
+      cout << "--> Reading GammaCut : " << name << endl;
+      while(!gammacutin.eof()){
+	gammacutin  >> x_gammacut[Ngammacut] >> y_gammacut[Ngammacut];
+	Ngammacut++;
+	if(gammacutin.eof()) break;
+      }
+      cout<<Ngammacut<<endl;
+      gammacutin.close();
+  }
+  else {
+    cout << " Gamma PI cut " << name << "  file not found." << endl;
+  }
+
+  Alpha_Gate=new TCutG("Alpha_Gate",Nalphacut,x_alphacut,y_alphacut);
+  Alpha_Gate->Print();	
+  Gamma_Gate=new TCutG("Gamma_Gate",Ngammacut,x_gammacut,y_gammacut);
+  Gamma_Gate->Print();
+  
+  return 0;
+}
+
+
+int Read_DMatrix() {
+
+  ifstream matrix_in("Config/DetectorMatrix.txt");
+  
+  cout << "--> Reading a Detector Matrix in" << endl;
+  
+  for(int i=0;i<167;i++){
+    
+    matrix_in >> DetMat1[i];
+    matrix_in >> DetMat2[i];
+    matrix_in >> DetMat3[i];
+    matrix_in >> DetMat4[i];
+    matrix_in >> DetMat5[i];
+    matrix_in >> DetMat6[i];
+    matrix_in >> DetMat7[i];
+    
+    if(1) {
+      cout << i << "	" << DetMat1[i] << "	";
+      cout << DetMat2[i] << "	";
+      cout << DetMat3[i] << "	";
+      cout << DetMat4[i] << "	";
+      cout << DetMat5[i] << "	";
+      cout << DetMat6[i] << "	";
+      cout << DetMat7[i] << "	";
+      cout << endl;
+    }
+  }
+  
+  matrix_in.close();
+  
+  
+  return 0;
+}
 
 
 int Read_TMatrix() {
@@ -117,10 +216,10 @@ int Create_Analyzer_Histograms() {
   //Energy Histograms
   ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
 
-  // for(int eye=0; eye<162; eye++) {
-    //cout<<"eye: "<<eye<<"  reftoindex1: "<< reftoindex1[eye] <<"  reftoindex2: "<< reftoindex2[eye] <<"     "<< index1[reftoindex1[eye]]<<"  "<<index2[reftoindex1[eye]]<<endl;
-  //   hTimeDev[eye]= new TH1D(Form("hTimeDev_%d",eye),Form("Crystal_%d_RelativeTo_Crystal_%d",index2[reftoindex1[eye]],index1[reftoindex1[eye]]),10000,-500,500);
-  // }
+  //Alpha Histograms
+  hAlpha = new TH2D("hAlpha","hAlpha",1500,0,30000,162,0,162);
+  hAlphaCalib = new TH2D("hAlphaCalib","hAlphaCalib",500,0.0,5.0,162,0,162);
+  
 
   return 0;
 
@@ -142,23 +241,12 @@ int Write_Analyzer_Histograms(TFile *fout) {
   
   ADC_calib->Write();
 
-  /*
-  TDirectory *cdTimeDev = fout->mkdir("TimeDeviations");
-  cdTimeDev->cd();
- 
+  hAlpha->Write();
+  hAlphaCalib->Write();
 
- for(int eye=0; eye<162; eye++) {
-    hTimeDev[eye]->Write();
-  }
+  Alpha_Gate->Write();
+  Gamma_Gate->Write();
 
-  double total_dev=0;
-  for(int eye=0; eye<162; eye++) {
-    hTimeDev[eye]->GetXaxis()->SetRangeUser(-40,40);
-    total_dev += hTimeDev[eye]->GetMean();
-    cout<<eye<<"  "<<hTimeDev[eye]->GetMean()<<"  "<<total_dev<<endl;
-  }
-  */
- 
   return 0;
 }
 
@@ -166,8 +254,11 @@ int Write_Analyzer_Histograms(TFile *fout) {
 int Initialize_Analyzer() {
 
   cout<<"Initializing Analyzer"<<endl;
-
+  
+  //Initialize Analysis Stuff
+  Read_PI_Gates();
   totalindex = Read_TMatrix();
+  Read_DMatrix();
   Create_Analyzer_Histograms();
   
   for(int eye=0; eye<162; eye++) {
@@ -184,6 +275,9 @@ int Initialize_Analyzer() {
 
 int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 
+  double ESum=0;
+  double Crystal_Mult=0;
+
   //Fill Event Length (mult 1 events just give 0 so require mult>1 to fill this)
   if(eventvector.size() > 1) {
     hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
@@ -198,7 +292,26 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
     //Fill ADC Calib
     ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
 
+    int Is_Alpha = Alpha_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast);
+    int Is_Gamma = Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast);
+
+    //cout<<Is_Alpha<<"  "<<Is_Gamma<<endl;
+    if(Is_Alpha) {
+      hAlpha->Fill(eventvector[eye].lgate, eventvector[eye].ID,1);
+      hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+    }
     
+    if(Is_Gamma) {
+      ESum += eventvector[eye].Eslow;
+      Crystal_Mult++;
+
+      
+
+      
+
+
+
+    }
 
     int id_eye=eventvector[eye].ID;
     
@@ -270,16 +383,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 	}
       }  //Done with coincidences 
       
-      
-      //Calibrate the BaF2 detectors
-      
-      
-
-
-
-
-
-      
+          
       
     
     }
