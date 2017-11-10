@@ -91,19 +91,43 @@ typedef struct {
   uint16_t Ns;         // number of samples in waveform
   uint16_t sgate;      // short gate
   uint16_t lgate;      // long gate
-  uint16_t baseline;   // baseline
+  // uint16_t baseline;   // baseline
   uint8_t board;       // board number
   uint8_t channel;     // channel number
   //uint16_t wf[300];
-  uint64_t N;
-  uint64_t EVTS;
+  // uint64_t N;
+  // uint64_t EVTS;
   double TOF;
   double Eslow;
   double Efast;
-  int ID;
-  int Valid;
+  uint16_t ID;
+  uint8_t Valid;
 } DEVT_BANK_wWF;
 
+
+typedef struct {
+  uint16_t sgate;      // short gate
+  uint16_t lgate;      // long gate
+  double TOF;
+  uint8_t ID;   //0 to 161 are dance //241 to 244 are beam monitors //200 is t0
+} DEVT_OUT;
+
+
+// DANCE event
+typedef struct{
+  double En;
+  double tof[162];
+  uint16_t Crystal_mult;
+  uint16_t Cluster_mult;
+  uint16_t Crystal_ID[162];
+  uint16_t Cluster_ID[162];
+  uint16_t Ifast[162];
+  uint16_t Islow[162];
+  double Ecluster[162];
+  double Ecrystal[162];
+  double ESum;
+  uint16_t TimeCard;
+} DANCE_Event;
 
 
 
