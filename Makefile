@@ -13,7 +13,7 @@ ROOTGLIBS    := $(shell ${ROOTSYS}/bin/root-config --glibs)
 ROOTLDFLAGS  := $(shell ${ROOTSYS}/bin/root-config --ldflags)
 CXXFLAGS += $(ROOTCFLAGS)
 
-INCLUDES:= analyzer.h main.h sort_functions.h structures.h unpacker.h
+INCLUDES:= analyzer.h main.h sort_functions.h structures.h unpacker.h 
 
 OBJECTS:= analyzer.o main.o sort_functions.o unpacker.o
 

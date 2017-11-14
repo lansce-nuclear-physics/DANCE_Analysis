@@ -119,10 +119,12 @@ int Make_Output_Binfile(int RunNumber) {
   outputbinfile.open(outfilename.str().c_str(), ios::out | ios::binary);
   
   if(outputbinfile.is_open()) {
-    cout<<"Succesfully created and opened output binary file: "<<outfilename.str()<<endl;
+    cout<<GREEN<<"Analyzer [INFO]: Succesfully created and opened output binary file: "<<outfilename.str()<<RESET<<endl;
+    return 0;
   }
   else {
-    cout<<"ERROR (Unpacker): Failed to create output binary file: "<<outfilename.str()<<endl;
+    cout<<RED<<"Analyzer [ERROR]: Failed to create output binary file: "<<outfilename.str()<<RESET<<endl;
+    return -1;
   }
 }
 
@@ -133,15 +135,15 @@ int Read_Energy_Calibrations(int RunNumber) {
 
   for(int eye=0; eye<200; eye++) {
     slow_offset[eye]=0;
-    slow_slope[eye]=0;
+    slow_slope[eye]=1;
     slow_quad[eye]=0;
     fast_offset[eye]=0;
-    fast_slope[eye]=0;  
+    fast_slope[eye]=1;  
   }
   
   int retval=0;
   
-  cout<<"Reading Energy Calibrations for Run "<<RunNumber<<endl;
+  cout<<"Analyzer [INFO]: Reading Energy Calibrations for Run "<<RunNumber<<endl;
   
   stringstream cal_name;
   cal_name.str();
@@ -151,8 +153,7 @@ int Read_Energy_Calibrations(int RunNumber) {
   ifstream encal;
   encal.open(cal_name.str().c_str());
   
-  if(encal.is_open()) {
-    cout<<"File: "<<cal_name.str()<<" found"<<endl;
+  if(encal.is_open() && READ_BINARY==0) {
     while(!encal.eof()) {
       encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
       slow_offset[id]=temp[0];
@@ -166,11 +167,14 @@ int Read_Energy_Calibrations(int RunNumber) {
       if(encal.eof()) {
 	break;
       }
-    }   
+    }  
+    
+    cout<<GREEN<<"Analyzer [INFO]: Read Energy Calibrations File: "<<cal_name.str()<<RESET<<endl;
+    return 0;
   }
   else {
-    cout<<"File: "<<cal_name.str()<<" NOT found..."<<endl;
-    cout<<"Looking for calib_ideal.dat"<<endl;
+    cout<<RED<<"Analyzer [ERROR]: File: "<<cal_name.str()<<" NOT found..."<<RESET<<endl;
+    cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
     
     ifstream idealcal;
     idealcal.open("./Calibrations/calib_ideal.dat");
@@ -190,10 +194,11 @@ int Read_Energy_Calibrations(int RunNumber) {
 	  break;
 	}
       }
+      cout<<GREEN<<"Analyzer [INFO]: Opened ./Calibrations/calib_ideal.dat"<<RESET<<endl;
       retval=1;
     }
     else {
-      cout<<"Can't open either calibration file..."<<endl;
+      cout<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
       retval=-1;
       
     }
@@ -214,34 +219,36 @@ int Read_PI_Gates() {
   sprintf(name,"Gates/%s",ALPHAGATE);
   ifstream alphacutin(name);
   if(alphacutin.is_open()) {
-    cout << "Analyzer: Reading AlphaCut : " << name << endl;
+    cout << "Analyzer [INFO]: Reading AlphaCut " << name << endl;
     while(!alphacutin.eof()){
       alphacutin  >> x_alphacut[Nalphacut] >> y_alphacut[Nalphacut];
       Nalphacut++;
       if(alphacutin.eof()) break;
     }
-    cout<<Nalphacut<<endl;
+    // cout<<Nalphacut<<endl;
     alphacutin.close();
+    cout<<GREEN<<"Analyzer [INFO]: Alpha PI cut loaded" <<RESET<<endl;
   }
   else {
-    cout << " Alpha PI cut " << name << "  file not found." << endl;
+    cout<<RED<<"Analyzer [ERROR]: Alpha PI cut "<<name<<" file NOT found." <<RESET<<endl;
   }
   
   
   sprintf(name,"Gates/%s",GAMMAGATE);
   ifstream gammacutin(name);
   if(gammacutin.is_open()) {
-    cout << "Analyzer:  Reading GammaCut : " << name << endl;
+    cout<<"Analyzer [INFO]: Reading GammaCut " <<name<<endl;
     while(!gammacutin.eof()){
       gammacutin  >> x_gammacut[Ngammacut] >> y_gammacut[Ngammacut];
       Ngammacut++;
       if(gammacutin.eof()) break;
     }
-    cout<<Ngammacut<<endl;
+    // cout<<Ngammacut<<endl;
     gammacutin.close();
+    cout<<GREEN<<"Analyzer [INFO]: Gamma PI cut loaded" <<RESET<<endl;
   }
   else {
-    cout << " Gamma PI cut " << name << "  file not found." << endl;
+    cout<<RED<<"Analyzer [INFO]: Gamma PI cut "<<name<<" file NOT found." <<RESET<<endl;
   }
 
   Alpha_Gate=new TCutG("Alpha_Gate",Nalphacut,x_alphacut,y_alphacut);
@@ -257,29 +264,33 @@ int Read_DMatrix() {
 
   ifstream matrix_in("Config/DetectorMatrix.txt");
   
-  cout <<" Analyzer:  Reading in a Detector Matrix" << endl;
+  cout <<"Analyzer [INFO]: Reading in a Detector Matrix" << endl;
   
-  for(int eye=0; eye<167; eye++){
-    
-    matrix_in >> DetMat1[eye];
-    matrix_in >> DetMat2[eye];
-    matrix_in >> DetMat3[eye];
-    matrix_in >> DetMat4[eye];
-    matrix_in >> DetMat5[eye];
-    matrix_in >> DetMat6[eye];
-    matrix_in >> DetMat7[eye];
-    
-    // cout<<eye<<"  "<<DetMat1[eye]<<" "<<DetMat2[eye]<<" "<<DetMat3[eye]<<" "<<DetMat4[eye]<<" "<<DetMat5[eye]<<" "<<DetMat6[eye]<<" "<<DetMat7[eye]<<endl;
+  if(matrix_in.is_open()) {
+    for(int eye=0; eye<167; eye++){
+      matrix_in >> DetMat1[eye];
+      matrix_in >> DetMat2[eye];
+      matrix_in >> DetMat3[eye];
+      matrix_in >> DetMat4[eye];
+      matrix_in >> DetMat5[eye];
+      matrix_in >> DetMat6[eye];
+      matrix_in >> DetMat7[eye];
+     }
+    matrix_in.close();
+    cout<<GREEN<<"Analyzer [INFO]: Read in Detector Matrix"<<RESET<<endl;
+    return 0;
   }
-  matrix_in.close();
+  else {
+    cout<<RED<<"Analyzer [ERROR]: Could NOT Read in Detector Matrix"<<RESET<<endl;
+    return -1;
+  }
   
-  return 0;
 }
 
 
 int Read_TMatrix() {
 
-  cout <<" Analyzer: Reading ./Config/TMatrix.txt"  << endl;
+  cout <<"Analyzer [INFO]: Reading ./Config/TMatrix.txt"  << endl;
   
   ifstream timemat;
   timemat.open("./Config/TMatrix.txt");
@@ -312,9 +323,10 @@ int Read_TMatrix() {
       counter++;
     }    
     timemat.close();
+    cout<<GREEN<<"Analyzer [INFO]: Read in TMatrix"<<RESET<<endl;
   }
   else {
-    cout<<"Couldn't open Config/TMatrix.txt"<<endl;
+    cout<<RED<<"Analyzer [ERROR]: Couldn't open Config/TMatrix.txt"<<RESET<<endl;
   }
   
   return counter;
@@ -323,7 +335,7 @@ int Read_TMatrix() {
 
 int Create_Analyzer_Histograms() {
   
-  cout<<"Creating Histograms"<<endl;
+  cout<<"Analyzer [INFO]: Creating Histograms"<<endl;
 
   //Make Histograms
   hCoinCAEN = new TH2D("CoinCAEN","CoinCAEN",162,0,162,162,0,162);  //coincidence matrix
@@ -381,6 +393,7 @@ int Create_Analyzer_Histograms() {
   Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
   
 
+  cout<<GREEN<<"Analyzer [INFO]: Created Histograms"<<RESET<<endl;
   return 0;
 
 }
@@ -388,7 +401,7 @@ int Create_Analyzer_Histograms() {
 
 int Write_Analyzer_Histograms(TFile *fout) {
   
-  cout<<"Writing Histograms"<<endl;
+  cout<<"Analyzer [INFO]: Writing Histograms"<<endl;
   
   fout->cd();
   hID->Write();
@@ -411,13 +424,14 @@ int Write_Analyzer_Histograms(TFile *fout) {
   En_Esum_Mcl->Write();
   En_Esum_Mcr->Write();
   
+  cout<<GREEN<<"Analyzer [INFO]: Wrote Histograms"<<RESET<<endl;
   return 0;
 }
 
 
 int Initialize_Analyzer() {
 
-  cout<<"Initializing Analyzer"<<endl;
+  cout<<BLUE<<"Analyzer [INIT]: Initializing Analyzer"<<RESET<<endl;
   
   //Initialize Analysis Stuff
   Read_PI_Gates();
@@ -439,7 +453,6 @@ int Initialize_Analyzer() {
 
 int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 
-  double ESum=0;
   int Crystal_Mult=0;
 
   //Initialize DANCE Event
@@ -455,7 +468,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
   }
 
   //Loop over event 
-  for(int eye=0; eye<eventvector.size(); eye++) {
+  for(uint32_t eye=0; eye<eventvector.size(); eye++) {
 
     //Fill ID histogram
     hID->Fill(eventvector[eye].ID);
@@ -491,7 +504,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
       if(eventvector.size() > 1 && eye < (eventvector.size()-1)) {
 	
 	//start with the next one
-	for(int jay=eye+1; jay<eventvector.size(); jay++) {
+	for(uint32_t jay=eye+1; jay<eventvector.size(); jay++) {
 	  
 	  int id_jay = eventvector[jay].ID;
 	  

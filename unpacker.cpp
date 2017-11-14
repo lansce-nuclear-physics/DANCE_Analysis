@@ -17,14 +17,26 @@
 #include "TFile.h"
 #include "TRandom.h"
 
+using namespace std;
+
+//Some Global Unpacker Variables (DONT CHANGE UNLESS NEEDED)
+
+/*size of the DEVT array in the unpacker*/
+#define MaxDEVTArrSize 10000000  //this should be a big number 
+
+/*size of the block buffer. The unpacker waits this many
+  events before looking at the deque and time sorting.  This 
+  number has huge efficiency implications so dont change it if
+  you dont understand it */
+#define BlockBufferSize 350000
+
+/*Time depth (in seconds) of the buffer.  While you cant know if you 
+  will fail the program will tell you if you did... */
+#define BufferDepth 600 
+
 
 //Verbosity and Error Checking
 //#define CheckTheDeque
-
-
-
-
-using namespace std;
 
 //#define Eventbuilder_Verbose
 
@@ -34,74 +46,55 @@ using namespace std;
 double TimeDeviations[200];
 
 //holds the id of each detector from dancemap
-int MapID[20][20][5];
+int MapID[20][20];
 
+//Functions
 int Make_DANCE_Map() {
+  cout << "Unpacker [INFO]: Reading DANCE Map" << endl;
   
-  FILE *map;
-
-  // added on Jan 7,2015  MJ
-#ifdef NEUANCE
-  sprintf(name,"Config/%s",DanceMapFile);
-  map=fopen(name,"r");
-
-  int m1,m2,m3,m4;
-  cout << "--> Reading a DANCE Map in from" << name << endl;
+  ifstream map;
+  map.open("Config/DanceMap.txt");
+  int m1,m2,m3;
   
-  do {
-    fscanf(map,"%d", &m1);
-    fscanf(map,"%d", &m2);
-    fscanf(map,"%d", &m3);
-    //fscanf(map,"%d", &m4);
-    
-    MapID[m2][m1][0]=m3;
-    //   MapID2[m1*16+m2]=m3;
-       
-  } while(!feof(map));
-
-  fclose(map);
-#endif
-
-#ifndef NEUANCE
-  map=fopen("Config/DanceMap.txt","r");
-  
-  int m1,m2,m3,m4;
-  cout << "Unpacker:  Reading a DANCE Map in" << endl;
-  
-  do{
-    fscanf(map,"%d", &m1);
-    fscanf(map,"%d", &m2);
-    fscanf(map,"%d", &m3);
-    
-    MapID[m2][m1][0]=m3;    
-  } while(!feof(map));
-  
-  fclose(map);
-#endif 
-  
-  return 0;
-  
+  if(map.is_open()) {
+    while(!map.eof()){
+      map>>m1>>m2>>m3;
+      MapID[m2][m1]=m3;
+      if(map.eof()) {
+	break;
+      }
+    }
+    map.close();
+    cout<<GREEN<<"Unpacker [INFO]: Made DANCE Map"<<RESET<<endl;
+    return 0;
+  }
+  else {
+    cout<<RED<<"Unpacker [ERROR]: Could Not Open DANCE Map File"<<endl;
+    return -1;
+  }  
 }
 
 
 
 int Read_TimeDeviations(int runnum) {
-  
+  cout << "Unpacker [INFO]: Reading Time Deviations" << endl;
+
   for(int eye=0; eye<200; eye++) {
     TimeDeviations[eye]=0;
   }
   
   //if we want to obtain the time deviations set them to zero
   if(FITTIMEDEV) {
-    cout<<"Initializing Unpacker... Set all time deviations to zero"<<endl;
+    cout<<RED<<"Unpacker [WARNING]: Set all time deviations to zero"<<RESET<<endl;
   }
   
   //if we have time deviations then obtain them from the files
   else {
     stringstream fname;
     fname.str();
-    fname<<"./TimeDeviations/TimeDeviations_Run" << std::setfill('0') << std::setw(6) << runnum << ".txt";
-    cout<<"Initializing Unpacker... Looking for TimeDeviations File: "<<fname.str()<<endl;
+    //fname<<"./TimeDeviations/TimeDeviations_Run" << std::setfill('0') << std::setw(6) << runnum << ".txt";
+    fname<<"./TimeDeviations/TimeDeviations.txt";
+    cout<<"Unpacker [INFO]: Looking for TimeDeviations File: "<<fname.str()<<endl;
     
     ifstream fdata;
     fdata.open(fname.str().c_str());
@@ -112,12 +105,14 @@ int Read_TimeDeviations(int runnum) {
       while(!fdata.eof()) {
 	fdata >> tempid >> tempoffset; 
 	TimeDeviations[tempid] = tempoffset;
-	cout<<tempid<<"  "<<TimeDeviations[tempid]<<endl;
+	if(fdata.eof()) {
+	  break;
+	}
       }
-      cout<<"Initializing Unpacker...  Set all time deviations to values in "<<fname.str()<<endl;
+      cout<<GREEN<<"Unpacker [INFO]: Set all time deviations to values in "<<fname.str()<<RESET<<endl;
     }
     else {
-      cout<<"Initializing Unpacker...  Couldnt find "<<fname.str()<<" Setting all time deviations to 0"<<endl;
+      cout<<RED<<"Unpacker [ERROR]: Couldnt find "<<fname.str()<<" Setting all time deviations to 0"<<RESET<<endl;
     }
     
   }
@@ -126,6 +121,8 @@ int Read_TimeDeviations(int runnum) {
 
 
 int Unpack_Data(gzFile gz_in, double begin, int runnum) {
+
+  cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl;
   
   //initialize DANCE Map
   Make_DANCE_Map();
@@ -144,7 +141,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
   }
   
   //define some things for the unpacker
-  double buffer_length = (double)500000000.0*BufferDepth; //clock ticks
+  double buffer_length = (double)1000000000.0*BufferDepth; //clock ticks
 
   bool run=true; 
   bool first_sort=true;
@@ -168,7 +165,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
   uint64_t TOTAL_BYTES=0;
   uint64_t Events_Invalid=0;
   double time_prog_old=0;
-  uint32_t Events_Analyzed=0;
+  // uint32_t Events_Analyzed=0;
   // uint32_t Events_Sorted=0;
   uint32_t Events_Sent=0;
   uint32_t progresscounter=1;           //Keep track of how many progress statements have been made
@@ -203,7 +200,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
   gettimeofday(&tv,NULL);  
   double unpack_begin = tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  cout<<"Unpacking Started: "<<unpack_begin<<endl;
+  cout<<GREEN<<"Unpacker [INFO]: Started Unpacking: "<<RESET<<endl;
   
   if(READ_BINARY==0) {
     while(run) {
@@ -216,21 +213,22 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
       
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
+	cout<<"Processing Run Number: "<<runnum<<endl;
 	if(timesort && datadeque.size()>0) {
-	  cout<<"oldest time in deque: "<<datadeque[0].TOF<<endl;
-	  cout<<"newest time in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
+	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
+	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
 	}	
-	cout<<TOTAL_EVTS<<" Events Processed "<<endl;
-	cout<<Events_Sent<<" Events Sent to Analyzer"<<endl;
-	cout<<Events_Invalid<<" Events were not valid (Blocking Time)"<<endl;
-	cout<<datadeque.size()<<" Events in the buffer"<<endl<<endl;
+	cout<<TOTAL_EVTS<<" Events Unpacked "<<endl;
+	cout<<Events_Sent<<" Events Analyzed"<<endl;
+	cout<<Events_Invalid<<" Events Invalid"<<endl;
+	cout<<datadeque.size()<<" Events in the Buffer"<<endl;
 	gettimeofday(&tv,NULL); 
 	time_prog=tv.tv_sec+(tv.tv_usec/1000000.0);
       
-	std::cout << "Average event rate: "<<(double)TOTAL_EVTS/(time_prog-begin)<<" Events per second "<<endl;
-	std::cout << "Average Data Read: "<<(double)TOTAL_BYTES/(time_prog-begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-	std::cout << "Instantaneous Data Read: "<<(double)BYTES_READ/(time_prog-time_prog_old)/(1024.0*1024.0)<<" MB/s"<<endl;
-	std::cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
+	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_prog-unpack_begin)<<" Events per second "<<endl;
+	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_prog-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_prog-time_prog_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
       
 	BYTES_READ=0;
 	time_prog_old = time_prog;
@@ -304,6 +302,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 		cout<<"detector_id: "<<evinfo->detector_id<<endl;
 		cout<<evinfo->integral[0]<<"  "<<evinfo->integral[1]<<endl;
 		cout<<"padding: "<<devt_padding<<endl<<endl;;
+		
 #endif
 		TotalBankSize-=sizeof(CEVT_BANK)+devt_padding;
 		EventBankSize-=sizeof(CEVT_BANK)+devt_padding;	  
@@ -380,71 +379,69 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 		db_arr[EVTS].board	= (int)((1.*((int)evaggr->P[evtnum].detector_id)-1)/16.);
 		db_arr[EVTS].channel	= (1*evaggr->P[evtnum].detector_id-1)-16*db_arr[EVTS].board;
 		//	db_arr[EVTS].N		= EVTS;
-		db_arr[EVTS].ID     	= MapID[db_arr[EVTS].channel][db_arr[EVTS].board][0];
+		
+		//  cout<<TOTAL_EVTS<<"    "<<EVTS<<"  "<<db_arr[EVTS].timestamp<<"   "<<evaggr->P[evtnum].detector_id<<"   "<<(int)db_arr[EVTS].channel<<"  "<<(int)db_arr[EVTS].board<<endl;
+		
+		db_arr[EVTS].ID     	= MapID[db_arr[EVTS].channel][db_arr[EVTS].board];
 		db_arr[EVTS].Valid = 1; //Everything starts valid
 		
-		  // -----------------------------------------------------------------------
-		  // CALCULATE THE LEADING EDGE using constant fraction "frac"
-		  int imin=0;
-		  double sigmin=1e9;
-		  double frac=0.04;
-		  double base=0;
-		  double secmom=0.;	
-		  int NNN=10;
-		  // int id=db_arr[EVTS].ID;
+		// -----------------------------------------------------------------------
+		// CALCULATE THE LEADING EDGE using constant fraction "frac"
+		int imin=0;
+		double sigmin=1e9;
+		double frac=0.04;
+		double base=0;
+		double secmom=0.;	
+		int NNN=10;
+		// int id=db_arr[EVTS].ID;
 		
-		  if(db_arr[EVTS].ID<162) frac=0.04;
-		  else frac=0.1;
+		if(db_arr[EVTS].ID<162) frac=0.04;
+		else frac=0.1;
 		
-		  frac=0.2;
+		frac=0.2;
 		
-		  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+		for(int i=0;i<db_arr[EVTS].Ns;i++) {
 		  
-		    wf1[i]=evaggr->wavelets[evtnum][i]+8192;
+		  wf1[i]=evaggr->wavelets[evtnum][i]+8192;
 		  
-		    if(i<NNN) {
-		      base+=(1.*wf1[i]);
-		      secmom+=(1.*wf1[i]*1.*wf1[i]);
-		    }		  
-		    if((1.*wf1[i])<sigmin) {
-		      sigmin=1.*wf1[i];
-		      imin=i;
-		    }
+		  if(i<NNN) {
+		    base+=(1.*wf1[i]);
+		    secmom+=(1.*wf1[i]*1.*wf1[i]);
+		  }		  
+		  if((1.*wf1[i])<sigmin) {
+		    sigmin=1.*wf1[i];
+		    imin=i;
 		  }
+		}
 		
-		  double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
-		  double dT=0;
-		  int iLD=0;
-		  for(int i=imin;i>1;i--){
-		    if((1.*wf1[i])<thr && (1.*wf1[i-1])>thr){
-		      double dSig=(1.*wf1[i-1]-1.*wf1[i]);
-		      if(dSig!=0) dT=(1.*wf1[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
-		      else dT=(i-1)*2.;
-		      iLD=i;
-		    }		
-		  }
+		double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
+		double dT=0;
+		int iLD=0;
+		for(int i=imin;i>1;i--){
+		  if((1.*wf1[i])<thr && (1.*wf1[i-1])>thr){
+		    double dSig=(1.*wf1[i-1]-1.*wf1[i]);
+		    if(dSig!=0) dT=(1.*wf1[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
+		    else dT=(i-1)*2.;
+		    iLD=i;
+		  }		
+		}
 		
-	       
-		  db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
+		db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
 		
-		  //need to add the time deviations before time sorting
-		  if(db_arr[EVTS].ID < 200) {
-		    db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
-		  }
+		//need to add the time deviations before time sorting
+		if(db_arr[EVTS].ID < 200) {
+		  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+		}
 		
-		  //keep track of the smallest timestamp
-		  if(db_arr[EVTS].TOF<smallest_timestamp) {
-		    smallest_timestamp=db_arr[EVTS].TOF;
-		  }    
+		//keep track of the smallest timestamp
+		if(db_arr[EVTS].TOF<smallest_timestamp) {
+		  smallest_timestamp=db_arr[EVTS].TOF;
+		}    
 		
-		  //dont incriment the EVTS so bad events get overwritten
-		  EVTS++;
-			    
-	      
-		//still procesed it
+		EVTS++;
 		TOTAL_EVTS++;
 	      
-		if(timesort) {
+	       	if(timesort) {
 
 		  //At this point we need to start ordering and eventbuilding
 		  if(EVTS >= BlockBufferSize) {
@@ -463,7 +460,9 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 		      if(event_building_active) {
 			if(smallest_timestamp < datadeque[0].TOF) {
 			  cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
-			  cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<endl;
+			  cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
+			  cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
+			  cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
 			  cout<<"Exiting"<<endl;
 			  return -1;
 			}   
@@ -612,9 +611,11 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 
   
     //Now that we are done sorting we need to empty the buffer
+    cout<<GREEN<<"Unpacker [INFO]: Finsihed Unpacking Data"<<RESET<<endl;
   
     //see if anything is left in the unsorted part
     if(EVTS>0) {
+      cout<<GREEN<<"Unpacker [INFO]: There are "<<EVTS<<" Events left to sort and "<<datadeque.size()<<" Events left in the Buffer" RESET<<endl;
    
 #ifdef Unpacker_Verbose
       cout<<"Sorting remaing data"<<first_sort<<" "<<EVTS<<endl;
@@ -629,9 +630,9 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 	//check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
 	if(event_building_active) {
 	  if(smallest_timestamp < datadeque[0].TOF) {
-	    cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
-	    cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<endl;
-	    cout<<"Exiting"<<endl;
+	    cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
+	    cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
+	    cout<<RED<<"Exiting"<<RESET<<endl;
 	    return -1;
 	  }   
 	}
@@ -724,7 +725,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 	}
     
 	if(datadeque.size()==0) {
-	  cout<<"Deque empty, unpacking complete."<<endl;
+	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
 	  emptythedeque=false;
 	}
       } 
@@ -743,22 +744,23 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
       
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
-	if(timesort) {
-	  cout<<"oldest time in deque: "<<datadeque[0].TOF<<endl;
-	  cout<<"newest time in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
+	cout<<"Processing Run Number: "<<runnum<<endl;
+	if(timesort && datadeque.size()>0) {
+	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
+	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
 	}	
-	cout<<TOTAL_EVTS<<" Events Processed "<<endl;
-	cout<<Events_Sent<<" Events Sent to Analyzer"<<endl;
-	cout<<Events_Invalid<<" Events were not valid (Blocking Time)"<<endl;
-	cout<<datadeque.size()<<" Events in the buffer"<<endl<<endl;
+	cout<<TOTAL_EVTS<<" Events Unpacked "<<endl;
+	cout<<Events_Sent<<" Events Analyzed"<<endl;
+	cout<<Events_Invalid<<" Events Invalid"<<endl;
+	cout<<datadeque.size()<<" Events in the Buffer"<<endl;
 	gettimeofday(&tv,NULL); 
 	time_prog=tv.tv_sec+(tv.tv_usec/1000000.0);
-	
-	std::cout << "Average event rate: "<<(double)TOTAL_EVTS/(time_prog-begin)<<" Events per second "<<endl;
-	std::cout << "Average Data Read: "<<(double)TOTAL_BYTES/(time_prog-begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-	std::cout << "Instantaneous Data Read: "<<(double)BYTES_READ/(time_prog-time_prog_old)/(1024.0*1024.0)<<" MB/s"<<endl;
-	std::cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
-	
+      
+	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_prog-unpack_begin)<<" Events per second "<<endl;
+	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_prog-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_prog-time_prog_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
+      
 	BYTES_READ=0;
 	time_prog_old = time_prog;
       }
@@ -766,7 +768,6 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
       gzret=gzread(gz_in,&devt_out,sizeof(DEVT_OUT));
       gzseek(gz_in,devt_padding,SEEK_CUR);
 
-      
       if(gzret!=0) {
 	
  	BYTES_READ += gzret;
@@ -847,31 +848,21 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
     
     //empty the deque when done reading
     if(timesort) {
-      cout<<"Done Reading"<<endl;
-      // uint64_t entry_counter=0;
+      cout<<GREEN<<"Unpacker [INFO]: Done Reading. There are "<<datadeque.size()<<" Events Left in the Buffer" RESET<<endl;
 
       while(emptythedeque) {
 	eventvector.clear();
 	double first_entry_time = datadeque[0].TOF;  //start of the event in time
 	eventvector.push_back(datadeque[0]); //put the first event in the events vector
-      
-	//  cout<<"Unpacker Event: "<<entry_counter<<" ID: "<<datadeque[0].ID<<"  lgate: "<<datadeque[0].lgate<<"  sgate: "<<datadeque[0].sgate<<"  TOF: "<<datadeque[0].TOF<<endl;
-	//   entry_counter++;
-
-	datadeque.pop_front();  //remove the first entry in the deque
-      
-	Events_Sent++;
+ 	datadeque.pop_front();  //remove the first entry in the deque
+      	Events_Sent++;
     
 	bool event_build =true;  //initilize bool to do eventbuilding
     
 	while(event_build && datadeque.size()>0) {
 	  if(datadeque[0].TOF < (first_entry_time + CoincidenceWindow)) {
 	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
-      
-	    //  cout<<"Unpacker Event: "<<entry_counter<<" ID: "<<datadeque[0].ID<<"  lgate: "<<datadeque[0].lgate<<"  sgate: "<<datadeque[0].sgate<<"  TOF: "<<datadeque[0].TOF<<endl;
-	    // entry_counter++;
-
-	    datadeque.pop_front();  //remove the first entry in the deque     
+      	    datadeque.pop_front();  //remove the first entry in the deque     
 	    Events_Sent++;
 	  }
 	  else {
@@ -881,19 +872,18 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 	}
     
 	if(eventvector.size()>0) {
-	  //	cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 	  Analyze_Data(eventvector);
 	}
     
 	if(datadeque.size()==0) {
-	  cout<<"Deque empty, unpacking complete."<<endl;
+	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
 	  emptythedeque=false;
 	}
       } 
     }
   } 
    
-  cout<<"Unpacking Complete: "<<TOTAL_EVTS<<" unpacked and "<<Events_Invalid<<" were invalid"<<endl;
+  //  cout<<"Unpacking Complete: "<<TOTAL_EVTS<<" unpacked and "<<Events_Invalid<<" were invalid"<<endl;
   
   return TOTAL_EVTS;
   
