@@ -27,7 +27,9 @@ TH2D *hCoinCAEN;  //coincidence matrix
 
 //Time Diagnostics
 TH1D *hEventLength;  //length in ns of the event (diagnostic)
-TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal
+TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
+TH1D *hTimeBetweenT0s; //time between T0s (ns)
+TH2D *hCrystalIDvsTOF; //TOF for each crystal 
 
 //Time Deviations
 TH2D *hTimeDev_Rel0;  //Time deviations of all crystals to crystal 0
@@ -347,8 +349,10 @@ int Create_Analyzer_Histograms() {
   //Diagnostics
   hEventLength = new TH1D("EventLength","EventLength",10000,0,10000);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
-  
-  //Energy Histograms
+  hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
+  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,100000,162,0,162); //TOF for each crystal 
+
+//Energy Histograms
   ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
 
   //Alpha Histograms
@@ -413,6 +417,9 @@ int Write_Analyzer_Histograms(TFile *fout) {
 
   hEventLength->Write();
   hTimeBetweenCrystals->Write();
+  hTimeBetweenT0s->Write();
+  hCrystalIDvsTOF->Write();
+
   
   ADC_calib->Write();
 
@@ -582,7 +589,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
     
       if(Is_Gamma) {
 
-	cout<<"ID: "<<eventvector[eye].ID<<"  TOF: "<<eventvector[eye].TOF<<endl;
+	//	cout<<"ID: "<<eventvector[eye].ID<<"  TOF: "<<eventvector[eye].TOF<<endl;
 
 	//Make a DANCE Event
 	devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
@@ -609,8 +616,14 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
       current_t0_timestamp = eventvector[eye].TOF;
       
       //Do some T0 diagnostics
-            
+      if(last_t0_timestamp > 0) {
+	hTimeBetweenT0s->Fill(current_t0_timestamp-last_t0_timestamp);
+      }
+      
+
+      //Set the old timestamp value once done
       last_t0_timestamp=current_t0_timestamp;
+      
       
     }
    
@@ -653,30 +666,28 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
   }
 
 
-  if(READ_BINARY==1) {
-    
     //Handle various events and do some physics
     
-    if(devent.Crystal_mult>0 && last_t0_timestamp > 0) {
+  if(devent.Crystal_mult>0 && last_t0_timestamp > 0) {
       
       //TOF now relative to last T0
       for(int kay=0; kay<devent.Crystal_mult; kay++) {
 	devent.tof[kay] -= last_t0_timestamp;
+	
+	//Fill the 2D spectrum of TOF vs Crystal
+	hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
       }
       
       //Calculate the neutron energy    
       devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0]+DANCE_Delay)/1e9)/((devent.tof[0]+DANCE_Delay)/1e9)/(2.997924589e8*2.997924589e8); 
       
-      /*
-      if(1) {
-	for(int jj=0;jj<devent.Crystal_mult;jj++){
-	  cout << devent.Ecrystal[jj] << "   \t" << devent.Crystal_ID[jj] << "   \t" << devent.Cluster_ID[jj] <<"    \t"<<devent.tof[jj]<<  endl;
-	}
-	cout<<endl;
-      }
-      */
-      //    cout<<"Analyzer: Made DANCE Event of Size: "<<devent.Crystal_mult<<" ESum: "<<devent.ESum<<" "<<DANCE_FlightPath<<" "<<DANCE_Delay<<" En: "<<devent.En<<endl;
-      
+    }
+    
+  if(READ_BINARY==1) {
+    
+    //Handle various events and do some physics
+    if(devent.Crystal_mult>0 && last_t0_timestamp > 0) {
+
       //Only one crystal...
       if(devent.Crystal_mult==1) {
 	devent.Cluster_mult=1;
