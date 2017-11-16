@@ -40,7 +40,6 @@ TH2D *ADC_calib;  //2D PSD Plot
 TH2D *hAlpha;
 TH2D *hAlphaCalib;
 
-
 //3D Histograms
 
 TH3F *En_Esum_Mcl;
@@ -153,7 +152,7 @@ int Read_Energy_Calibrations(int RunNumber) {
   ifstream encal;
   encal.open(cal_name.str().c_str());
   
-  if(encal.is_open() && READ_BINARY==0) {
+  if(encal.is_open() && READ_BINARY==1) {
     while(!encal.eof()) {
       encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
       slow_offset[id]=temp[0];
@@ -357,41 +356,44 @@ int Create_Analyzer_Histograms() {
   hAlphaCalib = new TH2D("hAlphaCalib","hAlphaCalib",500,0.0,5.0,162,0,162);
 
 
-  //Physics Histograms
-  double x[5000];
-  int NEbins=0;
-  
-  for(double lx=log10(NeutronE_From);lx<log10(NeutronE_To);lx=lx+(1./NeutronE_BinsPerDecade)){
-    x[NEbins]=pow(10,lx);
+  if(READ_BINARY==1) {
     
-    //   cout << NEbins << "	" << x[NEbins] << endl;
-    NEbins++;
+    //Physics Histograms
+    double x[5000];
+    int NEbins=0;
+    
+    for(double lx=log10(NeutronE_From);lx<log10(NeutronE_To);lx=lx+(1./NeutronE_BinsPerDecade)){
+      x[NEbins]=pow(10,lx);
+      
+      //   cout << NEbins << "	" << x[NEbins] << endl;
+      NEbins++;
+    }
+    NEbins--;
+    
+    int NoOfEnergyBins=GammaE_NoOfBins;
+    double *EtotBins=new double[NoOfEnergyBins+1];
+    double *Mbins=new double[21];
+    
+    for(int i=0;i<21;i++){
+      Mbins[i]=0.5+1.*i;
+    };
+    
+    double DEGamma=(GammaE_To-GammaE_From)/GammaE_NoOfBins;
+    for(int i=0;i<NoOfEnergyBins+1;i++){
+      //EtotBins[i]=i*16./128.;
+      EtotBins[i]=GammaE_From+i*DEGamma;
+    };
+    
+    En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    
+    En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    
+    Esum_Eg_Mcl=new TH3F("Esum_Eg_Mcl","Esum_Eg_Mcl where Eg is Ecluster",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
+    Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
+  
   }
-  NEbins--;
-  
-  int NoOfEnergyBins=GammaE_NoOfBins;
-  double *EtotBins=new double[NoOfEnergyBins+1];
-  double *Mbins=new double[21];
-  
-  for(int i=0;i<21;i++){
-    Mbins[i]=0.5+1.*i;
-  };
-
-  double DEGamma=(GammaE_To-GammaE_From)/GammaE_NoOfBins;
-  for(int i=0;i<NoOfEnergyBins+1;i++){
-    //EtotBins[i]=i*16./128.;
-    EtotBins[i]=GammaE_From+i*DEGamma;
-  };
-  
-  En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-  En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-  
-  En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-  En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-  
-  Esum_Eg_Mcl=new TH3F("Esum_Eg_Mcl","Esum_Eg_Mcl where Eg is Ecluster",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
-  Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
-  
 
   cout<<GREEN<<"Analyzer [INFO]: Created Histograms"<<RESET<<endl;
   return 0;
@@ -420,9 +422,11 @@ int Write_Analyzer_Histograms(TFile *fout) {
   Alpha_Gate->Write();
   Gamma_Gate->Write();
 
-
-  En_Esum_Mcl->Write();
-  En_Esum_Mcr->Write();
+  if(READ_BINARY==1) {
+    
+    En_Esum_Mcl->Write();
+    En_Esum_Mcr->Write();
+  }
   
   cout<<GREEN<<"Analyzer [INFO]: Wrote Histograms"<<RESET<<endl;
   return 0;
@@ -498,8 +502,6 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 	}
       }
       
-      
-    
       //Coincidences
       if(eventvector.size() > 1 && eye < (eventvector.size()-1)) {
 	
@@ -579,9 +581,12 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
       }
     
       if(Is_Gamma) {
+
+	cout<<"ID: "<<eventvector[eye].ID<<"  TOF: "<<eventvector[eye].TOF<<endl;
+
 	//Make a DANCE Event
 	devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
-	devent.Cluster_ID[Crystal_Mult] = Crystal_Mult;  //??????
+	devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
 	devent.Islow[Crystal_Mult] = eventvector[eye].lgate;  //Crystal long integral
 	devent.Islow[Crystal_Mult] = eventvector[eye].lgate;  //Crystal short integral
 	devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
@@ -648,126 +653,143 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
   }
 
 
-  
-  //Handle various events and do some physics
-  
-  if(devent.Crystal_mult>0) {
-
-    //TOF now relative to last T0
-    for(int kay=0; kay<devent.Crystal_mult; kay++) {
-      devent.tof[kay] -= last_t0_timestamp;
-    }
+  if(READ_BINARY==1) {
     
-    //Calculate the neutron energy    
-    devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0]+DANCE_Delay)/1e9)/((devent.tof[0]+DANCE_Delay)/1e9)/(2.997924589e8*2.997924589e8); 
+    //Handle various events and do some physics
     
-    //    cout<<"Analyzer: Made DANCE Event of Size: "<<devent.Crystal_mult<<" ESum: "<<devent.ESum<<" "<<DANCE_FlightPath<<" "<<DANCE_Delay<<" En: "<<devent.En<<endl;
-    
-    //Only one crystal...
-    if(devent.Crystal_mult==1) {
-      devent.Cluster_mult=1;
-      devent.Ecluster[0]=devent.Ecrystal[0];
-    }
-    
-    //Multiple Crystals... Clusterize
-    if(devent.Crystal_mult > 1) {
+    if(devent.Crystal_mult>0 && last_t0_timestamp > 0) {
       
-      // --------------------------------------------------------------------------------------------------------
-      // here we will clusterize
-      // result will be in Cluster_ID[i] where i runs through all the crystals
-      // minimum of Cluster_ID is 1 so don't forget to lower it by 1
-      // it is somewhat different then Jan Wouters routine but should lead to same results
-      // if used stand alone, set Cluster_ID[i]=i+1 for i=0,Crystal_Mult
-      // Label value (after this routine) is the cluster multiplicity
+      //TOF now relative to last T0
+      for(int kay=0; kay<devent.Crystal_mult; kay++) {
+	devent.tof[kay] -= last_t0_timestamp;
+      }
       
-      int jj=0;
-      int Label=0;
-      int intcounter;
-      int Hits;
-      int Internal_ID[163];
-
-      for(int loop=0; loop<devent.Crystal_mult; loop++){
-	devent.Ecluster[loop]=0.;
+      //Calculate the neutron energy    
+      devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0]+DANCE_Delay)/1e9)/((devent.tof[0]+DANCE_Delay)/1e9)/(2.997924589e8*2.997924589e8); 
+      
+      /*
+      if(1) {
+	for(int jj=0;jj<devent.Crystal_mult;jj++){
+	  cout << devent.Ecrystal[jj] << "   \t" << devent.Crystal_ID[jj] << "   \t" << devent.Cluster_ID[jj] <<"    \t"<<devent.tof[jj]<<  endl;
+	}
+	cout<<endl;
+      }
+      */
+      //    cout<<"Analyzer: Made DANCE Event of Size: "<<devent.Crystal_mult<<" ESum: "<<devent.ESum<<" "<<DANCE_FlightPath<<" "<<DANCE_Delay<<" En: "<<devent.En<<endl;
+      
+      //Only one crystal...
+      if(devent.Crystal_mult==1) {
+	devent.Cluster_mult=1;
+	devent.Ecluster[0]=devent.Ecrystal[0];
+	/*
+	if(0) {
+	  for(int jj=0;jj<devent.Crystal_mult;jj++){
+	    cout << devent.Ecrystal[jj] << "   \t" << devent.Crystal_ID[jj] << "   \t" << devent.Cluster_ID[jj] <<"    \t"<<devent.tof[jj]<<  endl;
+	  }
+	}
+	*/
+      }
+      
+      //Multiple Crystals... Clusterize
+      if(devent.Crystal_mult > 1) {
 	
-	if(loop==0 || devent.Cluster_ID[loop]>Label){
+	// --------------------------------------------------------------------------------------------------------
+	// here we will clusterize
+	// result will be in Cluster_ID[i] where i runs through all the crystals
+	// minimum of Cluster_ID is 1 so don't forget to lower it by 1
+	// it is somewhat different then Jan Wouters routine but should lead to same results
+	// if used stand alone, set Cluster_ID[i]=i+1 for i=0,Crystal_Mult
+	// Label value (after this routine) is the cluster multiplicity
+	
+	int jj=0;
+	int Label=0;
+	int intcounter;
+	int Hits;
+	int Internal_ID[163];
+	
+	for(int loop=0; loop<devent.Crystal_mult; loop++){
+	  devent.Ecluster[loop]=0.;
 	  
-	  Label++;
-	  intcounter=0;
-	  Hits=1;
-	  Internal_ID[0]=devent.Crystal_ID[loop];
-	  
-	  for(int l=0;l<Hits;l++) {
-	    for(jj=0;jj<devent.Crystal_mult;jj++) {
-	      if(Internal_ID[l]!=devent.Crystal_ID[jj]) { // no need to check the same crystals
-			
-		bool IsNeighbor=false;
-		
-		if(DetMat1[Internal_ID[l]]==DetMat2[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		else if(DetMat1[Internal_ID[l]]==DetMat3[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		else if(DetMat1[Internal_ID[l]]==DetMat4[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		else if(DetMat1[Internal_ID[l]]==DetMat5[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		else if(DetMat1[Internal_ID[l]]==DetMat6[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		else if(DetMat1[Internal_ID[l]]==DetMat7[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		
-		if(IsNeighbor) {	
-		  // if neighbor is found label it and add it to internal list (Internal_ID[]) for checking
-		  // further in l loop (Hits is incremented by one)
-		  // this way a new participant of the cluster is being chacked agains the other crystals
+	  if(loop==0 || devent.Cluster_ID[loop]>Label){
+	    
+	    Label++;
+	    intcounter=0;
+	    Hits=1;
+	    Internal_ID[0]=devent.Crystal_ID[loop];
+	    
+	    for(int l=0;l<Hits;l++) {
+	      for(jj=0;jj<devent.Crystal_mult;jj++) {
+		if(Internal_ID[l]!=devent.Crystal_ID[jj]) { // no need to check the same crystals
+		  
+		  bool IsNeighbor=false;
+		  
+		  if(DetMat1[Internal_ID[l]]==DetMat2[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat3[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat4[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat5[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat6[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat7[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  
+		  if(IsNeighbor) {	
+		    // if neighbor is found label it and add it to internal list (Internal_ID[]) for checking
+		    // further in l loop (Hits is incremented by one)
+		    // this way a new participant of the cluster is being chacked agains the other crystals
 		    
-		  if((1.*devent.Cluster_ID[jj])>=0 && (1.*devent.Cluster_ID[jj])>(1.*Label)) {
-		    // here if the crystal is already labeled we skip
-		    // so that we do not have to repeat already labeled crystals
-		    // more speed to it
-		    
-		    devent.Cluster_ID[jj]=Label; // this one is important- Adding the
+		    if((1.*devent.Cluster_ID[jj])>=0 && (1.*devent.Cluster_ID[jj])>(1.*Label)) {
+		      // here if the crystal is already labeled we skip
+		      // so that we do not have to repeat already labeled crystals
+		      // more speed to it
+		      
+		      devent.Cluster_ID[jj]=Label; // this one is important- Adding the
 		    //	crystals to the cluster
-		    
-		    Hits++;
-		    intcounter++;
-		    Internal_ID[intcounter]=devent.Crystal_ID[jj];	
+		      
+		      Hits++;
+		      intcounter++;
+		      Internal_ID[intcounter]=devent.Crystal_ID[jj];	
+		    }
 		  }
 		}
 	      }
 	    }
+	    if(Hits==1) devent.Cluster_ID[loop]=Label;
 	  }
-	  if(Hits==1) devent.Cluster_ID[loop]=Label;
 	}
-      }
-      
-      devent.Cluster_mult=Label;
-      
-      // Fill the cluster energy
-      // Labels go through 1,2,3 ... CrystalMult
-      
-      for(int ii=0;ii<devent.Crystal_mult;ii++){
-	devent.Ecluster[devent.Cluster_ID[ii]-1]+=devent.Ecrystal[ii];
-      };
-      // end of cluster analysis
-      
-      if(0){
-	cout << "-------------- After clusterization ---------------- " << endl;
-	cout << "	Crystal M = " << devent.Crystal_mult << endl;
-	cout << "	Cluster M = " << devent.Cluster_mult << endl;
-	cout << "	Label Max = " << Label << endl << endl;
-	for(int jj=0;jj<devent.Crystal_mult;jj++){
-	  cout << devent.Ecrystal[jj] << "   \t" << devent.Crystal_ID[jj] << "   \t" << devent.Cluster_ID[jj] <<"    \t"<<devent.tof[jj]<<  endl;
+	
+	devent.Cluster_mult=Label;
+	
+	// Fill the cluster energy
+	// Labels go through 1,2,3 ... CrystalMult
+	
+	for(int ii=0;ii<devent.Crystal_mult;ii++){
+	  devent.Ecluster[devent.Cluster_ID[ii]-1]+=devent.Ecrystal[ii];
+	};
+	// end of cluster analysis
+	/*
+	if(0){
+	  cout << "-------------- After clusterization ---------------- " << endl;
+	  cout << "	Crystal M = " << devent.Crystal_mult << endl;
+	  cout << "	Cluster M = " << devent.Cluster_mult << endl;
+	  cout << "	Label Max = " << Label << endl << endl;
+	  for(int jj=0;jj<devent.Crystal_mult;jj++){
+	    cout << devent.Ecrystal[jj] << "   \t" << devent.Crystal_ID[jj] << "   \t" << devent.Cluster_ID[jj] <<"    \t"<<devent.tof[jj]<<  endl;
+	  }
 	}
-      }
-    }  //Done checking mult > 1
+	*/
+      }  //Done checking mult > 1
+      
+      
+      //Fill DANCE Histograms
+      //cout<<"En: "<<devent.En<<"  ESum: "<<devent.ESum<<"  Mcl:"<<devent.Cluster_mult<<" Mcr: "<<devent.Crystal_mult<<" last T0: "<<last_t0_timestamp<<endl;
+      En_Esum_Mcl->Fill(devent.En,devent.ESum,devent.Cluster_mult);
+      En_Esum_Mcr->Fill(devent.En,devent.ESum,devent.Crystal_mult);
+      
+      // TH3F *En_Eg_Mcl; // this should have a Qgate on it
+      // TH3F *En_Eg_Mcr; // this should have a Qgate on it
+      
+      //  TH3F *Esum_Eg_Mcl->Fill(devent.ESum,devedevent.Cluster_mult);; // Eg is Ecluster here
+      //   TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
     
-
-    //Fill DANCE Histograms
-    //  cout<<"En: "<<devent.En<<"  ESum: "<<devent.ESum<<"  Mcl:"<<devent.Cluster_mult<<" Mcr: "<<devent.Crystal_mult<<" last T0: "<<last_t0_timestamp<<endl;
-    En_Esum_Mcl->Fill(devent.En,devent.ESum,devent.Cluster_mult);
-    En_Esum_Mcr->Fill(devent.En,devent.ESum,devent.Crystal_mult);
-    
-    // TH3F *En_Eg_Mcl; // this should have a Qgate on it
-    // TH3F *En_Eg_Mcr; // this should have a Qgate on it
-    
-    //  TH3F *Esum_Eg_Mcl->Fill(devent.ESum,devedevent.Cluster_mult);; // Eg is Ecluster here
-    //   TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
-    
-    
+    }
   } //Done checking mult > 0
   
   

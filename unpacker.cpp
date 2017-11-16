@@ -32,7 +32,7 @@ using namespace std;
 
 /*Time depth (in seconds) of the buffer.  While you cant know if you 
   will fail the program will tell you if you did... */
-#define BufferDepth 600 
+#define BufferDepth 720 
 
 
 //Verbosity and Error Checking
@@ -695,7 +695,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 
     }
   
-    if(timesort) {
+    if(timesort && datadeque.size()>0) {
       // uint64_t entry_counter=0;
 
       while(emptythedeque) {
@@ -792,7 +792,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 	
 	datadeque.push_back(devt_bank);
 	TOTAL_EVTS++;
-	
+/*	
 	
 	if(datadeque.size() > 0) {
 	  //   if(TOTAL_EVTS > progresscounter*ProgressInterval) {
@@ -839,6 +839,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 	  }
 	
 	}
+*/
       }
       else {
 	run=false;
