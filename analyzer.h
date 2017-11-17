@@ -18,6 +18,8 @@ int Create_Analyzer_Histograms();
 int Read_PI_Gates();
 int Read_Energy_Calibrations(int RunNumber);
 int Make_Output_Binfile(int RunNumber);
+int Read_Moderation_Time_Graphs();
+
 
 
 

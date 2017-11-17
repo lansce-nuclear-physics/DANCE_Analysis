@@ -20,13 +20,8 @@
 #define BOLDMAGENTA "\033[1m\033[35m"      /* Bold Magenta */
 #define BOLDCYAN    "\033[1m\033[36m"      /* Bold Cyan */
 #define BOLDWHITE   "\033[1m\033[37m"      /* Bold White */
-
 #define CLEAR "\033[2J"  // clear screen escape code 
-/* VERBOSITY */
 
-//#define Unpacker_Verbose
-//#define CheckTheDeque
-//#define Eventbuilder_Verbose
 
 
 
@@ -68,7 +63,14 @@
 
 //Physics Stuff
 #define	DANCE_FlightPath 20.28437  // meters
+#define U235_FlightPath 22.8 //meters
+#define BF3_FlightPath 22.74 //meters
+#define Li6_FlightPath 22.607 //meters
+
 #define DANCE_Delay 523.0  // ns
+#define U235_Delay 322.4 //ns
+#define BF3_Delay -207.0 //ns
+#define Li6_Delay 376.0 //ns
 
 //Histogramming
 #define	NeutronE_From 0.02 //Neutron energy from [eV]

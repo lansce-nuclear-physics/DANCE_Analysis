@@ -127,6 +127,7 @@ typedef struct{
   double Ecrystal[162];
   double ESum;
   uint16_t TimeCard;
+  uint16_t Valid;
 } DANCE_Event;
 
 

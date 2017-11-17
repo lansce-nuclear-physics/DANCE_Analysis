@@ -10,6 +10,7 @@
 #include "TH2.h"
 #include "TH3.h"
 #include "TCutG.h"
+#include "TGraph.h"
 
 using namespace std;
 
@@ -19,6 +20,17 @@ ofstream outputbinfile;
 //Structure to write data
 DEVT_OUT devt_out;
 
+//Graphs of TOF Corrections
+TGraph *gr_DANCE_TOF_Corr;
+TGraph *gr_U235_TOF_Corr;
+TGraph *gr_Li6_TOF_Corr;
+TGraph *gr_BF3_TOF_Corr;
+
+//Limits of TOF Corrections
+double DANCE_TOF_Corr_Limit[2];   //[0] is lower [1] is upper
+double U235_TOF_Corr_Limit[2];   //[0] is lower [1] is upper
+double Li6_TOF_Corr_Limit[2];   //[0] is lower [1] is upper
+double BF3_TOF_Corr_Limit[2];   //[0] is lower [1] is upper
 
 
 /* HISTOGRAMS */
@@ -30,6 +42,7 @@ TH1D *hEventLength;  //length in ns of the event (diagnostic)
 TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
 TH1D *hTimeBetweenT0s; //time between T0s (ns)
 TH2D *hCrystalIDvsTOF; //TOF for each crystal 
+TH1D *hCrystalTOF; //TOF for all crytals
 
 //Time Deviations
 TH2D *hTimeDev_Rel0;  //Time deviations of all crystals to crystal 0
@@ -38,12 +51,16 @@ TH2D *hTimeDev;  //Time deviations relative to adjacent crystals
 //Energy Histograms
 TH2D *ADC_calib;  //2D PSD Plot 
 
+//Physics Spectra
+TH1F *hEn; //Neutron Energy from dance events
+TH1D *hTOF; //TOF for dance events
+
+
 //Alpha Spectra
 TH2D *hAlpha;
 TH2D *hAlphaCalib;
 
 //3D Histograms
-
 TH3F *En_Esum_Mcl;
 TH3F *En_Esum_Mcr;
 
@@ -53,26 +70,20 @@ TH3F *En_Eg_Mcr; // this should have a Qgate on it
 TH3F *Esum_Eg_Mcl; // Eg is Ecluster here
 TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
 
-//Keep track of how many entries processed (Diagnostics)
-//uint64_t entry_counter=0;
-
-//Cuts
-
+/* CUTS */
 TCutG *Gamma_Gate;
 TCutG *Alpha_Gate;
-
 
 //Dance Event
 DANCE_Event devent;
 
 /* VARIABLES */
 
-double last_timestamp[2000];
-double current_timestamp[2000];
+double last_timestamp[256];
+double current_timestamp[256];
 
 double last_t0_timestamp;
 double current_t0_timestamp;
-
 
 //TMatrix Things
 int reftoindex1[200];
@@ -97,6 +108,62 @@ double slow_slope[200];
 double slow_quad[200];
 double fast_slope[200];
 double fast_offset[200];
+
+
+//This function fetches the TOF Correction plots for the moderation time 
+int Read_Moderation_Time_Graphs() {
+ 
+  cout<<"Analyzer [INFO]: Reading TOF Corrections"<<endl;
+
+  ifstream tof_corr;
+  tof_corr.open("./TOF_Corrections/TOF_Corrections.txt");
+
+  if(tof_corr.is_open()) {
+    //Find out how many points there are 
+    int npoints;
+    tof_corr>>npoints;
+    const int N=npoints;
+    
+    //Time of flight from neutron energy
+    double DANCE_TOF[N];
+    double U235_TOF[N];
+    double BF3_TOF[N];
+    double Li6_TOF[N];
+
+    //Time of flight plus moderation time
+    double DANCE_TOF_Measured[N];
+    double U235_TOF_Measured[N];
+    double BF3_TOF_Measured[N];
+    double Li6_TOF_Measured[N];
+
+    for(int eye=0; eye<N; eye++) {
+      tof_corr>>DANCE_TOF[eye]>>DANCE_TOF_Measured[eye]>>U235_TOF[eye]>>U235_TOF_Measured[eye]>>Li6_TOF[eye]>>Li6_TOF_Measured[eye]>>BF3_TOF[eye]>>BF3_TOF_Measured[eye];
+    }
+    
+    //Graphs of TOF Corrections
+    gr_DANCE_TOF_Corr = new TGraph(N,DANCE_TOF_Measured,DANCE_TOF);
+    gr_U235_TOF_Corr = new TGraph(N,U235_TOF_Measured,U235_TOF);
+    gr_BF3_TOF_Corr = new TGraph(N,BF3_TOF_Measured,BF3_TOF);
+    gr_Li6_TOF_Corr = new TGraph(N,Li6_TOF_Measured,Li6_TOF);
+    
+    DANCE_TOF_Corr_Limit[0] = DANCE_TOF_Measured[N-1];
+    DANCE_TOF_Corr_Limit[1] = DANCE_TOF_Measured[0];
+    U235_TOF_Corr_Limit[0] = U235_TOF_Measured[N-1];
+    U235_TOF_Corr_Limit[1] = U235_TOF_Measured[0];
+    Li6_TOF_Corr_Limit[0] = Li6_TOF_Measured[N-1];
+    Li6_TOF_Corr_Limit[1] = Li6_TOF_Measured[0];
+    BF3_TOF_Corr_Limit[0] = BF3_TOF_Measured[N-1];
+    BF3_TOF_Corr_Limit[1] = BF3_TOF_Measured[0];
+       
+    cout<<GREEN<<"Analyzer [INFO]: Read In TOF Corrections"<<RESET<<endl;
+    return 0;
+  }
+  else {
+    cout<<RED<<"Analyzer [ERROR]: Faild to Read In TOF Corrections"<<RESET<<endl;
+    return -1;
+  }  
+}
+
 
 
 //This function makes the output binary file for stage 0 or 1 filled with time-ordered devt_bank structures
@@ -141,10 +208,8 @@ int Read_Energy_Calibrations(int RunNumber) {
     fast_offset[eye]=0;
     fast_slope[eye]=1;  
   }
-  
-  int retval=0;
-  
-  cout<<"Analyzer [INFO]: Reading Energy Calibrations for Run "<<RunNumber<<endl;
+
+  cout<<"Analyzer [INFO]: Reading Energy Calibrations"<<endl;
   
   stringstream cal_name;
   cal_name.str();
@@ -153,58 +218,58 @@ int Read_Energy_Calibrations(int RunNumber) {
   
   ifstream encal;
   encal.open(cal_name.str().c_str());
+
+  bool encalfail=false;
   
-  if(encal.is_open() && READ_BINARY==1) {
-    while(!encal.eof()) {
-      encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
+  if(READ_BINARY==1) {
+    if(encal.is_open()) {
+      while(!encal.eof()) {
+	encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
+	slow_offset[id]=temp[0];
+	slow_slope[id]=temp[1];
+	slow_quad[id]=temp[2];
+	fast_offset[id]=temp[3];
+	fast_slope[id]=temp[4];
+	
+	if(encal.eof()) {
+	  break;
+	}
+      }  
+      
+      cout<<GREEN<<"Analyzer [INFO]: Read Energy Calibrations File: "<<cal_name.str()<<RESET<<endl;
+      return 0;
+    }
+    else {
+      cout<<RED<<"Analyzer [ERROR]: File: "<<cal_name.str()<<" NOT found..."<<RESET<<endl;
+      encalfail=true;
+    }
+  }
+  if(READ_BINARY==0 || encalfail==true)
+    cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
+  
+  ifstream idealcal;
+  idealcal.open("./Calibrations/calib_ideal.dat");
+  
+  if(idealcal.is_open()) {
+    while(!idealcal.eof()) {
+      idealcal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
       slow_offset[id]=temp[0];
       slow_slope[id]=temp[1];
       slow_quad[id]=temp[2];
       fast_offset[id]=temp[3];
       fast_slope[id]=temp[4];
       
-      //  cout<<id<<"  "<<slow_offset[id]<<"  "<<slow_slope[id]<<"  "<<slow_quad[id]<<"  "<<fast_offset[id]<<"  "<<fast_slope[id]<<endl;
-
-      if(encal.eof()) {
+      if(idealcal.eof()) {
 	break;
       }
-    }  
-    
-    cout<<GREEN<<"Analyzer [INFO]: Read Energy Calibrations File: "<<cal_name.str()<<RESET<<endl;
+    }
+    cout<<GREEN<<"Analyzer [INFO]: Opened ./Calibrations/calib_ideal.dat"<<RESET<<endl;
     return 0;
   }
   else {
-    cout<<RED<<"Analyzer [ERROR]: File: "<<cal_name.str()<<" NOT found..."<<RESET<<endl;
-    cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
-    
-    ifstream idealcal;
-    idealcal.open("./Calibrations/calib_ideal.dat");
-    
-    if(idealcal.is_open()) {
-      while(!idealcal.eof()) {
-	idealcal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
-	slow_offset[id]=temp[0];
-	slow_slope[id]=temp[1];
-	slow_quad[id]=temp[2];
-	fast_offset[id]=temp[3];
-	fast_slope[id]=temp[4];
-	 
-	//	cout<<id<<"  "<<slow_offset[id]<<"  "<<slow_slope[id]<<"  "<<slow_quad[id]<<"  "<<fast_offset[id]<<"  "<<fast_slope[id]<<endl;
-	 
-	if(idealcal.eof()) {
-	  break;
-	}
-      }
-      cout<<GREEN<<"Analyzer [INFO]: Opened ./Calibrations/calib_ideal.dat"<<RESET<<endl;
-      retval=1;
-    }
-    else {
-      cout<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
-      retval=-1;
-      
-    }
+    cout<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
+    return-1;
   }
-  return retval;
 }
 
 int Read_PI_Gates() {
@@ -351,6 +416,8 @@ int Create_Analyzer_Histograms() {
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,100000,162,0,162); //TOF for each crystal 
+  hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
+  hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
 
 //Energy Histograms
   ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
@@ -388,6 +455,8 @@ int Create_Analyzer_Histograms() {
       EtotBins[i]=GammaE_From+i*DEGamma;
     };
     
+    hEn=new TH1F("En","En",NEbins,x);
+
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     
@@ -419,7 +488,8 @@ int Write_Analyzer_Histograms(TFile *fout) {
   hTimeBetweenCrystals->Write();
   hTimeBetweenT0s->Write();
   hCrystalIDvsTOF->Write();
-
+  hCrystalTOF->Write();
+  // hEn->Write();
   
   ADC_calib->Write();
 
@@ -430,7 +500,8 @@ int Write_Analyzer_Histograms(TFile *fout) {
   Gamma_Gate->Write();
 
   if(READ_BINARY==1) {
-    
+    hTOF->Write();
+
     En_Esum_Mcl->Write();
     En_Esum_Mcr->Write();
   }
@@ -445,6 +516,7 @@ int Initialize_Analyzer() {
   cout<<BLUE<<"Analyzer [INIT]: Initializing Analyzer"<<RESET<<endl;
   
   //Initialize Analysis Stuff
+  Read_Moderation_Time_Graphs();
   Read_PI_Gates();
   totalindex = Read_TMatrix();
   Read_DMatrix();
@@ -529,9 +601,6 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 	    //Look at time deviations
 	    //Check relative to 0 first
 	    if(id_eye==0) { 
-	      //  cout<<id_eye<<"  "<<current_timestamp[id_eye]<<"  "<<last_timestamp[0]<<" diff: "<<current_timestamp[id_eye]-last_timestamp[0]<<endl;
-	      
-	      //relative to crystal 0;
 	      hTimeDev_Rel0->Fill(-ddT,id_jay,1);
 	    } 
 	    if(id_jay==0) {
@@ -552,16 +621,12 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 	    //if the left and right are neighbors (reftocrystals are equal) 
 	    //eye on left and jay on right
 	    if(id11>=0 && id11==id22){
-	      //   cout<<"first: "<<id_eye<<" "<<id_jay<<"   "<<id11<<"  "<<id12<<"  "<<id21<<"  "<<id22<<"   "<<index1[id11]<<endl;
-	      // hTimeDev[index1[id11]]->Fill(-ddT);
 	      hTimeDev->Fill(-ddT,index1[id11]);
 	    }
 	    //if the leftmost crystal referernce is >=0 
 	    //if the left and right are neighbors (reftocrystals are equal)
 	    //eye on right and jay on left 
 	    if(id12>=0 && id12==id21){
-	      //   cout<<"second: "<<id_eye<<" "<<id_jay<<"   "<<id11<<"  "<<id12<<"  "<<id21<<"  "<<id22<<"   "<<index1[id21]<<endl;
-	      // hTimeDev[index1[id21]]->Fill(ddT);
 	      hTimeDev->Fill(ddT,index1[id21]);
 	    }	  
 	  }
@@ -588,9 +653,6 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
       }
     
       if(Is_Gamma) {
-
-	//	cout<<"ID: "<<eventvector[eye].ID<<"  TOF: "<<eventvector[eye].TOF<<endl;
-
 	//Make a DANCE Event
 	devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
 	devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
@@ -601,26 +663,22 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
 	devent.tof[Crystal_Mult] = eventvector[eye].TOF; //time of flight for crystal hit
 	devent.ESum += eventvector[eye].Eslow; //ESum 
 	devent.Crystal_mult++;
+	devent.Valid=1;
 	Crystal_Mult++;
+	
       }
 
-      
-
-
-    
     }
     
     //this is t0
     if(id_eye==200) {
       
       current_t0_timestamp = eventvector[eye].TOF;
-      
       //Do some T0 diagnostics
       if(last_t0_timestamp > 0) {
 	hTimeBetweenT0s->Fill(current_t0_timestamp-last_t0_timestamp);
       }
       
-
       //Set the old timestamp value once done
       last_t0_timestamp=current_t0_timestamp;
       
@@ -629,10 +687,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
    
     //beam monitors
     
-
-
-
-
+    
 
 
 
@@ -663,42 +718,48 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector) {
       devt_out.ID = eventvector[eye].ID;
       outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_OUT));
     }    
-  }
+  } //end of eventvector loop
 
-
+  
     //Handle various events and do some physics
-    
+  
   if(devent.Crystal_mult>0 && last_t0_timestamp > 0) {
       
-      //TOF now relative to last T0
-      for(int kay=0; kay<devent.Crystal_mult; kay++) {
-	devent.tof[kay] -= last_t0_timestamp;
-	
+    //TOF now relative to last T0
+    for(int kay=0; kay<devent.Crystal_mult; kay++) {
+      devent.tof[kay] -= last_t0_timestamp;
+      
+      if(devent.tof[kay] >= DANCE_TOF_Corr_Limit[0] && devent.tof[kay] <= DANCE_TOF_Corr_Limit[1]) {
+	//Correct the TOF for moderation time 
+	devent.tof[kay] = gr_DANCE_TOF_Corr->Eval(devent.tof[kay]);
+
 	//Fill the 2D spectrum of TOF vs Crystal
 	hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
+	hCrystalTOF->Fill(devent.tof[kay],1);
       }
-      
-      //Calculate the neutron energy    
-      devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0]+DANCE_Delay)/1e9)/((devent.tof[0]+DANCE_Delay)/1e9)/(2.997924589e8*2.997924589e8); 
-      
-    }
-    
+      else {
+	devent.Valid=0;
+      }
+    } //end loop over devent crystals
+  } //end check of crystal mult and last_t0_timestamp
+  
+  
   if(READ_BINARY==1) {
     
     //Handle various events and do some physics
-    if(devent.Crystal_mult>0 && last_t0_timestamp > 0) {
+    if(devent.Crystal_mult>0 && last_t0_timestamp > 0 && devent.Valid==1) {
+      
+      //Calculate the neutron energy    
+      devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0])/1e9)/((devent.tof[0])/1e9)/(2.997924589e8*2.997924589e8); 
+      
+      //Fill TOF and En
+      hEn->Fill(devent.En,1);
+      hTOF->Fill(devent.tof[0]);
 
       //Only one crystal...
       if(devent.Crystal_mult==1) {
 	devent.Cluster_mult=1;
 	devent.Ecluster[0]=devent.Ecrystal[0];
-	/*
-	if(0) {
-	  for(int jj=0;jj<devent.Crystal_mult;jj++){
-	    cout << devent.Ecrystal[jj] << "   \t" << devent.Crystal_ID[jj] << "   \t" << devent.Cluster_ID[jj] <<"    \t"<<devent.tof[jj]<<  endl;
-	  }
-	}
-	*/
       }
       
       //Multiple Crystals... Clusterize

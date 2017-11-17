@@ -432,6 +432,26 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 		if(db_arr[EVTS].ID < 200) {
 		  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
 		}
+
+		//Add the DANCE delay
+		if(db_arr[EVTS].ID < 162) {
+		  db_arr[EVTS].TOF += DANCE_Delay;
+		}
+		
+		//Add the BF3 delay
+		if(db_arr[EVTS].ID == 241) {
+		  db_arr[EVTS].TOF += BF3_Delay;
+		} 
+
+		//Add the U235 delay
+		if(db_arr[EVTS].ID == 243) {
+		  db_arr[EVTS].TOF += U235_Delay;
+		} 
+
+		//Add the Li6 delay
+		if(db_arr[EVTS].ID == 244) {
+		  db_arr[EVTS].TOF += Li6_Delay;
+		}
 		
 		//keep track of the smallest timestamp
 		if(db_arr[EVTS].TOF<smallest_timestamp) {
