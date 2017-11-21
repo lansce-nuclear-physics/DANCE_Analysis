@@ -4,7 +4,7 @@ PATHTODATA=MIDAS_Data
 #PATHTODATA=MIDAS_Data_dancedaq_6
 
 #These all live on data/14/
-#for i in `seq 64693 64833`;  #Cu63
+for i in `seq 64693 64833`;  #Cu63
 
 #for i in `seq 63015 63589`;  #Cu65
 
@@ -18,10 +18,10 @@ PATHTODATA=MIDAS_Data
 
 
 #for i in `seq 67339 67357`;  #Co59 141.0mg
-for i in `seq 67366 67401`;  #Co59 329.4mg
+#for i in `seq 67366 67401`;  #Co59 329.4mg
 
 
 do
     echo Processing Run: $i;
-    ./DANCE_Analysis $PATHTODATA $i;
+    ./DANCE_Analysis $PATHTODATA $i stage0.cfg;
 done

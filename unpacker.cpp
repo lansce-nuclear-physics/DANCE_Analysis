@@ -120,7 +120,7 @@ int Read_TimeDeviations(int runnum) {
 }
 
 
-int Unpack_Data(gzFile gz_in, double begin, int runnum) {
+int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow) {
 
   cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl;
   
@@ -130,8 +130,8 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
   //initiliaze the time deviations
   Read_TimeDeviations(runnum);
 
-  if(WRITE_BINARY == 1) {
-    Make_Output_Binfile(runnum);
+  if(write_binary == 1) {
+    Make_Output_Binfile(runnum, read_binary);
   }
 
   //keep track of timestamps
@@ -202,7 +202,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 
   cout<<GREEN<<"Unpacker [INFO]: Started Unpacking: "<<RESET<<endl;
   
-  if(READ_BINARY==0) {
+  if(read_binary==0) {
     while(run) {
       
       //  cout<<EVTS<<endl;
@@ -591,7 +591,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 			  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
 			  //Send it to the analyzer
-			  Analyze_Data(eventvector);
+			  Analyze_Data(eventvector, read_binary, write_binary);
 			}
 		      }
 		      else {
@@ -741,7 +741,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
     
 	if(eventvector.size()>0) {
 	  //	cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-	  Analyze_Data(eventvector);
+	  Analyze_Data(eventvector, read_binary, write_binary);
 	}
     
 	if(datadeque.size()==0) {
@@ -754,7 +754,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
   } // END OF MIDAS READER
 
 
-  if(READ_BINARY==1) {
+  if(read_binary==1) {
 
     while(run) {
       
@@ -893,7 +893,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum) {
 	}
     
 	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector);
+	  Analyze_Data(eventvector, read_binary, write_binary);
 	}
     
 	if(datadeque.size()==0) {

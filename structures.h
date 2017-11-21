@@ -116,7 +116,9 @@ typedef struct {
 // DANCE event
 typedef struct{
   double En;
+  double En_corr;
   double tof[162];
+  double tof_corr[162];
   uint16_t Crystal_mult;
   uint16_t Cluster_mult;
   uint16_t Crystal_ID[162];
@@ -130,6 +132,39 @@ typedef struct{
   uint16_t Valid;
 } DANCE_Event;
 
+
+// U235 Beam Monitor event
+typedef struct{
+  double En;
+  double En_corr;
+  double tof;
+  double tof_corr;
+  uint16_t Ifast;
+  uint16_t Islow;
+  uint16_t Valid;
+} U235_Event;
+
+// He3 Beam Monitor event
+typedef struct{
+  double En;
+  double En_corr;
+  double tof;
+  double tof_corr;
+  uint16_t Ifast;
+  uint16_t Islow;
+  uint16_t Valid;
+} He3_Event;
+
+// Li6 Beam Monitor event
+typedef struct{
+  double En;
+  double En_corr;
+  double tof;
+  double tof_corr;
+  uint16_t Ifast;
+  uint16_t Islow;
+  uint16_t Valid;
+} Li6_Event;
 
 
 #endif

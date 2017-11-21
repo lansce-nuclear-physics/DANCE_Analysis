@@ -11,21 +11,53 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
+//Control Variables
+  bool Read_Binary=false;
+  bool Write_Binary=false;
+  double Coincidence_Window=0;
 
-  //string pathtomidas = "./MIDAS_Data/";
   string pathtobinary = "./stage0_bin/";
   string pathtoroot = "./RootFiles/";
 
-  //takes one argument the run number;
-  if(argc>3) {
-    cout<<RED<<"Main [ERROR]: Too many arguments provided.  I just need a path and a run number"<<RESET<<endl;
+  // ./DANCE_Analysis  PathToData  RunNunber  .cfgFile
+  if(argc>4) {
+    cout<<RED<<"Main [ERROR]: Too many arguments provided.  I just need a path, a run number, and a .cfg file"<<RESET<<endl;
     return -1;
   }
   
   //get the file number from command line args
   int RunNum = atoi(argv[2]);
-  string pathtomidas = argv[1];
+  string pathtodata = argv[1];
+  string cfgfile = argv[3];
 
+  ifstream cfgf;
+  cfgf.open(cfgfile.c_str());
+
+  if(cfgf.is_open()) {
+    string item;
+    while(!cfgf.eof()) {
+      cfgf>>item;
+      if(item.compare("Coincidence_Window") == 0) {
+      	cfgf>>Coincidence_Window;
+      }
+      if(item.compare("Read_Binary") == 0) {
+      	cfgf>>Read_Binary;
+      }
+      if(item.compare("Write_Binary") == 0) {
+	cfgf>>Write_Binary;
+      }      
+    }
+    
+    cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
+    cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<endl;
+  }
+  else {
+    cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
+    return -1;
+  }
+
+  
+   
   //make the file
   gzFile gz_in;
   
@@ -35,11 +67,11 @@ int main(int argc, char *argv[]) {
     stringstream runname;
     runname.str();
     
-  if(READ_BINARY == 0) {
+    if(Read_Binary == 0) {
 
     stringstream midasrunname;
     midasrunname.str();
-    midasrunname << pathtomidas << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
+    midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
     cout<<"Main [INFO]: Checking for: "<<midasrunname.str()<<endl;
     
     //Look for uncompressed .mid files
@@ -62,7 +94,7 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  if(READ_BINARY == 1) {
+    if(Read_Binary == 1) {
     
     stringstream binaryrunname;
     binaryrunname.str();
@@ -100,18 +132,18 @@ int main(int argc, char *argv[]) {
   }
   
   //Initialize Things
-  Initialize_Analyzer();
+  Initialize_Analyzer(Read_Binary, Write_Binary);
 
   stringstream rootfilename;
   rootfilename.str();
   
   //stage 0
-  if(READ_BINARY==0) {
+  if(Read_Binary==0) {
     rootfilename << "./stage0_root/Stage0_Histograms_Run_";
     rootfilename << RunNum << ".root";
   }
  //stage 1
-  if(READ_BINARY==1) {
+  if(Read_Binary==1) {
     rootfilename << "./stage1_root/Stage1_Histograms_Run_";
     rootfilename << RunNum << ".root";
   }
@@ -124,17 +156,17 @@ int main(int argc, char *argv[]) {
 
 
   //Initialize some stuff
-  Read_Energy_Calibrations(RunNum);
+  Read_Energy_Calibrations(RunNum, Read_Binary);
 
   //start time
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum);
+  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
   //Write histograms
-  Write_Analyzer_Histograms(fout);
+  Write_Analyzer_Histograms(fout, Read_Binary);
 
   fout->Write();
   cout<<GREEN<<"Main [INFO]: Rootfile Written"<<RESET<<endl;

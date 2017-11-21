@@ -24,10 +24,9 @@
 
 
 
-
 //Coincidence window for the eventbuilder
 //#define CoincidenceWindow 10 //in ns
-#define CoincidenceWindow 500 //in ns
+//#define CoincidenceWindow 500 //in ns
 
 //Status indicators
 #define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
@@ -41,8 +40,8 @@
 
 //#define READ_BINARY 1  //This is basically the stage 0 or 1 flag.  If we read binary then 
 //#define WRITE_BINARY 0 //this will spit out the binary file of timesorted DEVT_BANK_wWF objects for easy resorting in staged analysis
-#define READ_BINARY 0  //This is basically the stage 0 or 1 flag.  If we read binary then 
-#define WRITE_BINARY 1 //this will spit out the binary file of timesorted DEVT_BANK_wWF objects for easy resorting in staged analysis
+//#define READ_BINARY 0  //This is basically the stage 0 or 1 flag.  If we read binary then 
+//#define WRITE_BINARY 1 //this will spit out the binary file of timesorted DEVT_BANK_wWF objects for easy resorting in staged analysis
 
 #define HAVE_Threshold 0 //1 is yes 0 is no
 #define Energy_Threshold 0.15 //MeV
@@ -50,6 +49,7 @@
 //File Input
 #define TMatrixFile "./Config/TMatrix.txt"  // File that includes ID's of crystals for which the time deviations histograms will be created
 #define	DanceMapFile "./Config/DanceMap.txt"  // File that includes ID's of crystals for which the time deviations histograms will be created
+
 
 //File Output
 #define STAGE0_ROOT "./stage0_root"
@@ -64,7 +64,7 @@
 //Physics Stuff
 #define	DANCE_FlightPath 20.28437  // meters
 #define U235_FlightPath 22.8 //meters
-#define BF3_FlightPath 22.74 //meters
+#define He3_FlightPath 22.74 //meters
 #define Li6_FlightPath 22.607 //meters
 
 #define DANCE_Delay 523.0  // ns
