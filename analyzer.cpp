@@ -1035,9 +1035,9 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     //Handle various events and do some physics
     if(u235event.Valid==1) {
       //Calculate the neutron energy    
-      u235event.En = 0.5*939.565379e6*U235_FlightPath*DANCE_FlightPath/((u235event.tof)/1e9)/((u235event.tof)/1e9)/(2.997924589e8*2.997924589e8); 
+      u235event.En = 0.5*939.565379e6*U235_FlightPath*U235_FlightPath/((u235event.tof)/1e9)/((u235event.tof)/1e9)/(2.997924589e8*2.997924589e8); 
       //Calculate corrrected nuetron energy
-      u235event.En_corr = 0.5*939.565379e6*U235_FlightPath*DANCE_FlightPath/((u235event.tof_corr)/1e9)/((u235event.tof_corr)/1e9)/(2.997924589e8*2.997924589e8); 
+      u235event.En_corr = 0.5*939.565379e6*U235_FlightPath*U235_FlightPath/((u235event.tof_corr)/1e9)/((u235event.tof_corr)/1e9)/(2.997924589e8*2.997924589e8); 
       hU235_En->Fill(u235event.En);
       hU235_En_Corr->Fill(u235event.En_corr);
     } 
@@ -1069,9 +1069,9 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     //Handle various events and do some physics
     if(he3event.Valid==1) {
       //Calculate the neutron energy    
-      he3event.En = 0.5*939.565379e6*He3_FlightPath*DANCE_FlightPath/((he3event.tof)/1e9)/((he3event.tof)/1e9)/(2.997924589e8*2.997924589e8); 
+      he3event.En = 0.5*939.565379e6*He3_FlightPath*He3_FlightPath/((he3event.tof)/1e9)/((he3event.tof)/1e9)/(2.997924589e8*2.997924589e8); 
       //Calculate corrrected nuetron energy
-      he3event.En_corr = 0.5*939.565379e6*He3_FlightPath*DANCE_FlightPath/((he3event.tof_corr)/1e9)/((he3event.tof_corr)/1e9)/(2.997924589e8*2.997924589e8); 
+      he3event.En_corr = 0.5*939.565379e6*He3_FlightPath*He3_FlightPath/((he3event.tof_corr)/1e9)/((he3event.tof_corr)/1e9)/(2.997924589e8*2.997924589e8); 
       hHe3_En->Fill(he3event.En);
       hHe3_En_Corr->Fill(he3event.En_corr);
     } 
@@ -1104,9 +1104,9 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     //Handle various events and do some physics
     if(li6event.Valid==1) {
       //Calculate the neutron energy    
-      li6event.En = 0.5*939.565379e6*Li6_FlightPath*DANCE_FlightPath/((li6event.tof)/1e9)/((li6event.tof)/1e9)/(2.997924589e8*2.997924589e8); 
+      li6event.En = 0.5*939.565379e6*Li6_FlightPath*Li6_FlightPath/((li6event.tof)/1e9)/((li6event.tof)/1e9)/(2.997924589e8*2.997924589e8); 
       //Calculate corrrected nuetron energy
-      li6event.En_corr = 0.5*939.565379e6*Li6_FlightPath*DANCE_FlightPath/((li6event.tof_corr)/1e9)/((li6event.tof_corr)/1e9)/(2.997924589e8*2.997924589e8); 
+      li6event.En_corr = 0.5*939.565379e6*Li6_FlightPath*Li6_FlightPath/((li6event.tof_corr)/1e9)/((li6event.tof_corr)/1e9)/(2.997924589e8*2.997924589e8); 
       hLi6_En->Fill(li6event.En);
       hLi6_En_Corr->Fill(li6event.En_corr);
     } 

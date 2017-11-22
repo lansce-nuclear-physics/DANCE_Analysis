@@ -68,9 +68,9 @@
 #define Li6_FlightPath 22.607 //meters
 
 #define DANCE_Delay 523.0  // ns
-#define U235_Delay 322.4 //ns
-#define BF3_Delay -207.0 //ns
-#define Li6_Delay 376.0 //ns
+#define U235_Delay 553.2 //ns (Was 322.4 in previous version)
+#define BF3_Delay 359.3 //ns (Was -207 in previous version)
+#define Li6_Delay 502.9 //ns (Was 376 in previous version)
 
 //Histogramming
 #define	NeutronE_From 0.02 //Neutron energy from [eV]
