@@ -67,7 +67,7 @@
 #define He3_FlightPath 22.74 //meters
 #define Li6_FlightPath 22.607 //meters
 
-#define DANCE_Delay 523.0  // ns
+#define DANCE_Delay 205.0  // ns (Was 523.0 in previous version)
 #define U235_Delay 553.2 //ns (Was 322.4 in previous version)
 #define BF3_Delay 359.3 //ns (Was -207 in previous version)
 #define Li6_Delay 502.9 //ns (Was 376 in previous version)
