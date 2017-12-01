@@ -55,6 +55,7 @@ TH2D *hTimeDev;  //Time deviations relative to adjacent crystals
 
 //Energy Histograms
 TH2D *ADC_calib;  //2D PSD Plot 
+TH2D *ADC_calib_Invalid;  //2D PSD Plot for Invalid events 
 
 //Physics Spectra
 TH1D *hEn; //Neutron Energy from dance events
@@ -69,6 +70,9 @@ TH2D *hAlphaCalib;
 //3D Histograms
 TH3F *En_Esum_Mcl;
 TH3F *En_Esum_Mcr;
+
+TH3F *hTOF_Esum_Mcl;
+TH3F *hTOF_Esum_Mcr;
 
 TH3F *En_Eg_Mcl; // this should have a Qgate on it
 TH3F *En_Eg_Mcr; // this should have a Qgate on it
@@ -469,6 +473,7 @@ int Create_Analyzer_Histograms(bool read_binary) {
   
   //Energy Histograms
   ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
+  ADC_calib_Invalid=new TH2D("ADC_calib_Invalid","ADC_calib_Invalid",800,0.,16.,1000,0.,10.);
 
   //Alpha Histograms
   hAlpha = new TH2D("hAlpha","hAlpha",1500,0,30000,162,0,162);
@@ -527,6 +532,9 @@ int Create_Analyzer_Histograms(bool read_binary) {
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+
+    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",7500,0,15000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",7500,0,15000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
     En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
@@ -570,7 +578,8 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
     hDetectorLoad->Write();
   }
   ADC_calib->Write();
-
+  ADC_calib_Invalid->Write();
+  
   hAlpha->Write();
   hAlphaCalib->Write();
 
@@ -586,6 +595,9 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
 
     En_Esum_Mcl->Write();
     En_Esum_Mcr->Write();
+
+    hTOF_Esum_Mcl->Write();
+    hTOF_Esum_Mcr->Write();
   }
 
 
@@ -758,35 +770,38 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
       //Fill time between crystal hits
       hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
 
-      //Fill ADC Calib
-      ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
-
-      int Is_Alpha = Alpha_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast);
-      int Is_Gamma = Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast);
-
-      if(Is_Alpha) {
-	//Fill some Calibration Spectra
-	hAlpha->Fill(eventvector[eye].lgate, eventvector[eye].ID,1);
-	hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
-      }
-    
-      if(Is_Gamma) {
-	//Make a DANCE Event
-	devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
-	devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
-	devent.Islow[Crystal_Mult] = eventvector[eye].lgate;  //Crystal long integral
-	devent.Ifast[Crystal_Mult] = eventvector[eye].sgate;  //Crystal short integral
-	devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
-	devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
-	devent.tof[Crystal_Mult] = eventvector[eye].TOF; //time of flight for crystal hit
-	devent.ESum += eventvector[eye].Eslow; //ESum 
-	devent.Crystal_mult++;
-	devent.Valid=1;  //event is now valid
-	Crystal_Mult++;	
-
-      }
-
-      DANCE_Entries_per_T0++;
+      if(eventvector[eye].Valid==1) {
+	//Fill ADC Calib
+	ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
+	
+	if(Alpha_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
+	  //Fill some Calibration Spectra
+	  hAlpha->Fill(eventvector[eye].lgate, eventvector[eye].ID,1);
+	  hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+	}
+	
+	if( Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
+	  //Make a DANCE Event
+	  devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
+	  devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
+	  devent.Islow[Crystal_Mult] = eventvector[eye].lgate;  //Crystal long integral
+	  devent.Ifast[Crystal_Mult] = eventvector[eye].sgate;  //Crystal short integral
+	  devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
+	  devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
+	  devent.tof[Crystal_Mult] = eventvector[eye].TOF; //time of flight for crystal hit
+	  devent.ESum += eventvector[eye].Eslow; //ESum 
+	  devent.Crystal_mult++;
+	  devent.Valid=1;  //event is now valid
+	  Crystal_Mult++;	
+	  
+	}
+	
+	DANCE_Entries_per_T0++;
+	
+      } //end of Valid Check
+      else {
+	ADC_calib_Invalid->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
+      } //end of not valid else
       
       if(read_binary==0) {
 	//Fill detecotor load
@@ -994,11 +1009,14 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
 	  devent.Ecluster[devent.Cluster_ID[ii]-1]+=devent.Ecrystal[ii];
 	};
       }  //Done checking mult > 1
-      
-      //Fill DANCE Histograms
-      //cout<<"En: "<<devent.En<<"  ESum: "<<devent.ESum<<"  Mcl:"<<devent.Cluster_mult<<" Mcr: "<<devent.Crystal_mult<<" last T0: "<<last_t0_timestamp<<endl;
+            
+      //Mults vs ESum vs En
       En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
       En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
+      
+      //Mults vs ESum vs TOF
+      hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
+      hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
       
       // TH3F *En_Eg_Mcl; // this should have a Qgate on it
       // TH3F *En_Eg_Mcr; // this should have a Qgate on it

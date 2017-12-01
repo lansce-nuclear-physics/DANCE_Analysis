@@ -43,7 +43,7 @@
 //#define READ_BINARY 0  //This is basically the stage 0 or 1 flag.  If we read binary then 
 //#define WRITE_BINARY 1 //this will spit out the binary file of timesorted DEVT_BANK_wWF objects for easy resorting in staged analysis
 
-#define HAVE_Threshold 0 //1 is yes 0 is no
+#define HAVE_Threshold 1 //1 is yes 0 is no
 #define Energy_Threshold 0.15 //MeV
 
 //File Input
