@@ -39,6 +39,8 @@ TH2D *hCoinCAEN;  //coincidence matrix
 //Time Diagnostics
 TH1D *hEventLength;  //length in ns of the event (diagnostic)
 TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
+TH1D *hTimeBetweenDEvents;  //time between subsequent DANCE events (ns)
+TH3D *hTimeBetweenDEvents_ESum_Mcr; //DANCE ESum vs time between subsequent DANCE events for Mcr==1
 TH1D *hTimeBetweenT0s; //time between T0s (ns)
 TH2D *hCrystalIDvsTOF; //TOF for each crystal 
 TH1D *hCrystalTOF; //TOF for all crytals
@@ -117,6 +119,8 @@ double current_timestamp[256];
 
 double last_t0_timestamp;
 double current_t0_timestamp;
+
+double last_devent_timestamp;
 
 //TMatrix Things
 int reftoindex1[200];
@@ -453,6 +457,8 @@ int Create_Analyzer_Histograms(bool read_binary) {
   //Diagnostics
   hEventLength = new TH1D("EventLength","EventLength",10000,0,10000);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
+  hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
+  hTimeBetweenDEvents_ESum_Mcr = new TH3D("TimeBetweenDEvents_ESum_Mcr","TimeBetweenDEvents_ESum_Mcr",1000,0,10000,500,0,10,20,0,20);
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   
   //RAW TOF
@@ -562,6 +568,8 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
 
   hEventLength->Write();
   hTimeBetweenCrystals->Write();
+  hTimeBetweenDEvents->Write();
+  hTimeBetweenDEvents_ESum_Mcr->Write();
   hTimeBetweenT0s->Write();
   hCrystalIDvsTOF_Corr->Write();
   hCrystalTOF_Corr->Write();
@@ -643,6 +651,8 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
 
     last_t0_timestamp=0;
     current_t0_timestamp=0;
+
+    last_devent_timestamp=0;
   }
 
   //Diagnostics
@@ -893,7 +903,13 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
   if(devent.Valid == 1) {
     if(last_t0_timestamp > 0) {
       
+      //DANCE Event Diagnostics
       DANCE_Events_per_T0++;
+
+      hTimeBetweenDEvents->Fill(devent.tof[0]-last_devent_timestamp);
+      hTimeBetweenDEvents_ESum_Mcr->Fill(devent.tof[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);
+      
+      last_devent_timestamp=devent.tof[0];
       
       //TOF now relative to last T0
       for(int kay=0; kay<devent.Crystal_mult; kay++) {
