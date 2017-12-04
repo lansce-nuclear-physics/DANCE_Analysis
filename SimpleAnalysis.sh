@@ -28,9 +28,9 @@ PATHTODATA=hygelac14
 #for i in `seq 67700 67760`;  #Co59 329.4mg
 
 #for i in `seq 60409 60451`;  #Au197 4mm
-#for i in `seq 60572 60584`;  #Au197 4mm
+for i in `seq 60572 60584`;  #Au197 4mm
 #for i in `seq 63590 63649`;  #Au197 4mm
-for i in `seq 68104 68126`;  #Au197 4mm
+#for i in `seq 68104 68126`;  #Au197 4mm
 
 
 do

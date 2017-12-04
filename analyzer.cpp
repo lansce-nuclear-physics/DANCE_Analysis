@@ -371,7 +371,7 @@ int Read_PI_Gates() {
 
 int Read_DMatrix() {
 
-  ifstream matrix_in("Config/DetectorMatrix.txt");
+  ifstream matrix_in(DMatrixFile);
   
   cout <<"Analyzer [INFO]: Reading in a Detector Matrix" << endl;
   
@@ -399,10 +399,10 @@ int Read_DMatrix() {
 
 int Read_TMatrix() {
 
-  cout <<"Analyzer [INFO]: Reading ./Config/TMatrix.txt"  << endl;
+  cout <<"Analyzer [INFO]: Reading "<<TMatrixFile << endl;
   
   ifstream timemat;
-  timemat.open("./Config/TMatrix.txt");
+  timemat.open(TMatrixFile);
     
   for(int i=0;i<200;i++){
     reftoindex1[i]=-1;
@@ -435,7 +435,7 @@ int Read_TMatrix() {
     cout<<GREEN<<"Analyzer [INFO]: Read in TMatrix"<<RESET<<endl;
   }
   else {
-    cout<<RED<<"Analyzer [ERROR]: Couldn't open Config/TMatrix.txt"<<RESET<<endl;
+    cout<<RED<<"Analyzer [ERROR]: Couldn't open "<<TMatrixFile<<RESET<<endl;
   }
   
   return counter;
@@ -670,7 +670,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
 }
 
 
-int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool write_binary) {
+int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time) {
 
   int Crystal_Mult=0;
 
@@ -779,7 +779,12 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
 
       //Fill time between crystal hits
       hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
-
+      
+      //Blocking Time to avoid retrigger problems
+      if((current_timestamp[id_eye]-last_timestamp[id_eye]) < Crystal_Blocking_Time) {
+	eventvector[eye].Valid=0;
+      }
+      
       if(eventvector[eye].Valid==1) {
 	//Fill ADC Calib
 	ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
@@ -906,9 +911,16 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
       //DANCE Event Diagnostics
       DANCE_Events_per_T0++;
 
-      hTimeBetweenDEvents->Fill(devent.tof[0]-last_devent_timestamp);
-      hTimeBetweenDEvents_ESum_Mcr->Fill(devent.tof[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);
-      
+      //DEvent Blocking Time
+      if((devent.tof[0]-last_devent_timestamp) < DEvent_Blocking_Time) {
+	devent.Valid=0;
+      }
+      else {
+	hTimeBetweenDEvents->Fill(devent.tof[0]-last_devent_timestamp);
+	hTimeBetweenDEvents_ESum_Mcr->Fill(devent.tof[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);	
+      }
+     
+      //Set Last devent timestamp to current one
       last_devent_timestamp=devent.tof[0];
       
       //TOF now relative to last T0
@@ -1041,7 +1053,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
       //   TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
     
     }
-  } //Done checking mult > 0
+  } //Done checking for stage 1
   
   //U235 Beam Monitor Events
   if(u235event.Valid == 1) {

@@ -53,7 +53,7 @@ int Make_DANCE_Map() {
   cout << "Unpacker [INFO]: Reading DANCE Map" << endl;
   
   ifstream map;
-  map.open("Config/DanceMap.txt");
+  map.open(DanceMapFile);
   int m1,m2,m3;
   
   if(map.is_open()) {
@@ -120,7 +120,7 @@ int Read_TimeDeviations(int runnum) {
 }
 
 
-int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow) {
+int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time) {
 
   cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl;
   
@@ -591,7 +591,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 			  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
 			  //Send it to the analyzer
-			  Analyze_Data(eventvector, read_binary, write_binary);
+			  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time);
 			}
 		      }
 		      else {
@@ -741,7 +741,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
     
 	if(eventvector.size()>0) {
 	  //	cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-	  Analyze_Data(eventvector, read_binary, write_binary);
+	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time);
 	}
     
 	if(datadeque.size()==0) {
@@ -893,7 +893,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	}
     
 	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, read_binary, write_binary);
+	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time);
 	}
     
 	if(datadeque.size()==0) {

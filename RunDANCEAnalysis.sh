@@ -62,7 +62,7 @@ LAST_RUN=59679
 #FIRST_RUN=60409
 #LAST_RUN=60451
 
-DATA_DIR=/mnt/hygelac-data/13/dance/caen2015/
+DATA_DIR=/mnt/hygelac-data/13/dance/caen2015
 ANALYSIS_DIR=/home/cprokop/CJP/DANCE_Analysis/
 STAGE0_DIR=$ANALYSIS_DIR/stage0_root/
 STAGE1_DIR=$ANALYSIS_DIR/stage1_root/

@@ -11,7 +11,9 @@ using namespace std;
 
 int main(int argc, char *argv[]) {
 
-//Control Variables
+  //Control Variables
+  double Crystal_Blocking_Time=0;
+  double DEvent_Blocking_Time=0;
   bool Read_Binary=false;
   bool Write_Binary=false;
   double Coincidence_Window=0;
@@ -46,10 +48,16 @@ int main(int argc, char *argv[]) {
       if(item.compare("Write_Binary") == 0) {
 	cfgf>>Write_Binary;
       }      
+      if(item.compare("Crystal_Blocking_Time") == 0) {
+	cfgf>>Crystal_Blocking_Time;
+      }    
+      if(item.compare("DEvent_Blocking_Time") == 0) {
+	cfgf>>DEvent_Blocking_Time;
+      } 
     }
     
     cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
-    cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<endl;
+    cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<"  "<<Crystal_Blocking_Time<<"  "<<DEvent_Blocking_Time<<endl;
   }
   else {
     cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
@@ -162,7 +170,7 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window);
+  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
   //Write histograms
