@@ -670,7 +670,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
 }
 
 
-int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time) {
+int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold) {
 
   int Crystal_Mult=0;
 

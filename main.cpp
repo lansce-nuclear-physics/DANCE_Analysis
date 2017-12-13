@@ -17,6 +17,8 @@ int main(int argc, char *argv[]) {
   bool Read_Binary=false;
   bool Write_Binary=false;
   double Coincidence_Window=0;
+  bool HAVE_Threshold=false;
+  double Energy_Threshold=0.15; //MeV
 
   string pathtobinary = "./stage0_bin/";
   string pathtoroot = "./RootFiles/";
@@ -54,10 +56,16 @@ int main(int argc, char *argv[]) {
       if(item.compare("DEvent_Blocking_Time") == 0) {
 	cfgf>>DEvent_Blocking_Time;
       } 
+      if(item.compare("HAVE_Threshold") == 0) {
+	cfgf>>HAVE_Threshold;
+      } 
+       if(item.compare("Energy_Threshold") == 0) {
+	cfgf>>Energy_Threshold;
+      } 
     }
     
     cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
-    cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<"  "<<Crystal_Blocking_Time<<"  "<<DEvent_Blocking_Time<<endl;
+    cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<"  "<<Crystal_Blocking_Time<<"  "<<DEvent_Blocking_Time<<"  "<<HAVE_Threshold<<"  "<<Energy_Threshold<<endl;
   }
   else {
     cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
@@ -148,16 +156,16 @@ int main(int argc, char *argv[]) {
   //stage 0
   if(Read_Binary==0) {
     rootfilename << "./stage0_root/Stage0_Histograms_Run_";
-    rootfilename << RunNum << ".root";
+    rootfilename << RunNum;
   }
  //stage 1
   if(Read_Binary==1) {
     rootfilename << "./stage1_root/Stage1_Histograms_Run_";
-    rootfilename << RunNum << ".root";
+    rootfilename << RunNum;
   }
 
   //make the root file  
-  TFile *fout = new TFile(Form("%s",rootfilename.str().c_str()),"RECREATE");
+  TFile *fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),(int)Coincidence_Window,(int)Crystal_Blocking_Time,(int)DEvent_Blocking_Time),"RECREATE");
   
   struct timeval tv;  						// real time  
   double begin, end, time_elapsed;			// start,stop, elapsed time
@@ -170,7 +178,7 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time);
+  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
   //Write histograms

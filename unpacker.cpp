@@ -120,7 +120,7 @@ int Read_TimeDeviations(int runnum) {
 }
 
 
-int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time) {
+int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold) {
 
   cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl;
   
@@ -438,9 +438,9 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 		  db_arr[EVTS].TOF += DANCE_Delay;
 		}
 		
-		//Add the BF3 delay
+		//Add the He3 delay
 		if(db_arr[EVTS].ID == 241) {
-		  db_arr[EVTS].TOF += BF3_Delay;
+		  db_arr[EVTS].TOF += He3_Delay;
 		} 
 
 		//Add the U235 delay
@@ -591,7 +591,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 			  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
 			  //Send it to the analyzer
-			  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time);
+			  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
 			}
 		      }
 		      else {
@@ -741,7 +741,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
     
 	if(eventvector.size()>0) {
 	  //	cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time);
+	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold);
 	}
     
 	if(datadeque.size()==0) {
@@ -893,7 +893,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	}
     
 	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time);
+	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
 	}
     
 	if(datadeque.size()==0) {

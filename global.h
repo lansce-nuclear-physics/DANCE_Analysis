@@ -27,10 +27,6 @@
 
 #define FITTIMEDEV 0  //this turns on finding time deviations
 
-//DANCE Thresholds
-#define HAVE_Threshold 1 //1 is yes 0 is no
-#define Energy_Threshold 0.15 //MeV
-
 //File Inputs
 #define TMatrixFile "./Config/TMatrix.txt" 
 #define	DanceMapFile "./Config/DanceMap.txt" 
@@ -47,19 +43,19 @@
 #define ALPHAGATE "Alpha.dat"
 
 //Physics Stuff
-#define	DANCE_FlightPath 20.28437  // meters
-#define U235_FlightPath 22.8 //meters
+#define	DANCE_FlightPath 20.2407  // was 20.28437 meters
+#define U235_FlightPath 22.8299  // was 22.8 //meters
 #define He3_FlightPath 22.74 //meters
-#define Li6_FlightPath 22.607 //meters
+#define Li6_FlightPath 22.6121 // was 22.607 meters
 
-#define DANCE_Delay 205.0  // ns (Was 523.0 in previous version)
-#define U235_Delay 553.2 //ns (Was 322.4 in previous version)
-#define BF3_Delay 359.3 //ns (Was -207 in previous version)
-#define Li6_Delay 502.9 //ns (Was 376 in previous version)
+#define DANCE_Delay 282.26  // ns (Was 523.0 in FARE, and 205.0 in last version)
+#define U235_Delay 578.2201 //ns (Was 322.4 in FARE and 553.2 in previous version)
+#define He3_Delay 359.3 //ns (Was -207 in previous version)
+#define Li6_Delay 500.156 //ns (Was 376 in FARE, and 502.9 in previous version)
 
 //Histogramming
-#define	NeutronE_From 0.02 //Neutron energy from [eV]
-#define	NeutronE_To 1e6 //Neutron energy to [eV]
+#define	NeutronE_From 0.002 //Neutron energy from [eV]
+#define	NeutronE_To 5e6 //Neutron energy to [eV]
 #define	NeutronE_BinsPerDecade 500.0 // Number of neutron energy bins per decade
 
 #define	GammaE_From 0.0 //Gamma energy [MeV] - low limit
