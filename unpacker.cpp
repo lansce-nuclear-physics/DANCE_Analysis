@@ -33,7 +33,7 @@ using namespace std;
 
 /*Time depth (in seconds) of the buffer.  While you cant know if you 
   will fail the program will tell you if you did... */
-#define BufferDepth 10  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
+#define BufferDepth 10000  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
 
 
 //Verbosity and Error Checking
@@ -485,7 +485,6 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 			  cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
 			  cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
 			  cout<<"Exiting"<<endl;
-
 			  ofstream failfile;
 			  failfile.open("Failed_Analysis.txt", ios::out | ios::app);
 			  failfile << "Run: "<<runnum<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
@@ -659,6 +658,10 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	    cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
 	    cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
 	    cout<<RED<<"Exiting"<<RESET<<endl;
+	    ofstream failfile;
+	    failfile.open("Failed_Analysis.txt", ios::out | ios::app);
+	    failfile << "Run: "<<runnum<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+	    failfile.close();
 	    return -1;
 	  }   
 	}
