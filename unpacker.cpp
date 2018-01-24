@@ -1,9 +1,18 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  unpacker.cpp           *// 
+//*  Last Edit: 01/23/18    *//  
+//***************************//
+
+//File includes
 #include "global.h"
 #include "unpacker.h"
 #include "structures.h"
 #include "sort_functions.h"
 #include "analyzer.h"
 
+//C/C++ includes
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -14,6 +23,7 @@
 #include <iomanip>
 #include <string>
 
+//ROOT includes
 #include "TH1D.h"
 #include "TFile.h"
 #include "TRandom.h"
@@ -37,10 +47,9 @@ using namespace std;
 
 
 //Verbosity and Error Checking
-//#define CheckTheDeque
-
+//define CheckTheDeque
 //#define Eventbuilder_Verbose
-
+//#define Unpacker_Verbose
 
 
 //global unpacker variables
@@ -77,24 +86,24 @@ int Make_DANCE_Map() {
 
 
 
-int Read_TimeDeviations(int runnum) {
+int Read_TimeDeviations(int runnum, bool FitTimeDev) {
   cout << "Unpacker [INFO]: Reading Time Deviations" << endl;
-
+  
   for(int eye=0; eye<200; eye++) {
     TimeDeviations[eye]=0;
-  }
+  }  
   
-  //if we want to obtain the time deviations set them to zero
-  if(FITTIMEDEV) {
-    cout<<RED<<"Unpacker [WARNING]: Set all time deviations to zero"<<RESET<<endl;
+  //If we want to fit the time deviations then set all of them to zero
+  if(FitTimeDev) {
+    cout<<GREEN<<"Unpacker [INFO]: Set all time deviations to 0 "<<RESET<<endl;
   }
   
   //if we have time deviations then obtain them from the files
   else {
     stringstream fname;
     fname.str();
-    //fname<<"./TimeDeviations/TimeDeviations_Run" << std::setfill('0') << std::setw(6) << runnum << ".txt";
-    fname<<"./TimeDeviations/TimeDeviations.txt";
+    
+    fname<<"./TimeDeviations/TimeDeviations_Run_" << std::setfill('0') << std::setw(5) << runnum << ".txt";
     cout<<"Unpacker [INFO]: Looking for TimeDeviations File: "<<fname.str()<<endl;
     
     ifstream fdata;
@@ -111,25 +120,25 @@ int Read_TimeDeviations(int runnum) {
 	}
       }
       cout<<GREEN<<"Unpacker [INFO]: Set all time deviations to values in "<<fname.str()<<RESET<<endl;
+      return 0;
     }
     else {
       cout<<RED<<"Unpacker [ERROR]: Couldnt find "<<fname.str()<<" Setting all time deviations to 0"<<RESET<<endl;
     }
-    
   }
   return 0;
 }
 
 
-int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold) {
+int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev) {
 
-  cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl;
+  cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<"   "<<BufferDepth<<" seconds buffer depth"<<endl;
   
   //initialize DANCE Map
   Make_DANCE_Map();
 
   //initiliaze the time deviations
-  Read_TimeDeviations(runnum);
+  Read_TimeDeviations(runnum,FitTimeDev);
 
   if(write_binary == 1) {
     Make_Output_Binfile(runnum, read_binary);
@@ -151,67 +160,59 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
   bool timesort=true;
 
   //Structures to put data in
-  deque<DEVT_BANK_wWF> datadeque;   //Storage container for time sorted data
-  vector<DEVT_BANK_wWF> eventvector;   //Vector to store events
-  CEVT_BANK *evinfo = new CEVT_BANK(); // caen event info
-  test_struct_cevt *evaggr = new test_struct_cevt(); 
-  DEVT_BANK_wWF *db_arr = new DEVT_BANK_wWF[MaxDEVTArrSize];
-  DEVT_BANK_wWF devt_bank;
-  DEVT_OUT devt_out;
-
+  deque<DEVT_BANK> datadeque;                         //Storage container for time sorted data
+  vector<DEVT_BANK> eventvector;                      //Vector to store events for analysis
+  CEVT_BANK *evinfo = new CEVT_BANK();                //caen event info
+  test_struct_cevt *evaggr = new test_struct_cevt();  //event aggregate
+  DEVT_BANK *db_arr = new DEVT_BANK[MaxDEVTArrSize];  //Storage array for entries
+  DEVT_STAGE1 devt_stage1;                            //Stage1 format for reading binary
+  
   //Counters
-  uint32_t TOTAL_EVTS=0;
-  uint32_t EVTS=0;
-  uint64_t BYTES_READ=0;
-  uint64_t TOTAL_BYTES=0;
-  uint64_t Events_Invalid=0;
-  double time_prog_old=0;
-  // uint32_t Events_Analyzed=0;
-  // uint32_t Events_Sorted=0;
-  uint32_t Events_Sent=0;
-  uint32_t progresscounter=1;           //Keep track of how many progress statements have been made
-  int tempcount = 0;
-  int insidecounter = 0;
+  uint32_t TOTAL_EVTS=0;        //Total number of entries unpacked
+  uint32_t EVTS=0;              //Total number of entries unpacked since last time sort
+  uint64_t BYTES_READ=0;        //Total number of Bytes read since last time sort
+  uint64_t TOTAL_BYTES=0;       //Total number of Bytes read 
+  uint32_t Events_Sent=0;       //Total number of entries sent to the analyzer
+  uint32_t progresscounter=1;   //Keep track of how many progress statements have been made
+  int gzret=1;                  //number of bytes read by gzread
   
-  int gzret=1;  //number of bytes read by gzread
-
   
-  double smallest_timestamp=400000000000000.0;
+  double smallest_timestamp=400000000000000.0;  //This just needs to be a large number
   
-  EventHeader_t head;      //MIDAS event header
-  BankHeader_t bhead;      //MIDAS bank header
-  Bank32_t bank32;         //MIDAS 32-bit bank
+  //MIDAS Bank Stuff
+  EventHeader_t head;           //MIDAS event header
+  BankHeader_t bhead;           //MIDAS bank header
+  Bank32_t bank32;              //MIDAS 32-bit bank
 
-  uint32_t TotalDataSize=0; 
-  uint32_t TotalBankSize=0; // =head.fDataSize;
-  uint32_t EventBankSize=0; // =bhead.fDataSize;
+  uint32_t TotalDataSize=0;     // head.fDataSize;
+  uint32_t TotalBankSize=0;     // bhead.fDataSize;
+  uint32_t EventBankSize=0;     // bank32fDataSize;
 
-  long devt_padding = 0;
+  long devt_padding = 0;        // padding between banks not divisible by 64 bits
+  
   short imported_peaks[256][16384]; // this is actually supported channels / supported length of PXXX bank
   unsigned short int wf1[15000];
-  // unsigned short int wf2[15000];
 
   //time profiling for performance
-  struct timeval tv;   	// real time  
-  double time_prog;   //  elapsed time
+  struct timeval tv;   	   //Real time  
+  double time_elapsed;     //Elapsed time
+  double time_elapsed_old; //Previous elapsed time
   
-  //unpacker crontroll
-  run=true; 
-
+  //Start of the unpacking process 
   gettimeofday(&tv,NULL);  
   double unpack_begin = tv.tv_sec+(tv.tv_usec/1000000.0);
 
   cout<<GREEN<<"Unpacker [INFO]: Started Unpacking: "<<RESET<<endl;
   
+  //Stage 0 unpacking
   if(read_binary==0) {
     while(run) {
-      
-      //  cout<<EVTS<<endl;
-      
+     
       if(TOTAL_EVTS > EventLimit) {
 	run=false;
       }
       
+      //Progess indicator
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
 	cout<<"Processing Run Number: "<<runnum<<endl;
@@ -221,30 +222,33 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	}	
 	cout<<TOTAL_EVTS<<" Events Unpacked "<<endl;
 	cout<<Events_Sent<<" Events Analyzed"<<endl;
-	cout<<Events_Invalid<<" Events Invalid"<<endl;
 	cout<<datadeque.size()<<" Events in the Buffer"<<endl;
 	gettimeofday(&tv,NULL); 
-	time_prog=tv.tv_sec+(tv.tv_usec/1000000.0);
+	time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
       
-	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_prog-unpack_begin)<<" Events per second "<<endl;
-	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_prog-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_prog-time_prog_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_elapsed-unpack_begin)<<" Events per second "<<endl;
+	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
 	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
       
 	BYTES_READ=0;
-	time_prog_old = time_prog;
+	time_elapsed_old = time_elapsed;
       }
     
+      //Read in the event header
       gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
-      //  cout<<gzret<<endl;
-
-
+      
+      //As long as gzread reads something start doing unpacking
       if(gzret!=0) {
-
-	TotalDataSize=head.fDataSize;
+	
+	TotalDataSize = head.fDataSize;
 	BYTES_READ += TotalDataSize;
 	TOTAL_BYTES += TotalDataSize;
-      
+
+#ifdef Unpacker_Verbose
+	cout<<"Type: "<<head.fEventId<<endl;
+#endif
+	
 	if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
 
 	  //End of Run
@@ -270,11 +274,8 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 #endif
 	
 	  TotalBankSize = bhead.fDataSize;
-	  tempcount = 0;
-	  insidecounter = 0;
 	
 	  while(TotalBankSize>0) {
-	    insidecounter += 1;
 	    gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
 	    TotalBankSize-=sizeof(Bank32_t);
 #ifdef Unpacker_Verbose
@@ -328,21 +329,38 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	      TotalBankSize -= EventBankSize;
 	      free (fData);	
             
+#ifdef Unpacker_Verbose 
+	      cout<<"Before trig bank"<<endl;
+#endif
+
 	      // begin funny place between peaks and cpu
 	      while (true) {
 		// the peaks bank should be here
 		gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
 		TotalBankSize-=sizeof(Bank32_t);
 		EventBankSize = bank32.fDataSize;
+
+#ifdef Unpacker_Verbose 
+		cout<<"Peak bank"<<endl;
+		cout<<"Name: "<<bank32.fName[0]<<"  Total Bank Size: "<<TotalBankSize<<"  EventBankSize: "<<EventBankSize<<endl;
+#endif
 	      
 		if(bank32.fName[0]=='p') {
 		  int whichpeak = atoi(&bank32.fName[1]);
-		  //cout << "whichpeak: " << whichpeak << endl;
+#ifdef Unpacker_Verbose 
+		  cout << "whichpeak: " << whichpeak << endl;
+#endif
 		  gzret=gzread(gz_in,imported_peaks[whichpeak],bank32.fDataSize);
+#ifdef Unpacker_Verbose 
+		  cout<<"After Read"<<endl;
+#endif
 		  //gzread(in,waveform,bank32.fDataSize);
 		  TotalBankSize -= EventBankSize;
 		} 
 		else {
+#ifdef Unpacker_Verbose 
+		  cout<<"CPU Bank"<<endl;
+#endif
 		  // get the cpu bank information
 		  char *fData=(char*)malloc(bank32.fDataSize);
 		  gzret=gzread(gz_in,fData,bank32.fDataSize);
@@ -351,7 +369,10 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 		  break; // you break here because the cpu comes last
 		}
 	      }
-	    
+#ifdef Unpacker_Verbose 
+	      cout<<"After trig bank"<<endl;
+#endif
+
 	      int last_detnum = evaggr->P[0].detector_id;
 	      int where_in_peakbank = 0;
 	      for (uint32_t evtnum=0;evtnum<evaggr->N;++evtnum) {
@@ -368,25 +389,24 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 		where_in_peakbank += wflen;
 		last_detnum = current_detnum;
 	      
-		uint64_t timestamp_raw = (evaggr->P[evtnum].position & 0x7FFFFFFFFFFF); // 47 bits for timestamp
-		// uint64_t fine_time = (evaggr->P[evtnum].position >> 53);		// 10 sig bits for interp time	
+		uint64_t timestamp_raw = (evaggr->P[evtnum].position & 0x7FFFFFFFFFFF);                // 47 bits for timestamp
+
+#ifdef Unpacker_Verbose 
+		cout<<"timestamp_raw: "<<timestamp_raw<<endl;
+#endif
 	      	      
-		db_arr[EVTS].timestamp	= (double)(timestamp_raw);   	
-		db_arr[EVTS].TOF		= (double)(timestamp_raw);   	
-		db_arr[EVTS].Ns		= evaggr->P[evtnum].width; // number of samples of the waveform
-		db_arr[EVTS].sgate	= evaggr->P[evtnum].integral[0]; // CEVT_BANK
-		db_arr[EVTS].lgate	= evaggr->P[evtnum].integral[1]-evaggr->P[evtnum].integral[0]; // CEVT_BANK
-		//	db_arr[EVTS].baseline	= 0;		// Baseline not passed in CEVT_BANK
-		db_arr[EVTS].board	= (int)((1.*((int)evaggr->P[evtnum].detector_id)-1)/16.);
-		db_arr[EVTS].channel	= (1*evaggr->P[evtnum].detector_id-1)-16*db_arr[EVTS].board;
-		//	db_arr[EVTS].N		= EVTS;
-		
-		//  cout<<TOTAL_EVTS<<"    "<<EVTS<<"  "<<db_arr[EVTS].timestamp<<"   "<<evaggr->P[evtnum].detector_id<<"   "<<(int)db_arr[EVTS].channel<<"  "<<(int)db_arr[EVTS].board<<endl;
-		
-		db_arr[EVTS].ID     	= MapID[db_arr[EVTS].channel][db_arr[EVTS].board];
-		db_arr[EVTS].Valid = 1; //Everything starts valid
-		
-		// -----------------------------------------------------------------------
+		db_arr[EVTS].timestamp	= (double)(timestamp_raw);                                     //Digitizer timestamp
+		db_arr[EVTS].TOF       	= (double)(timestamp_raw);                                     //Time of Flight (Currently in 2ns incriments)
+		db_arr[EVTS].Ns		= evaggr->P[evtnum].width;                                     //Number of samples of the waveform
+		db_arr[EVTS].Ifast	= evaggr->P[evtnum].integral[0];                               //Fast integral
+		db_arr[EVTS].Islow	= evaggr->P[evtnum].integral[1]-evaggr->P[evtnum].integral[0]; //Slow integral
+		db_arr[EVTS].board	= (int)((1.*((int)evaggr->P[evtnum].detector_id)-1)/16.);      //Board number
+		db_arr[EVTS].channel	= (1*evaggr->P[evtnum].detector_id-1)-16*db_arr[EVTS].board;   //Channel number
+		db_arr[EVTS].ID     	= MapID[db_arr[EVTS].channel][db_arr[EVTS].board];             //ID from DANCE map
+		db_arr[EVTS].Valid = 1;                                                                //Everything starts valid     
+#ifdef Unpacker_Verbose 
+		cout<<(int)db_arr[EVTS].board<<"  "<<(int)db_arr[EVTS].channel<<endl;
+#endif
 		// CALCULATE THE LEADING EDGE using constant fraction "frac"
 		int imin=0;
 		double sigmin=1e9;
@@ -427,41 +447,28 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 		  }		
 		}
 		
+		//Put the TOF into 1ns units including the CFD time
 		db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
+   
 		
-		//need to add the time deviations before time sorting
+		//need to add the time deviations (if any) before time sorting
 		if(db_arr[EVTS].ID < 200) {
 		  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
 		}
 
-		//Add the DANCE delay
-		if(db_arr[EVTS].ID < 162) {
-		  db_arr[EVTS].TOF += DANCE_Delay;
-		}
-		
-		//Add the He3 delay
-		if(db_arr[EVTS].ID == 241) {
-		  db_arr[EVTS].TOF += He3_Delay;
-		} 
-
-		//Add the U235 delay
-		if(db_arr[EVTS].ID == 243) {
-		  db_arr[EVTS].TOF += U235_Delay;
-		} 
-
-		//Add the Li6 delay
-		if(db_arr[EVTS].ID == 244) {
-		  db_arr[EVTS].TOF += Li6_Delay;
-		}
-		
-		//keep track of the smallest timestamp
+       		//keep track of the smallest timestamp
 		if(db_arr[EVTS].TOF<smallest_timestamp) {
 		  smallest_timestamp=db_arr[EVTS].TOF;
 		}    
 		
+		//increment counters
 		EVTS++;
 		TOTAL_EVTS++;
-	      
+
+#ifdef Unpacker_Verbose 
+		cout<<EVTS<<"  "<<TOTAL_EVTS<<endl;
+#endif
+		//Do the time sorting
 	       	if(timesort) {
 
 		  //At this point we need to start ordering and eventbuilding
@@ -515,7 +522,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 			db_arr[EVT_SORT]=datadeque[k];
 			EVT_SORT++;
 		      }
-		    
+		      
 		      //remove the ones put onto the array so we dont double things
 		      for(int k=0; k<(deque_size-first_index); k++) {
 			datadeque.pop_back();
@@ -532,16 +539,13 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 		    //sort the unsorted data
 		    heapSort(db_arr, EVT_SORT);
 
-
 		    //push the now sorted data onto the sorted buffer
 		    for(int j=0; j<EVT_SORT; j++) {
-		    
 		      //Update and push it onto the deque if valid
 		      last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
 		      datadeque.push_back(db_arr[j]);
 		    }
-		  
-
+		    
 #ifdef CheckTheDeque
 		    cout<<"Checking deque"<<endl;
 		    for(int k=0; k<datadeque.size()-1; k++) {
@@ -614,7 +618,6 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 #ifdef Unpacker_Verbose
 		    cout<<"total events at end: "<<datadeque.size()+this_send<<"  Total Sent: "<<Events_Sent<<endl;
 #endif
-		
 		  }	
 		}
 		else {
@@ -679,8 +682,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 #ifdef Unpacker_Verbose
 	cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
 #endif
-      
-	//place everything after that onto the unsorted array
+      	//place everything after that onto the unsorted array
 	for(uint k=first_index; k<datadeque.size(); k++) {
 #ifdef Unpacker_Verbose
 	  cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
@@ -693,7 +695,6 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	for(int k=0; k<(deque_size-first_index); k++) {
 	  datadeque.pop_back();
 	}
-      
 #ifdef Unpacker_Verbose
 	cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
 #endif
@@ -704,24 +705,17 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
     
       //sort the unsorted data
       heapSort(db_arr, EVT_SORT);
-
-
+      
       //push the now sorted data onto the sorted buffer
       for(int j=0; j<EVT_SORT; j++) {
-           
 	//Update and push it onto the deque if valid
 	last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
 	datadeque.push_back(db_arr[j]);
-	
       }
-    
-    
 #ifdef Unpacker_Verbose
       cout<<"About to event build deque size: "<<datadeque.size()<<endl;
 #endif
-
       EVTS=0;
-
     }
   
     if(timesort && datadeque.size()>0) {
@@ -763,14 +757,17 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
   } // END OF MIDAS READER
 
 
+  //Stage 1 unpacker
   if(read_binary==1) {
 
     while(run) {
       
+      //Event limit control
       if(TOTAL_EVTS > EventLimit) {
 	run=false;
       }
       
+      //Progress indicator
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
 	cout<<"Processing Run Number: "<<runnum<<endl;
@@ -780,141 +777,122 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 	}	
 	cout<<TOTAL_EVTS<<" Events Unpacked "<<endl;
 	cout<<Events_Sent<<" Events Analyzed"<<endl;
-	cout<<Events_Invalid<<" Events Invalid"<<endl;
 	cout<<datadeque.size()<<" Events in the Buffer"<<endl;
 	gettimeofday(&tv,NULL); 
-	time_prog=tv.tv_sec+(tv.tv_usec/1000000.0);
+	time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
       
-	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_prog-unpack_begin)<<" Events per second "<<endl;
-	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_prog-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_prog-time_prog_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_elapsed-unpack_begin)<<" Events per second "<<endl;
+	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
 	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
       
 	BYTES_READ=0;
-	time_prog_old = time_prog;
+	time_elapsed_old = time_elapsed;
       }
       
-      gzret=gzread(gz_in,&devt_out,sizeof(DEVT_OUT));
+      gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
       gzseek(gz_in,devt_padding,SEEK_CUR);
-
+      
       if(gzret!=0) {
 	
  	BYTES_READ += gzret;
 	TOTAL_BYTES += gzret;
 
-	//Check on the time ordering of the input file
-#ifdef Check_Time_Order 
-	if(datadeque.size()>0) {
-	  if(devt_out.TOF < datadeque[datadeque.size()-1].TOF) {
-	    cout<<"Found time order problem..."<<endl;
-	    cout<<"New Timestamp: "<<devt_out.TOF<<" Last thing placed in the deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
-	  }
-	}
-#endif
-		
-	devt_bank.lgate = devt_out.lgate;
-	devt_bank.sgate = devt_out.sgate;
-	devt_bank.ID = devt_out.ID;
-	devt_bank.TOF = devt_out.TOF;
-	devt_bank.Valid = 1; //Everything starts valid
-       
+	//Fill the array
+	db_arr[TOTAL_EVTS].TOF = devt_stage1.TOF;
+	db_arr[TOTAL_EVTS].Ifast = devt_stage1.Ifast;
+	db_arr[TOTAL_EVTS].Islow = devt_stage1.Islow;
+	db_arr[TOTAL_EVTS].ID = devt_stage1.ID;
+	db_arr[TOTAL_EVTS].Valid = 1; //Everything starts valid
+
 	
-	datadeque.push_back(devt_bank);
+	//need to add the time deviations before time sorting
+	if(db_arr[TOTAL_EVTS].ID < 200) {
+	  db_arr[TOTAL_EVTS].TOF += TimeDeviations[db_arr[TOTAL_EVTS].ID];
+	}
+	
+	//Add the DANCE delay
+	if(db_arr[TOTAL_EVTS].ID < 162) {
+	  db_arr[TOTAL_EVTS].TOF += DANCE_Delay;
+	}
+	
+	//Add the He3 delay
+	if(db_arr[TOTAL_EVTS].ID == 241) {
+	  db_arr[TOTAL_EVTS].TOF += He3_Delay;
+	} 
+	
+	//Add the U235 delay
+	if(db_arr[TOTAL_EVTS].ID == 243) {
+	  db_arr[TOTAL_EVTS].TOF += U235_Delay;
+	} 
+	
+	//Add the Li6 delay
+	if(db_arr[TOTAL_EVTS].ID == 244) {
+	  db_arr[TOTAL_EVTS].TOF += Li6_Delay;
+	}
+       	
 	TOTAL_EVTS++;
-/*	
-	
-	if(datadeque.size() > 0) {
-	  //   if(TOTAL_EVTS > progresscounter*ProgressInterval) {
-	  
-	  //	if(0) {
-	  //check to see if the buffer is longer than the length specificed in global.h
-	  if((datadeque[datadeque.size()-1].TOF - datadeque[0].TOF) > buffer_length) {
-	    
-	    //we have started to build
-	    event_building_active=true;
-	  
-	    //clear the event vector
-	    eventvector.clear();
-	  
-	    //first timestamp in the deque
-	    double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	    datadeque.pop_front();  //remove the first entry in the deque
-	    Events_Sent++;
-	    //  this_send++;
-	  
-	    bool event_build =true;  //bool to do eventbuilding
-	  
-	    while(event_build) {
-	      if(datadeque[0].TOF < (first_entry_time + CoincidenceWindow)) {
-		eventvector.push_back(datadeque[0]); //put the first event in the events vector
-		datadeque.pop_front();  //remove the first entry in the deque     
-		Events_Sent++;
-		//  this_send++;
-	      }
-	      else {
-		event_build = false;
-		break;
-	      }
-	    }
-	  
-	    if(eventvector.size()>0) {
-#ifdef Eventbuilder_Verbose
-	      cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-#endif
-	      //Send it to the analyzer
-	      Analyze_Data(eventvector);
-	    }
-	  }
-	
-	}
-*/
+
       }
       else {
 	run=false;
 	break;
       }
-    }
+    }  //end of while(run)
     
-    //empty the deque when done reading
-    if(timesort) {
-      cout<<GREEN<<"Unpacker [INFO]: Done Reading. There are "<<datadeque.size()<<" Events Left in the Buffer" RESET<<endl;
+    cout<<GREEN<<"Unpacker [INFO]: Unpacking Complete"<<RESET<<endl;
 
-      while(emptythedeque) {
-	eventvector.clear();
-	double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	eventvector.push_back(datadeque[0]); //put the first event in the events vector
- 	datadeque.pop_front();  //remove the first entry in the deque
-      	Events_Sent++;
+    //Since it is stage 1 it is very likely that things are already closely ordered in time but the offsets can play with things so resort 
+    cout<<"Unpacker [INFO]: Time Sorting"<<endl;
+    heapSort(db_arr, TOTAL_EVTS);
+    cout<<GREEN<<"Unpacker [INFO]: Time Sort Complete"<<RESET<<endl;
+
+    uint64_t stage1_counter=0;  //keep track of entries sorted into events     
+    bool event_build =true;  //initilize bool to do eventbuilding
     
-	bool event_build =true;  //initilize bool to do eventbuilding
-    
-	while(event_build && datadeque.size()>0) {
-	  if(datadeque[0].TOF < (first_entry_time + CoincidenceWindow)) {
-	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
-      	    datadeque.pop_front();  //remove the first entry in the deque     
-	    Events_Sent++;
+    while(event_build) {
+      
+      double first_entry_time = db_arr[stage1_counter].TOF;  //start of the event in time
+      eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
+      Events_Sent++;
+      stage1_counter++;
+      
+      bool add_to_current_event = true; 
+      
+      while(add_to_current_event && stage1_counter<=TOTAL_EVTS) {
+	if(db_arr[stage1_counter].TOF < (first_entry_time + CoincidenceWindow)) {
+	  eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
+	  Events_Sent++;
+	  stage1_counter++;
+	}
+	else {
+	  //If the timestamp is beyond the current start of event + coincidence window this event is over
+	  add_to_current_event = false;
+	  
+	  //Send the current event to analyzer
+	  if(eventvector.size()>0) {
+	    Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
+	    eventvector.clear();
 	  }
-	  else {
-	    event_build = false;
-	    break;
-	  }
+	  
+	  break;
 	}
-    
-	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
-	}
-    
-	if(datadeque.size()==0) {
-	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
-	  emptythedeque=false;
-	}
-      } 
-    }
-  } 
-   
-  //  cout<<"Unpacking Complete: "<<TOTAL_EVTS<<" unpacked and "<<Events_Invalid<<" were invalid"<<endl;
+      } //end of while(add_to_current_event && eye<=TOTAL_EVTS) 
+      
+      //Check to see if the next event in the array is beyond the number of events unpacked
+      if(stage1_counter >= TOTAL_EVTS + 1) {
+	event_build = false;
+	break;
+      } //end of if(stage1_counter == TOTAL_EVENTS + 1)
+    } //end of while(event_build)
+  } //end of if(read_binary==1)
+
+  //Make the time deviations if needed (Likely only a stage 0 thing)
+  if(FitTimeDev) {
+    Make_Time_Deviations(runnum);
+  }
   
+  //Unpacking is finished.  Return the total number of events unpacked and analyzed
   return TOTAL_EVTS;
   
   

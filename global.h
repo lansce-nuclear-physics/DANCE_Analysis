@@ -1,3 +1,10 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  global.h               *// 
+//*  Last Edit: 01/23/18    *//  
+//***************************//
+
 #ifndef GLOBAL_H
 #define GLOBAL_H
 
@@ -25,14 +32,12 @@
 #define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
 #define ProgressInterval 1000000   //Progress bar incriments
 
-#define FITTIMEDEV 0  //this turns on finding time deviations
-
 //File Inputs
 #define TMatrixFile "./Config/TMatrix.txt" 
 #define	DanceMapFile "./Config/DanceMap.txt" 
 #define DMatrixFile "./Config/DetectorMatrix.txt"
 
-//File Output
+//File Input/Output
 #define STAGE0_ROOT "./stage0_root"
 #define STAGE1_ROOT "./stage1_root"
 #define STAGE0_BIN "./stage0_bin"

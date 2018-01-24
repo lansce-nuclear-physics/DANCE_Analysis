@@ -1,3 +1,10 @@
+##*************************##
+##  Christopher J. Prokop  ##
+##  cprokop@lanl.gov       ##
+##  Makefile               ## 
+##  Last Edit: 01/23/18    ##  
+##*************************##
+
 CC=g++
 CXX=g++
 CXXLD=g++

@@ -1,17 +1,35 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  main.cpp               *// 
+//*  Last Edit: 01/23/18    *//  
+//***************************//
+
+//File includes
 #include "global.h"
 #include "main.h"
 #include "unpacker.h"
 #include "analyzer.h"
 
-//#define VERBOSE
-
+//C/C++ includes
 #include <sys/time.h>
 
 using namespace std;
 
 int main(int argc, char *argv[]) {
 
-  //Control Variables
+  //Read in the version information
+  ifstream version_file;
+  version_file.open(".version");
+  
+  string filler, version;
+  version_file >> filler >> version;
+  
+  //Output the version information
+  cout<<"You are Running DANCE Analysis version "<<version<<endl;
+
+
+  //Control Variables that get read in from .cfg files passed along to various functions
   double Crystal_Blocking_Time=0;
   double DEvent_Blocking_Time=0;
   bool Read_Binary=false;
@@ -19,11 +37,10 @@ int main(int argc, char *argv[]) {
   double Coincidence_Window=0;
   bool HAVE_Threshold=false;
   double Energy_Threshold=0.15; //MeV
+  bool FitTimeDev=0;
 
-  string pathtobinary = "./stage0_bin/";
-  string pathtoroot = "./RootFiles/";
-
-  // ./DANCE_Analysis  PathToData  RunNunber  .cfgFile
+  
+  // ./DANCE_Analysis  PathToData  RunNumber  .cfgFile
   if(argc>4) {
     cout<<RED<<"Main [ERROR]: Too many arguments provided.  I just need a path, a run number, and a .cfg file"<<RESET<<endl;
     return -1;
@@ -59,8 +76,11 @@ int main(int argc, char *argv[]) {
       if(item.compare("HAVE_Threshold") == 0) {
 	cfgf>>HAVE_Threshold;
       } 
-       if(item.compare("Energy_Threshold") == 0) {
+      if(item.compare("Energy_Threshold") == 0) {
 	cfgf>>Energy_Threshold;
+      }  
+      if(item.compare("FitTimeDev") == 0) {
+	cfgf>>FitTimeDev;
       } 
     }
     
@@ -71,19 +91,20 @@ int main(int argc, char *argv[]) {
     cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
     return -1;
   }
-
   
    
-  //make the file
+  //make the file handle
   gzFile gz_in;
   
   //Figure out what we are reading in.
-  //MIDAS Files have a .mid or .mid.gz ending and stage0 are .bin or .bin.gz
+  //MIDAS Files have a .mid or .mid.gz ending and staged analysis files are .bin or .bin.gz
 
-    stringstream runname;
-    runname.str();
+  //Name of the midas or bin file
+  stringstream runname;
+  runname.str();
     
-    if(Read_Binary == 0) {
+  //Stage 0
+  if(Read_Binary == 0) {
 
     stringstream midasrunname;
     midasrunname.str();
@@ -110,11 +131,12 @@ int main(int argc, char *argv[]) {
     }
   }
   
-    if(Read_Binary == 1) {
+  //Stage 1
+  if(Read_Binary == 1) {
     
     stringstream binaryrunname;
     binaryrunname.str();
-    binaryrunname << pathtobinary << "stage0_run_" << RunNum << ".bin";
+    binaryrunname << STAGE0_BIN << "/stage0_run_" << RunNum << ".bin";
     cout<<"Main [INFO]: Checking for: "<<binaryrunname.str()<<endl;
     
     //Look for uncompressed .bin files
@@ -137,11 +159,10 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  
   //Make sure after all of that we have a file
   gz_in=gzopen(runname.str().c_str(),"rb");
 
-   //check to see if its open
+  //check to see if its open
   if(!gz_in) {
     cout<<RED<<"Main [ERROR]: No Files for run "<<RunNum<< " Found. Exiting."<<RESET<<endl;
     return -1;
@@ -150,6 +171,7 @@ int main(int argc, char *argv[]) {
   //Initialize Things
   Initialize_Analyzer(Read_Binary, Write_Binary);
 
+  //Name of the output root file
   stringstream rootfilename;
   rootfilename.str();
   
@@ -158,7 +180,7 @@ int main(int argc, char *argv[]) {
     rootfilename << "./stage0_root/Stage0_Histograms_Run_";
     rootfilename << RunNum;
   }
- //stage 1
+  //stage 1
   if(Read_Binary==1) {
     rootfilename << "./stage1_root/Stage1_Histograms_Run_";
     rootfilename << RunNum;
@@ -167,6 +189,7 @@ int main(int argc, char *argv[]) {
   //make the root file  
   TFile *fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),(int)Coincidence_Window,(int)Crystal_Blocking_Time,(int)DEvent_Blocking_Time),"RECREATE");
   
+  //Time profiling stuff
   struct timeval tv;  						// real time  
   double begin, end, time_elapsed;			// start,stop, elapsed time
 
@@ -178,15 +201,17 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
+  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,FitTimeDev);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
   //Write histograms
   Write_Analyzer_Histograms(fout, Read_Binary);
 
+  //Write the root file
   fout->Write();
   cout<<GREEN<<"Main [INFO]: Rootfile Written"<<RESET<<endl;
   
+  //Print the time elapsed for the entire process
   gettimeofday(&tv,NULL);  
   end=tv.tv_sec+(tv.tv_usec/1000000.0);
   time_elapsed = (double)(end-begin); ;

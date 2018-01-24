@@ -1,6 +1,14 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  structures.h           *// 
+//*  Last Edit: 01/23/18    *//  
+//***************************//
+
 #ifndef STRUCTURES_H
 #define STRUCTURES_H
 
+//File includes
 #include "global.h"
 
 // C/C++ includes 
@@ -49,7 +57,7 @@ struct Sclr_t {
   uint32_t scaler[24];
 };
 
-//Digitizer Header
+//Digitizer Header (NOT USED YET)
 struct V1730_Header_t {
   uint32_t dataword_1;
   uint32_t dataword_2;
@@ -57,17 +65,12 @@ struct V1730_Header_t {
   uint32_t dataword_4;
 };
 
-//Channel Aggregate Header
+//Channel Aggregate Header (NOT USED YET)
 struct V1730_ChAgg_Header_t {
   uint32_t dataword_1;
   uint32_t dataword_2;
 };
 
-//Channel Aggregate Footer
-struct V1730_ChAgg_Footer_t {
-  uint32_t dataword_1;
-  uint32_t dataword_2;  
-};
  
 typedef struct {
   uint64_t  position;
@@ -78,92 +81,87 @@ typedef struct {
 } CEVT_BANK;
 
 typedef struct{
-	uint32_t N;
-	CEVT_BANK P[MaxHitsPerT0];
-        short wavelets[MaxHitsPerT0][1024]; // this ties to the wavelets with P
-        short imported_peaks[256][16384]; // this is actually supported channels / supported length of PXXX bank
-        short something[10000]; // this is actually supported channels / supported length of PXXX bank
+  uint32_t N;
+  CEVT_BANK P[MaxHitsPerT0];
+  short wavelets[MaxHitsPerT0][1024]; // this ties to the wavelets with P
+  short imported_peaks[256][16384]; // this is actually supported channels / supported length of PXXX bank
+  short something[10000]; // this is actually supported channels / supported length of PXXX bank
 } test_struct_cevt;
 
 
 typedef struct {
-  uint64_t timestamp;  // timestamp
-  uint16_t Ns;         // number of samples in waveform
-  uint16_t sgate;      // short gate
-  uint16_t lgate;      // long gate
-  // uint16_t baseline;   // baseline
-  uint8_t board;       // board number
-  uint8_t channel;     // channel number
-  //uint16_t wf[300];
-  // uint64_t N;
-  // uint64_t EVTS;
-  double TOF;
-  double Eslow;
-  double Efast;
-  uint16_t ID;
-  uint8_t Valid;
-} DEVT_BANK_wWF;
+  uint64_t timestamp;        // timestamp
+  uint16_t Ns;               // number of samples in waveform
+  uint16_t Ifast;            // short integral
+  uint16_t Islow;            // long integral
+  uint8_t board;             // board number
+  uint8_t channel;           // channel number
+  double TOF;                // Time of Flight in ns
+  double Eslow;              // Calibrated slow integral
+  double Efast;              // Calibrated fast integral
+  uint16_t ID;               // Extracted ID using DANCE Map
+  uint8_t Valid;             // Valid Flag
+} DEVT_BANK;
 
 
 typedef struct {
-  uint16_t sgate;      // short gate
-  uint16_t lgate;      // long gate
-  double TOF;
-  uint8_t ID;   //0 to 161 are dance //241 to 244 are beam monitors //200 is t0
-} DEVT_OUT;
+  uint16_t Ifast;            // short integral
+  uint16_t Islow;            // long integral
+  double TOF;                // Time-Of-Flight in ns
+  uint8_t ID;                // ID from DANCE Map 0 to 161 are dance //241 to 244 are beam monitors //200 is t0
+} DEVT_STAGE1;
 
 
 // DANCE event
 typedef struct{
-  double En;
-  double En_corr;
-  double tof[162];
-  double tof_corr[162];
-  uint16_t Crystal_mult;
-  uint16_t Cluster_mult;
-  uint16_t Crystal_ID[162];
-  uint16_t Cluster_ID[162];
-  uint16_t Ifast[162];
-  uint16_t Islow[162];
-  double Ecluster[162];
-  double Ecrystal[162];
-  double ESum;
-  uint16_t TimeCard;
-  uint16_t Valid;
+  double En;                 //Neutron energy from TOF
+  double En_corr;            //Neutron energy from TOF corrected for moderator function
+  double tof[162];           //Neutron Time-Of-Flight from each crystal
+  double tof_corr[162];      //Neutron Time-Of-Flight from each crystal corrected for moderator function
+  uint16_t Crystal_mult;     //DANCE crystal multiplicity 
+  uint16_t Cluster_mult;     //DANCE cluster multiplicity 
+  uint16_t Crystal_ID[162];  //DANCE crystal ID
+  uint16_t Cluster_ID[162];  //DANCE cluster ID
+  uint16_t Ifast[162];       //Uncalibrated fast integral
+  uint16_t Islow[162];       //Uncalibrated slow integral
+  double Ecluster[162];      //Calibrated cluster energy (From sum of crystal ESlow in the cluster)
+  double Ecrystal[162];      //Calibrated crystal energy from ESlow
+  double ESum;               //Total DANCE Event energy from sum of crystal ESlow in the event 
+  uint16_t Valid;            //Valid event flag
 } DANCE_Event;
 
 
 // U235 Beam Monitor event
 typedef struct{
-  double En;
-  double En_corr;
-  double tof;
-  double tof_corr;
-  uint16_t Ifast;
-  uint16_t Islow;
-  uint16_t Valid;
+  double En;                 //Neutron energy from TOF
+  double En_corr;            //Neutron energy from TOF corrected for moderator function
+  double tof;                //Neutron Time-Of-Flight 
+  double tof_corr;           //Neutron Time-Of-Flight corrected for moderator function
+  uint16_t Ifast;            //Uncalibrated fast integral  
+  uint16_t Islow;            //Uncalibrated slow integral 
+  uint16_t Valid;            //Valid event flag
 } U235_Event;
 
 // He3 Beam Monitor event
 typedef struct{
-  double En;
-  double En_corr;
-  double tof;
-  double tof_corr;
-  uint16_t Ifast;
-  uint16_t Islow;
-  uint16_t Valid;
+  double En;                 //Neutron energy from TOF
+  double En_corr;            //Neutron energy from TOF corrected for moderator function
+  double tof;                //Neutron Time-Of-Flight 
+  double tof_corr;           //Neutron Time-Of-Flight corrected for moderator function
+  uint16_t Ifast;            //Uncalibrated fast integral  
+  uint16_t Islow;            //Uncalibrated slow integral 
+  uint16_t Valid;            //Valid event flag
 } He3_Event;
 
 // Li6 Beam Monitor event
 typedef struct{
-  double En;
-  double En_corr;
-  double tof;
-  double tof_corr;
-  uint16_t Ifast;
-  uint16_t Islow;
-  uint16_t Valid;
+  double En;                 //Neutron energy from TOF
+  double En_corr;            //Neutron energy from TOF corrected for moderator function
+  double tof;                //Neutron Time-Of-Flight 
+  double tof_corr;           //Neutron Time-Of-Flight corrected for moderator function
+  uint16_t Ifast;            //Uncalibrated fast integral  
+  uint16_t Islow;            //Uncalibrated slow integral 
+  uint16_t Valid;            //Valid event flag
 } Li6_Event;
 
 

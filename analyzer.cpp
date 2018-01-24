@@ -1,9 +1,20 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  analyzer.cpp           *// 
+//*  Last Edit: 01/23/18    *//  
+//***************************//
+
+//File includes
 #include "analyzer.h"
+
+//C/C++ Includes
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <math.h>
 
+//ROOT Includes
 #include "TRandom.h"
 #include "TFile.h"
 #include "TH1.h"
@@ -18,7 +29,7 @@ using namespace std;
 ofstream outputbinfile;
 
 //Structure to write data
-DEVT_OUT devt_out;
+DEVT_STAGE1 devt_out;
 
 //Graphs of TOF Corrections
 TGraph *gr_DANCE_TOF_Corr;
@@ -152,6 +163,55 @@ uint32_t T0_Counter=0;
 double Detector_Load[100000000];
 uint32_t DANCE_Entries_per_T0=0;
 uint32_t DANCE_Events_per_T0=0;
+
+
+//This function goes through and makes the run-by-run time deviations
+int Make_Time_Deviations(int RunNumber) {
+  
+  cout<<"Analyzer [INFO]: Making Time Deviations"<<endl;
+ 
+  //Stringstream for the outpout file name of td_out
+  stringstream outfilename;
+  outfilename.str();
+  outfilename << "./TimeDeviations/TimeDeviations_Run_" << RunNumber << ".txt";
+  
+  //initialize the time deviation to 0.  Its cumulative...
+  double time_deviation=0;
+
+  //open the time deviations text file
+  ofstream td_out;
+  td_out.open(outfilename.str().c_str());
+  
+  //First detector has no offest
+  td_out <<"0   \t 0 \n";
+    
+  //  cout<<"Total Indices: "<<totalindex<<endl;
+
+  //Fill in the rest
+  for(int eye=0; eye<totalindex; eye++) {
+    cout<<index1[eye]<<"  "<<index2[eye]<<endl;
+    
+    //Set the range of the Time Deviations 2D histogram to the proper bin 
+    hTimeDev->GetYaxis()->SetRangeUser(index1[eye],index1[eye]+1);
+    hTimeDev->GetXaxis()->SetRangeUser(-500,500);
+
+    //Iteratively Close in on the proper range 
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    cout<<hTimeDev->GetMean()<<"  "<<time_deviation<<endl;
+    time_deviation += hTimeDev->GetMean();
+    td_out <<index2[eye]<<"   \t"<<time_deviation<<"\n";
+  }
+  
+  cout<<GREEN<<"Analyzer [INFO]: Made Time Deviations for Run: "<<RunNumber<<RESET<<endl;
+  return 0;
+}
+
+
+
 
 //This function fetches the TOF Correction plots for the moderation time 
 int Read_Moderation_Time_Graphs() {
@@ -527,7 +587,7 @@ int Create_Analyzer_Histograms(bool read_binary) {
   hLi6_TOF = new TH1D("Li6_TOF","Li6_TOF",600000,0,60000000);  //Raw TOF for Li6 Monitor
   hLi6_TOF_Corr = new TH1D("Li6_TOF_Corrected","Li6_TOF_Corrected",600000,0,60000000); //Corrected TOF for Li6 Monitor
   hLi6_PulseHeight = new TH1D("Li6_PulseHeight","Li6_PulseHeight",10000,0,100000);  //Energy for Li6 Monitor
-  hLi6_PSD = new TH2D("Li6_PSD","Li6_PSD",600,0,60000,600,0,60000);  //sgate vs late for Li6 Monitor
+  hLi6_PSD = new TH2D("Li6_PSD","Li6_PSD",600,0,60000,600,0,60000);  //Ifast vs late for Li6 Monitor
   hLi6_En = new TH1D("Li6_En","Li6_En",NEbins,x);  //Neutron Energy for Li6 Monitor 
   hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
 
@@ -670,7 +730,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
 }
 
 
-int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold) {
+int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold) {
 
   int Crystal_Mult=0;
 
@@ -704,8 +764,8 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     if(id_eye<162) {
 
       //Apply Energy Calibration
-      double temp_slow = eventvector[eye].lgate + gRandom->Uniform(0,1);
-      double temp_fast = eventvector[eye].sgate + gRandom->Uniform(0,1);
+      double temp_slow = eventvector[eye].Islow + gRandom->Uniform(0,1);
+      double temp_fast = eventvector[eye].Ifast + gRandom->Uniform(0,1);
       
       eventvector[eye].Eslow = 0.001*(temp_slow*temp_slow*slow_quad[eventvector[eye].ID] +
 				      temp_slow*slow_slope[eventvector[eye].ID] +
@@ -791,7 +851,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
 	
 	if(Alpha_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
 	  //Fill some Calibration Spectra
-	  hAlpha->Fill(eventvector[eye].lgate, eventvector[eye].ID,1);
+	  hAlpha->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	  hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
 	}
 	
@@ -799,8 +859,8 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
 	  //Make a DANCE Event
 	  devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
 	  devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
-	  devent.Islow[Crystal_Mult] = eventvector[eye].lgate;  //Crystal long integral
-	  devent.Ifast[Crystal_Mult] = eventvector[eye].sgate;  //Crystal short integral
+	  devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
+	  devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
 	  devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
 	  devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
 	  devent.tof[Crystal_Mult] = eventvector[eye].TOF; //time of flight for crystal hit
@@ -866,24 +926,24 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     //He3
     if(id_eye == 241) {
       he3event.tof = eventvector[eye].TOF;
-      he3event.Ifast = eventvector[eye].sgate;
-      he3event.Islow = eventvector[eye].lgate;
+      he3event.Ifast = eventvector[eye].Ifast;
+      he3event.Islow = eventvector[eye].Islow;
       he3event.Valid = 1; //he3 event now valid
     }
     
-     //U235
+    //U235
     if(id_eye == 243) {
       u235event.tof = eventvector[eye].TOF;
-      u235event.Ifast = eventvector[eye].sgate;
-      u235event.Islow = eventvector[eye].lgate;
+      u235event.Ifast = eventvector[eye].Ifast;
+      u235event.Islow = eventvector[eye].Islow;
       u235event.Valid = 1; //u235 event now valid
     }
 
     //Li6
     if(id_eye == 244) {
       li6event.tof = eventvector[eye].TOF;
-      li6event.Ifast = eventvector[eye].sgate;
-      li6event.Islow = eventvector[eye].lgate;
+      li6event.Ifast = eventvector[eye].Ifast;
+      li6event.Islow = eventvector[eye].Islow;
       li6event.Valid = 1; //li6 event now valid
     }
 
@@ -893,11 +953,11 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
 
     //Write to Binary
     if(write_binary==1 && outputbinfile.is_open()) {
-      devt_out.sgate = eventvector[eye].sgate;
-      devt_out.lgate = eventvector[eye].lgate;
+      devt_out.Ifast = eventvector[eye].Ifast;
+      devt_out.Islow = eventvector[eye].Islow;
       devt_out.TOF = eventvector[eye].TOF;
       devt_out.ID = eventvector[eye].ID;
-      outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_OUT));
+      outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_STAGE1));
     }    
   } //end of eventvector loop
   
@@ -1089,7 +1149,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     } 
   }
   
-//He3 Beam Monitor Events
+  //He3 Beam Monitor Events
   if(he3event.Valid == 1) {
     if(last_t0_timestamp > 0) {
       //Fill Pulse Height Spectrum
@@ -1123,7 +1183,7 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
     } 
   }
 
-//Li6 Beam Monitor Events
+  //Li6 Beam Monitor Events
   if(li6event.Valid == 1) {
     if(last_t0_timestamp > 0) {
       //Fill Pulse Height Spectrum
@@ -1157,8 +1217,6 @@ int Analyze_Data(std::vector<DEVT_BANK_wWF> eventvector, bool read_binary, bool 
       hLi6_En_Corr->Fill(li6event.En_corr);
     } 
   }
-
-  
 
   //Done with Event Processing
 

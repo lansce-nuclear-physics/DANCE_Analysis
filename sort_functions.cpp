@@ -1,10 +1,19 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  sort_functions.cpp     *// 
+//*  Last Edit: 01/23/18    *//  
+//***************************//
+
+//File includes
 #include "sort_functions.h"
 
+//C/C++ includes
 #include <iostream>
 
 // To heapify a subtree rooted with node i which is
 // an index in arr[]. n is size of heap
-void heapify(DEVT_BANK_wWF arr[], int n, int i) {
+void heapify(DEVT_BANK arr[], int n, int i) {
   int largest = i;  // Initialize largest as root
   int l = 2*i + 1;  // left = 2*i + 1
   int r = 2*i + 2;  // right = 2*i + 2
@@ -27,8 +36,7 @@ void heapify(DEVT_BANK_wWF arr[], int n, int i) {
 }
 
 // main function to do heap sort
-//void heapSort(std::deque<DEVT_BANK_wWF> arr, int n)
-void heapSort(DEVT_BANK_wWF arr[], int n) {
+void heapSort(DEVT_BANK arr[], int n) {
   // Build heap (rearrange array)
   for (int i = n / 2 - 1; i >= 0; i--)
     heapify(arr, n, i);
@@ -43,10 +51,4 @@ void heapSort(DEVT_BANK_wWF arr[], int n) {
   }
 }
 
-/* A utility function to print array of size n */
-//void printArray(std::deque<DEVT_BANK_wWF> arr, int n)
-void printArray(DEVT_BANK_wWF arr[], int n) {
-  for (int i=0; i<n; ++i)
-    std::cout << arr[i].TOF << " ";
-  std::cout << "\n";
-}
+/* STAGE 0 SORTING */

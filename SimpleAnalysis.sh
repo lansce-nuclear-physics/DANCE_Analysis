@@ -23,20 +23,23 @@ PATHTODATA=hygelac14
 #for i in `seq 64693 64833`;  #Cu63
 
 #for i in `seq 60409 60451`;  #Au197 4mm
-#for i in `seq 60572 60584`;  #Au197 4mm
+for i in `seq 60572 60584`;  #Au197 4mm
 #for i in `seq 63590 63649`;  #Au197 4mm
 #for i in `seq 68104 68126`;  #Au197 4mm
 
 #for i in `seq 59715 59842`;  #Pb208 
 #for i in `seq 60622 60811`;  #Pb208 
 #for i in `seq 62695 62735`;  #Pb208 
+
 #for i in `seq 63650 64136`;  #Pb208 
+#for i in `seq 63865 63870`;  #Pb208 
+
 #for i in `seq 64834 64987`;  #Pb208 
-for i in `seq 68040 68103`;  #Pb208 
+#for i in `seq 68040 68103`;  #Pb208 
 
 do
     echo Processing Run: $i;
-    ./DANCE_Analysis $PATHTODATA $i stage0.cfg;
+#    ./DANCE_Analysis $PATHTODATA $i stage0.cfg;
     ./DANCE_Analysis $PATHTODATA $i stage1.cfg;
 
 done
