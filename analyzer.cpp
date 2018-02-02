@@ -947,7 +947,6 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       li6event.Valid = 1; //li6 event now valid
     }
 
-
     //Once done the time is the last timestamp
     last_timestamp[id_eye] = current_timestamp[id_eye];
 

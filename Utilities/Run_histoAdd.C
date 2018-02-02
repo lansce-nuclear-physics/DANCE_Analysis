@@ -1,5 +1,14 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  Run_histoAdd.C         *// 
+//*  Last Edit: 01/25/18    *//  
+//***************************//
+
+//ROOT Includes
 #include "TMath.h"
 
+//C/C++ Includes
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -33,12 +42,12 @@ void Run_histoAdd(string Isotope, int Start, int End) {
   
   cout<<text.str()<<endl;
 
-   system(text.str().c_str());
+  system(text.str().c_str());
 }
 
 void Script_histoAdd() {
   
- //starting time
+  //starting time
   struct timeval tv;
   double begin, end, time_elapsed;  // start,stop, elapsed time
 
@@ -51,17 +60,15 @@ void Script_histoAdd() {
   Run_histoAdd("Fe57",59862,60363);
   */
   
-  /*
+ 
   //Pb208
   Run_histoAdd("Pb208",59715,59842);
   Run_histoAdd("Pb208",60622,60811);
   Run_histoAdd("Pb208",62695,62735);
-  Run_histoAdd("Pb208",63650,64136);
-  */
+  // Run_histoAdd("Pb208",63650,64136);
   Run_histoAdd("Pb208",64834,64987);
-  /*
   Run_histoAdd("Pb208",68040,68103);
-  */
+ 
   
   /*
   //Au197 4mm
@@ -70,19 +77,15 @@ void Script_histoAdd() {
   Run_histoAdd("Au197",63590,63649);
   Run_histoAdd("Au197",68104,68126);
   */
-
  
-  /* 
   //Cu65
   Run_histoAdd("Cu65",60834,61251);
   Run_histoAdd("Cu65",63015,63589);
   Run_histoAdd("Cu65",64137,64692);
   Run_histoAdd("Cu65",64989,65265);
-  */
-
   
   //Cu63
-  //Run_histoAdd("Cu63",64693,64833);
+  Run_histoAdd("Cu63",64693,64833);
   
   /*
   //Co59
@@ -92,7 +95,7 @@ void Script_histoAdd() {
   Run_histoAdd("Co59_329p4mg",68128,68900);
   */ 
 
- cout<<"Done!"<<endl;
+  cout<<"Done!"<<endl;
   gettimeofday(&tv,NULL);  
   end=tv.tv_sec+(tv.tv_usec/1000000.0);
   time_elapsed = (double)(end-begin);
@@ -100,7 +103,7 @@ void Script_histoAdd() {
 
 }
 
-int Test(string Isotope, int Start, int End, int N) {
+int Merge_histoAdd(string Isotope, int Start, int End, int N) {
 
   //starting time
   struct timeval tv;
@@ -124,39 +127,39 @@ int Test(string Isotope, int Start, int End, int N) {
   }
 
   if(N > 5) {
-    cout<<"There will be more base level sorts than cores..."<<endl;
+    cout<<"There will be more base level adds than cores..."<<endl;
     N=5;
     cout<<"N is now: "<<N<<endl;
   }
   else {
     //Check to see if the requested histoadd depth is reasonable
-    int base_level_sorts = TMath::Power(2,N);
-    int runs_per_blsort = (int)nruns/base_level_sorts;
+    int base_level_adds = TMath::Power(2,N);
+    int runs_per_bladd = (int)nruns/base_level_adds;
 
     //Loop until reasonable
     bool check_add_levels=true;
     
     while(check_add_levels) {
-      if(runs_per_blsort < 2.0) {
+      if(runs_per_bladd < 2.0) {
 	cout<<"Warning there are less than two runs per first level histoadd..."<<endl;
-	cout<<"Reducing sort level by 1"<<endl;
+	cout<<"Reducing add level by 1"<<endl;
 	N--;
 	cout<<"N is now: "<<N<<endl;
-	base_level_sorts = TMath::Power(2,N);
-	runs_per_blsort = (int)nruns/base_level_sorts;
+	base_level_adds = TMath::Power(2,N);
+	runs_per_bladd = (int)nruns/base_level_adds;
       }
       else {
 	check_add_levels=false;
       }
     }
 
-    cout<<"Runs per BL Sort: "<<runs_per_blsort<<endl;
+    cout<<"Runs per BL Add: "<<runs_per_bladd<<endl;
 
-    //Number of base level sorts needing to be done
-    int nblsorts = (int)TMath::Power(2,N);
+    //Number of base level adds needing to be done
+    int nbladds = (int)TMath::Power(2,N);
      
     //Runs per Base Level Add
-    runs_per_blsort = (int)nruns/nblsorts;
+    runs_per_bladd = (int)nruns/nbladds;
     
     stringstream command_text[100];
     stringstream outfilenames[100];
@@ -173,24 +176,22 @@ int Test(string Isotope, int Start, int End, int N) {
 
     int nblcounter=0;
     //deal with the first level first
-    for(int eye=0; eye<nblsorts; eye++) {
-      first_run[eye] = Start + nblcounter*runs_per_blsort+1;
-      last_run[eye] = Start + (nblcounter+1)*runs_per_blsort;
+    for(int eye=0; eye<nbladds; eye++) {
+      first_run[eye] = Start + nblcounter*runs_per_bladd+1;
+      last_run[eye] = Start + (nblcounter+1)*runs_per_bladd;
       nblcounter++;
       
     }
     //make sure the first and last run is correct
     first_run[0]=Start;
-    last_run[nblsorts-1]=End;
+    last_run[nbladds-1]=End;
 
     //Do the base level add
-    for(int eye=0; eye<nblsorts; eye++) {
-      //      cout<<eye<<"  "<<first_run[eye]<<"  "<<last_run[eye]<<endl;
+    for(int eye=0; eye<nbladds; eye++) {
       outfilenames[eye].str();
       outfilenames[eye] << "Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[eye]<<"_"<<last_run[eye]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
       
       command_text[eye].str();
-      //command_text[eye] << "xterm -hold -e echo ";
       command_text[eye] << " xterm -e histoAdd ";
       command_text[eye] << outfilenames[eye].str()<<" ";
 
@@ -228,14 +229,11 @@ int Test(string Isotope, int Start, int End, int N) {
 	while ( std::getline(fstatus, unused) )
 	  ++numLines;
 	
-	//cout<<eye<<" "<<numLines<<endl;
 	if(numLines > 2) {
 	  nrunning++;
 	}
 	fstatus.close();
       }
-
-      //  cout<<nrunning<<" histoAdds running"<<endl;
       
       if(nrunning==0) {
 	break;
@@ -257,14 +255,7 @@ int Test(string Isotope, int Start, int End, int N) {
     for(int eye=N-1; eye>=0; eye--) {
       cout<<TMath::Power(2,eye)<<"  Level Counter: "<<level_counter<<endl;
       
-      for(int jay=0; jay<TMath::Power(2,eye); jay++) {
-	//	cout<<first_run[2*jay*level_counter]<<"  "<<last_run[2*(jay+1)*(level_counter)-1]<<endl;
-	//	cout<<2*jay*level_counter<<"  "<<2*(jay)*level_counter+level_counter-1<<endl;
-	//	cout<<2*(jay)*level_counter+level_counter<<"  "<<2*(jay+1)*level_counter-1<<endl;
-	//	cout<<first_run[2*jay*level_counter]<<"  "<<last_run[2*jay*level_counter+level_counter-1]<<endl;
-	//	cout<<first_run[2*jay*level_counter+level_counter]<<"  "<<last_run[2*(jay+1)*level_counter]<<endl;
-	//	cout<<endl;	
-	
+      for(int jay=0; jay<TMath::Power(2,eye); jay++) {	
 	first_run[add_counter] = first_run[2*jay*level_counter];
 	last_run[add_counter] = last_run[2*(jay+1)*level_counter-1];
 	
@@ -273,7 +264,7 @@ int Test(string Isotope, int Start, int End, int N) {
 	
 	command_text[add_counter].str();
 	command_text[add_counter] << "xterm -e histoAdd ";
-	//  command_text[add_counter] << "xterm -e -hold echo ";
+	//command_text[add_counter] << "xterm -e -hold echo ";
 	command_text[add_counter] << outfilenames[add_counter].str()<<" ";
 	
 	add_status_fname[add_counter].str();
@@ -314,15 +305,12 @@ int Test(string Isotope, int Start, int End, int N) {
 	  while ( std::getline(fstatus, unused) )
 	    ++numLines;
 	  
-	  //cout<<kay<<" "<<numLines<<endl;
 	  if(numLines > 2) {
 	    nrunning++;
 	  }
 	  fstatus.close();
 	}
-	
-	//	cout<<nrunning<<" histoAdds running"<<endl;
-	
+       
 	if(nrunning==0) {
 	  break;
 	}
@@ -372,30 +360,29 @@ int Test(string Isotope, int Start, int End, int N) {
 }
 
 
-void Launch_Test() {
+void Launch_Merge_histoAdd() {
 
   //Pb208
-  //  Test("Pb208",59715,59842,4);
-  //  Test("Pb208",60622,60811,4);
-  //  Test("Pb208",62695,62735,4);
-  //  Test("Pb208",63650,64136,4);
-  //  Test("Pb208",64834,64987,4);
-  //  Test("Pb208",68040,68103,4);
+  // Merge_histoAdd("Pb208",59715,59842,4);
+  // Merge_histoAdd("Pb208",60622,60811,4);
+  // Merge_histoAdd("Pb208",62695,62735,4);
+  Merge_histoAdd("Pb208",63650,64136,4);
+  // Merge_histoAdd("Pb208",64834,64987,4);
+  // Merge_histoAdd("Pb208",68040,68103,4);
+
 
   //Au197
-  //  Test("Au197",60409,60451,2);
-  //  Test("Au197",60572,60584,2);
-  //  Test("Au197",63590,63649,2);
-    Test("Au197",68104,68126,2);
+  //  Merge_histoAdd("Au197",60409,60451,2);
+  //  Merge_histoAdd("Au197",60572,60584,2);
+  //  Merge_histoAdd("Au197",63590,63649,2);
+  //  Merge_histoAdd("Au197",68104,68126,2);
 
   //Cu65
-  //  Test("Cu65",60834,61251,4);
-  //  Test("Cu65",63015,63589,4);
-  //  Test("Cu65",64137,64692,4);
-  //  Test("Cu65",64989,65265,3);
-
-
+  //Merge_histoAdd("Cu65",60834,61251,4);
+  //Merge_histoAdd("Cu65",63015,63589,4);
+  //Merge_histoAdd("Cu65",64137,64692,4);
+  //Merge_histoAdd("Cu65",64989,65265,3);
 
   //Cu63
-  // Test("Cu63",64693,64833,3);
+  //Merge_histoAdd("Cu63",64693,64833,3);
 }

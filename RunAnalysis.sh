@@ -2,7 +2,7 @@
 #set -x
 
 #where the data are
-input=hygelac21/
+input=/mnt/hygelac-data/21/dance/caen2015/
 
 #Get the start and end run from the command line args
 startrun=$1;
