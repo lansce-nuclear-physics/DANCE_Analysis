@@ -2,7 +2,7 @@
 ##  Christopher J. Prokop  ##
 ##  cprokop@lanl.gov       ##
 ##  Makefile               ## 
-##  Last Edit: 01/23/18    ##  
+##  Last Edit: 02/07/18    ##  
 ##*************************##
 
 CC=g++
@@ -13,7 +13,7 @@ CCLD=gcc
 CXXFLAGS= -g -Wall -I -I$  -pthread -fPIC -DPIC
 CCFLAGS=$(CXXFLAGS)
 
-ROOTSYS = /opt64/root/new/
+#ROOTSYS = /opt64/root/new/
 
 ROOTCFLAGS   := $(shell ${ROOTSYS}/bin/root-config --cflags)
 ROOTGLIBS    := $(shell ${ROOTSYS}/bin/root-config --glibs)
