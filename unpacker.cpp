@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 02/07/18    *//  
 //***************************//
 
 //File includes
@@ -60,7 +60,7 @@ int MapID[20][20];
 
 //Functions
 int Make_DANCE_Map() {
-  cout << "Unpacker [INFO]: Reading DANCE Map" << endl;
+  cout << "Unpacker [INFO]: Reading "<<DanceMapFile<<endl;
   
   ifstream map;
   map.open(DanceMapFile);
@@ -130,9 +130,25 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev) {
 }
 
 
-int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev) {
+int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev) {
 
-  cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<"   "<<BufferDepth<<" seconds buffer depth"<<endl;
+  cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl<<endl;
+
+  cout<<"Buffer Depth: "<<BufferDepth<<" seconds"<<endl;
+  cout<<"Coincidence Window: "<<CoincidenceWindow<<" ns"<<endl;
+  cout<<"Crystal Blocking Time: "<<Crystal_Blocking_Time<<" ns"<<endl;
+  cout<<"DANCE Event Blocking Time: "<<DEvent_Blocking_Time<<" ns"<<endl;
+  
+  if(HAVE_Threshold) {
+    cout<<"Energy Thresholds are ON and set to: "<<Energy_Threshold<<" MeV"<<endl;
+  }
+  else {
+    cout<<"Energy Thresholds are OFF"<<endl;
+  }
+  if(FitTimeDev) {
+    cout<<"Time Deviations will be determined following analysis"<<endl;
+  }
+  cout<<endl;
   
   //initialize DANCE Map
   Make_DANCE_Map();
@@ -247,6 +263,8 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
 
 #ifdef Unpacker_Verbose
 	cout<<"Type: "<<head.fEventId<<endl;
+	cout<<"Size: "<<head.fDataSize<<endl;     ///< event size in bytes
+	cout<<"TimeStamp "<<head.fTimeStamp<<endl;    ///< event timestamp in seconds
 #endif
 	
 	if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
@@ -791,7 +809,7 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
       }
       
       gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
-      gzseek(gz_in,devt_padding,SEEK_CUR);
+      // gzseek(gz_in,devt_padding,SEEK_CUR);
       
       if(gzret!=0) {
 	
@@ -846,6 +864,8 @@ int Unpack_Data(gzFile gz_in, double begin, int runnum, bool read_binary, bool w
     cout<<"Unpacker [INFO]: Time Sorting"<<endl;
     heapSort(db_arr, TOTAL_EVTS);
     cout<<GREEN<<"Unpacker [INFO]: Time Sort Complete"<<RESET<<endl;
+
+    cout<<"Unpacker [INFO]: Starting Analysis"<<endl;
 
     uint64_t stage1_counter=0;  //keep track of entries sorted into events     
     bool event_build =true;  //initilize bool to do eventbuilding

@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 02/07/18    *//  
 //***************************//
 
 //File includes
@@ -79,6 +79,10 @@ TH1D *hTOF_Corr; //TOF for dance events
 //Alpha Spectra
 TH2D *hAlpha;
 TH2D *hAlphaCalib;
+
+//Gamma Spectra
+TH2D *hGamma;
+TH2D *hGammaCalib;
 
 //3D Histograms
 TH3F *En_Esum_Mcl;
@@ -433,7 +437,7 @@ int Read_DMatrix() {
 
   ifstream matrix_in(DMatrixFile);
   
-  cout <<"Analyzer [INFO]: Reading in a Detector Matrix" << endl;
+  cout <<"Analyzer [INFO]: Reading "<<DMatrixFile<<endl;
   
   if(matrix_in.is_open()) {
     for(int eye=0; eye<167; eye++){
@@ -540,6 +544,10 @@ int Create_Analyzer_Histograms(bool read_binary) {
   //Energy Histograms
   ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
   ADC_calib_Invalid=new TH2D("ADC_calib_Invalid","ADC_calib_Invalid",800,0.,16.,1000,0.,10.);
+  
+  //Gamma Histograms
+  hGamma = new TH2D("hGamma","hGamma",1500,0,30000,162,0,162);
+  hGammaCalib = new TH2D("hGammaCalib","hGammaCalib",2000,0.0,20.0,162,0,162);
 
   //Alpha Histograms
   hAlpha = new TH2D("hAlpha","hAlpha",1500,0,30000,162,0,162);
@@ -650,6 +658,9 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
   
   hAlpha->Write();
   hAlphaCalib->Write();
+
+  hGamma->Write();
+  hGammaCalib->Write();
 
   Alpha_Gate->Write();
   Gamma_Gate->Write();
@@ -856,6 +867,11 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	}
 	
 	if( Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
+
+	  //Fill some Calibration Spectra
+	  hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
+	  hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+	  
 	  //Make a DANCE Event
 	  devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
 	  devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????

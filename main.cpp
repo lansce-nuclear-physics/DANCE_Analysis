@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  main.cpp               *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 02/07/18    *//  
 //***************************//
 
 //File includes
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     }
     
     cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
-    cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<"  "<<Crystal_Blocking_Time<<"  "<<DEvent_Blocking_Time<<"  "<<HAVE_Threshold<<"  "<<Energy_Threshold<<endl;
+    // cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<"  "<<Crystal_Blocking_Time<<"  "<<DEvent_Blocking_Time<<"  "<<HAVE_Threshold<<"  "<<Energy_Threshold<<endl;
   }
   else {
     cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
