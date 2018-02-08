@@ -28,7 +28,6 @@ int main(int argc, char *argv[]) {
   //Output the version information
   cout<<"You are Running DANCE Analysis version "<<version<<endl;
 
-
   //Control Variables that get read in from .cfg files passed along to various functions
   double Crystal_Blocking_Time=0;
   double DEvent_Blocking_Time=0;
