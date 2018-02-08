@@ -879,7 +879,6 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
 	  devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
 	  devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
-	  devent.tof[Crystal_Mult] = eventvector[eye].TOF; //time of flight for crystal hit
 	  devent.ESum += eventvector[eye].Eslow; //ESum 
 	  devent.Crystal_mult++;
 	  devent.Valid=1;  //event is now valid
