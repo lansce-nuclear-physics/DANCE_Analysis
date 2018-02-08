@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 02/07/18    *//  
+//*  Last Edit: 02/08/18    *//  
 //***************************//
 
 //File includes
@@ -84,6 +84,22 @@ TH2D *hAlphaCalib;
 TH2D *hGamma;
 TH2D *hGammaCalib;
 
+//QGated 3D Histograms;
+
+//Flag to turn on the QGated spectra
+bool QGated_Spectra = true;
+
+//This sets the number of QGates
+const int NQGates = 3;
+
+//This defines the Qgates for the En_Ecl_Mcl QGated spectra
+double QGates[2*NQGates] = {6.5,7.0,   //QGate 1
+			    6.5,7.5,   //QGate 2
+			    6.5,6.7};  //QGate 3
+
+TH3F *En_Ecl_Mcl_QGated[NQGates];
+
+
 //3D Histograms
 TH3F *En_Esum_Mcl;
 TH3F *En_Esum_Mcr;
@@ -161,13 +177,11 @@ double slow_quad[200];
 double fast_slope[200];
 double fast_offset[200];
 
-
 //Diagnostics
 uint32_t T0_Counter=0;
 double Detector_Load[100000000];
 uint32_t DANCE_Entries_per_T0=0;
 uint32_t DANCE_Events_per_T0=0;
-
 
 //This function goes through and makes the run-by-run time deviations
 int Make_Time_Deviations(int RunNumber) {
@@ -552,9 +566,7 @@ int Create_Analyzer_Histograms(bool read_binary) {
   //Alpha Histograms
   hAlpha = new TH2D("hAlpha","hAlpha",1500,0,30000,162,0,162);
   hAlphaCalib = new TH2D("hAlphaCalib","hAlphaCalib",500,0.0,5.0,162,0,162);
-  
-  
-  
+    
   //Physics Histograms
   double x[5000];
   int NEbins=0;
@@ -615,7 +627,16 @@ int Create_Analyzer_Histograms(bool read_binary) {
     
     Esum_Eg_Mcl=new TH3F("Esum_Eg_Mcl","Esum_Eg_Mcl where Eg is Ecluster",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
     Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
-  
+
+
+    if(QGated_Spectra) {
+      
+      for (int kay=0; kay<NQGates; kay++) {
+	En_Ecl_Mcl_QGated[kay]=new TH3F(Form("En_Ecl_Mcl_ESum_Gated_%d",kay),
+					Form("En_Ecl_Mcl_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+      }
+    }
   }
 
   cout<<GREEN<<"Analyzer [INFO]: Created Histograms"<<RESET<<endl;
@@ -677,7 +698,13 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
 
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
-  }
+
+    if(QGated_Spectra) {
+      for (int kay=0; kay<NQGates; kay++) {
+	En_Ecl_Mcl_QGated[kay]->Write();
+      }
+    }
+  } //End check for stage 1
 
 
   //Beam Monitors
@@ -1120,12 +1147,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
       hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
       
-      // TH3F *En_Eg_Mcl; // this should have a Qgate on it
-      // TH3F *En_Eg_Mcr; // this should have a Qgate on it
-      
-      //  TH3F *Esum_Eg_Mcl->Fill(devent.ESum,devedevent.Cluster_mult);; // Eg is Ecluster here
-      //   TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
-    
+      //Loop over the cluster mult
+      for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
+	for(int kay=0; kay<NQGates; kay++) {
+	  if(devent.ESum > QGates[kay*2] && devent.ESum < QGates[kay*2+1]) {
+	    En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
+	  } //Done Checking QGates
+	} //Done Looping over QGates
+      } //Done looping over cluster mult
     }
   } //Done checking for stage 1
   
