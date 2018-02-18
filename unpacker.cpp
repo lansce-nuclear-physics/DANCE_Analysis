@@ -50,7 +50,7 @@ using namespace std;
 //define CheckTheDeque
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
-//#define Scaler_Verbose
+#define Scaler_Verbose
 
 //global unpacker variables
 double TimeDeviations[200];
@@ -219,10 +219,14 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   double time_elapsed_old; //Previous elapsed time
   
   //Scaler Variables for caen2018 format
-  struct timeval timevalue;      //Time at which scalers were recorded
-  uint32_t Digitizer_Rates[20];  //Digitizer read rates in bytes per second
-  uint16_t ADC_Temp[20][16];     //ADC Temps in degrees C
-  
+  struct timeval timevalue;          //Time at which scalers were recorded
+  uint32_t Digitizer_Rates[20];      //Digitizer read rates in bytes per second
+  uint16_t ADC_Temp[20][16];         //0x1nA8 ADC Temps in degrees C
+  uint32_t Channel_Status[20][16];   //0x1n88 Channel status registers
+  uint32_t Acquisition_Status[20];   //0x8104 Acquisition Status
+  uint32_t Failure_Status[20];       //0x8178 Board Failure Status
+  uint32_t Readout_Status[20];       //0xEF04 Readout Status
+
   //waveform
   vector<uint16_t> waveform;
 
@@ -566,108 +570,157 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 #endif    
 	  
 	    TotalBankSize = bhead.fDataSize;
-      
-	    //Read the time bank
-	    gzret=gzread(gz_in,&bank,sizeof(Bank_t));
-	    TotalBankSize-=sizeof(Bank_t);
-	    
-#ifdef Scaler_Verbose
-	    cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
-	    cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
-	    cout << dec << bank.fType << endl;
-	    cout << dec << bank.fDataSize << endl;
-#endif
-	    //see if data is on an 8-byte boundary
-	    bool readextra = false;
-	    if(bank.fDataSize%8 !=0) {
-	      readextra = true; 
-	    }
-	    
-	    gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
-	    TotalBankSize-=sizeof(timevalue);
-	    
-	    if(readextra) {
-	      uint32_t extra = 0;
-	      gzret=gzread(gz_in,&extra,sizeof(extra));
-	      TotalBankSize -= sizeof(extra);
-	    }
-	    
-	    //Read the digitizer rates bank
-	    gzret=gzread(gz_in,&bank,sizeof(Bank_t));
-	    TotalBankSize-=sizeof(Bank_t);
-	    
-#ifdef Scaler_Verbose
-	    cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
-	    cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
-	    cout << dec << bank.fType << endl;
-	    cout << dec << bank.fDataSize << endl;
-#endif
-	    
-	    //see if data is on an 8-byte boundary
-	    readextra = false;
-	    if(bank.fDataSize%8 !=0) {
-	      readextra = true; 
-	    }
-	    
-	    //number of digitizers active
-	    int nscalers = bank.fDataSize/sizeof(uint32_t);
-	    
-	    //read the digitizer rates
-	    for(int i=0; i<nscalers; i++) {
-	      gzret=gzread(gz_in,&Digitizer_Rates[i],sizeof(uint32_t));
-#ifdef Scaler_Verbose
-	      cout<<i<<"  "<<Digitizer_Rates[i]<<endl;
-#endif
-	      TotalBankSize-=sizeof(uint32_t);
-	    }
-	    
-	    if(readextra) {
-	      uint32_t extra = 0;
-	      gzret=gzread(gz_in,&extra,sizeof(extra));
-	      TotalBankSize -= sizeof(extra);
-	    }
-	    
-	    //Read the adc temps
-	    gzret=gzread(gz_in,&bank,sizeof(Bank_t));
-	    TotalBankSize-=sizeof(Bank_t);
-	    
-#ifdef Scaler_Verbose
-	    cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
-	    cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
-	    cout << dec << bank.fType << endl;
-	    cout << dec << bank.fDataSize << endl;
-#endif
-	    
-	    readextra = false;
-	    if(bank.fDataSize%8 !=0) {
-	      readextra = true; 
-	    }
 
-	    for(int i=0; i<nscalers; i++) {
-	      for(int j=0; j<16; j++) {
-		gzret=gzread(gz_in,&ADC_Temp[i][j],sizeof(uint16_t));
-		TotalBankSize-=sizeof(uint16_t);
-	      }
-	    }
+	    //This is the numbef of active boards
+	    int nactiveboards = 0;
 	    
-	    if(readextra) {
-	      uint32_t extra = 0;
-	      gzret=gzread(gz_in,&extra,sizeof(extra));
-	      TotalBankSize -= sizeof(extra);
-	    }
-	    
+	    while(TotalBankSize > 0) {
+
+	      gzret=gzread(gz_in,&bank,sizeof(BankHeader_t));	
+	      TotalBankSize-=sizeof(Bank_t);
+	      
 #ifdef Scaler_Verbose
-	    for(int i=0; i<16; i++) {
-	      for(int j=0; j<nscalers; j++) {
-		cout<<ADC_Temp[j][i]<<"  ";
-	      }
-	      cout<<endl;
-	    }
+	      cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
+	      cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
+	      cout << dec << bank.fType << endl;
+	      cout << dec << bank.fDataSize << endl;
 #endif
+	      //see if data is on an 8-byte boundary
+	      bool readextra = false;
+	      if(bank.fDataSize%8 !=0) {
+		readextra = true; 
+	      }
+	      
+	      //This is the time struct
+	      if (bank.fName[0]=='T' && bank.fName[1]=='I' && bank.fName[2]== 'M' && bank.fName[3]=='E') {
+#ifdef Scaler_Verbose
+		cout<<endl<<"Time"<<endl;
+#endif
+		gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
+		TotalBankSize-=sizeof(timevalue);
+	      }
+	      
+	      //These are the Digitizer Rates
+	      if (bank.fName[0]=='S' && bank.fName[1]=='C' && bank.fName[2]== 'L' && bank.fName[3]=='R') {
+	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+#ifdef Scaler_Verbose
+		cout<<endl<<"Digitizer Rates"<<endl;
+#endif
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Digitizer_Rates[eye],sizeof(uint32_t));
+#ifdef Scaler_Verbose
+		  cout<<eye<<"  "<<Digitizer_Rates[eye]<<endl;
+#endif
+		  TotalBankSize-=sizeof(uint32_t);
+		}
+	      }
+
+	      //These are the Acquisition Status
+	      if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
+#ifdef Scaler_Verbose
+	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		cout<<endl<<"Acquisition Status"<<endl;
+#endif
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Acquisition_Status[eye],sizeof(uint32_t));
+#ifdef Scaler_Verbose
+		  cout<<eye<<"  "<<Acquisition_Status[eye]<<endl;
+#endif
+		  TotalBankSize-=sizeof(uint32_t);
+		}
+	      }
+
+	      //These are the Failure Status
+	      if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
+	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+#ifdef Scaler_Verbose
+		cout<<endl<<"Failure Status"<<endl;
+#endif
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
+#ifdef Scaler_Verbose
+		  cout<<eye<<"  "<<Failure_Status[eye]<<endl;
+#endif
+		  TotalBankSize-=sizeof(uint32_t);
+		}
+	      }
+
+	      //These are the Readout Status
+	      if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
+	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+#ifdef Scaler_Verbose
+		cout<<endl<<"Readout Status"<<endl;
+#endif
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Readout_Status[eye],sizeof(uint32_t));
+#ifdef Scaler_Verbose
+		  cout<<eye<<"  "<<Readout_Status[eye]<<endl;
+#endif
+		  TotalBankSize-=sizeof(uint32_t);
+		}
+	      }
+	      
+	      //These are the ADC Temps
+	      if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
+#ifdef Scaler_Verbose
+		cout<<endl<<"ADC Temps"<<endl;
+#endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<16; jay++) {
+		    gzret=gzread(gz_in,&ADC_Temp[eye][jay],sizeof(uint16_t));
+		    TotalBankSize-=sizeof(uint16_t);
+		  }
+		}
+	      
+#ifdef Scaler_Verbose
+		for(int eye=0; eye<16; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<ADC_Temp[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
+	      }
+#endif
+	      
+	      //These are the Channel Status
+	      if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
+#ifdef Scaler_Verbose
+		cout<<endl<<"Channel Status"<<endl;
+#endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<16; jay++) {
+		    gzret=gzread(gz_in,&Channel_Status[eye][jay],sizeof(uint32_t));
+		    TotalBankSize-=sizeof(uint32_t);
+		  }
+		}
+	      
+#ifdef Scaler_Verbose
+		for(int eye=0; eye<16; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<Channel_Status[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
+	      }
+#endif
+	      
+	      
+	      
+	      
+	      if(readextra) {
+		uint32_t extra = 0;
+		gzret=gzread(gz_in,&extra,sizeof(extra));
+		TotalBankSize -= sizeof(extra);
+	      }	      
+	    }
 #ifdef Scaler_Verbose
 	    cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
 #endif
-	  }
+	  }  //End of Event ID 2
     
 	  //Data
 	  else if(head.fEventId==1){

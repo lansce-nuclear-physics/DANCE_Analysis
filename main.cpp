@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
   bool HAVE_Threshold=false;
   double Energy_Threshold=0.15; //MeV
   bool FitTimeDev=0;
+  string DataFormat;
 
   
   // ./DANCE_Analysis  PathToData  RunNumber  .cfgFile
@@ -81,6 +82,9 @@ int main(int argc, char *argv[]) {
       if(item.compare("FitTimeDev") == 0) {
 	cfgf>>FitTimeDev;
       } 
+      if(item.compare("DataFormat") == 0) {
+	cfgf>>DataFormat;
+      }
     }
     
     cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
@@ -107,7 +111,12 @@ int main(int argc, char *argv[]) {
 
     stringstream midasrunname;
     midasrunname.str();
-    midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
+    if(strcmp(DataFormat.c_str(),"caen2015") == 0) {
+      midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
+    }
+    else if(strcmp(DataFormat.c_str(),"caen2018") == 0) {
+      midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(5) << RunNum << ".mid";
+    }
     cout<<"Main [INFO]: Checking for: "<<midasrunname.str()<<endl;
     
     //Look for uncompressed .mid files
@@ -200,7 +209,7 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,FitTimeDev);
+  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,FitTimeDev,DataFormat);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
   //Write histograms
