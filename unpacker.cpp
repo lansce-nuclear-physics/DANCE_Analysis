@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 02/07/18    *//  
+//*  Last Edit: 02/21/18    *//  
 //***************************//
 
 //File includes
@@ -132,6 +132,9 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev) {
 
 int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat) {
 
+  ofstream faillog;
+  faillog.open("Readout_Status_Failures.txt", ios::app);
+
   cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl<<endl;
 
   cout<<"Buffer Depth: "<<BufferDepth<<" seconds"<<endl;
@@ -228,7 +231,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   uint32_t Readout_Status[20];       //0xEF04 Readout Status
 
   //waveform
-  vector<uint16_t> waveform;
+  // vector<uint16_t> waveform;
+  uint16_t waveform[1000];
 
   //channel vector
   vector<int> channels;
@@ -641,6 +645,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		nactiveboards = bank.fDataSize/sizeof(uint32_t);
 		for(int eye=0; eye<nactiveboards; eye++) {
 		  gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
+
+		  if(Failure_Status[eye] != 0) {
+		    faillog<<"Run: "<<runnum<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
+		  }
 #ifdef Scaler_Verbose
 		  cout<<eye<<"  "<<Failure_Status[eye]<<endl;
 #endif
@@ -707,9 +715,6 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		}
 	      }
 #endif
-	      
-	      
-	      
 	      
 	      if(readextra) {
 		uint32_t extra = 0;
@@ -780,7 +785,6 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		//extract stuff
 		uint32_t nwords = v1730_header.dataword_1 & 0xFFFFFFF;
 		int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
-		//  cout<<"header: "<<header<<endl;
 		if(header != 10) {
 		  cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
 		  return -1;
@@ -799,8 +803,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		    return -1;
 		  }
 		  
-		  channels.clear();
 		  //interpret the channel mask 
+		  channels.clear();
 		  for(int m=0; m<8; m++) {
 #ifdef Unpacker_Verbose
 		    cout<<m<<"  "<<((channelmask >> m) & 0x1)<<endl;
@@ -827,13 +831,20 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		    }
 		    
 		    int nsdb8 = (v1730_chagg_header.dataword_2 & 0xFFFF);
-		    
 #ifdef Unpacker_Verbose
 		    cout<<"Waveform Size: "<<db_arr[EVTS].Ns<<endl;
 #endif
 		    int extras_format = (v1730_chagg_header.dataword_2 & 0x7000000) >> 24;
+#ifdef Unpacker_Verbose 
+		    cout<<"Extras Format: "<<extras_format<<endl;
+#endif
+		    int extras_enabled = (v1730_chagg_header.dataword_2 & 0x10000000) >> 28;
+#ifdef Unpacker_Verbose
+		    cout<<"Extras Enabled: "<<extras_enabled<<endl;
+#endif
 		    int chaggwordstoread = chaggsize-2;
 		    
+		    //Unpack the channel aggreate
 		    while (chaggwordstoread>0) {
 
 		      //Need to set the board and Ns here
@@ -847,8 +858,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 #ifdef Unpacker_Verbose
 		      cout<<"TTT: "<<db_arr[EVTS].timestamp<<endl;
 #endif	      
-		      int ch = (dataword & 0x80000000) >> 31;
-		      db_arr[EVTS].channel = ch + channels[chaggcounter];
+		      // int ch = (dataword & 0x80000000) >> 31;
+		      db_arr[EVTS].channel = ((dataword & 0x80000000) >> 31) + channels[chaggcounter];
 
 		      //Map it
 		      db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];         
@@ -858,39 +869,35 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      chaggwordstoread--;
 		      
 		      //unpack waveform
-		      waveform.clear();
-		      for(int i=0; i<nsdb8*4; i++) {
+		      gzret=gzread(gz_in,&waveform[0],db_arr[EVTS].Ns*sizeof(uint16_t));
+		      
+		      BytesRead += gzret;
+		      wordstoread -= nsdb8*4;
+		      chaggwordstoread -= nsdb8*4;
+		      
+		      for(int eye=0; eye<db_arr[EVTS].Ns; eye++) {
+			waveform[eye] = waveform[eye] & 0x3FFF;
+		      }
+		      
+ 		      
+		      //Extras
+		      if(extras_enabled) {
 			gzret=gzread(gz_in,&dataword,sizeof(dataword));
-			
-			int wf1 = (dataword & 0x3FFF);
-			waveform.push_back(wf1);
-			// cout<<rawdata.waveform.size()<<"  "<<rawdata.waveform[rawdata.waveform.size()-1]<<endl;
-			int wf2 = (dataword & 0x3FFF0000) >> 16;
-			waveform.push_back(wf2);
-#ifdef Unpacker_Verbose
-	      	        cout<<waveform.size()-1<<" "<<waveform[waveform.size()-2]<<"    "<<waveform.size()<<" "<<waveform[waveform.size()-1]<<endl;;
-#endif		      
 			BytesRead += sizeof(dataword);
 			wordstoread--;
 			chaggwordstoread--;
-		      }	  
-	      
-		      //Extras
-		      gzret=gzread(gz_in,&dataword,sizeof(dataword));
-		      BytesRead += sizeof(dataword);
-		      // TotalBytesRead += sizeof(dataword);
-		      wordstoread--;
-		      chaggwordstoread--;
-		      
-		      //Add the upper bits to the 47-bit timestamp
-		      uint16_t timehigh = (dataword & 0xFFFF0000) >> 16;
-		      db_arr[EVTS].timestamp += timehigh*2147483648; 
-	      	      
+			if(extras_format <= 2) {
+			  
+			  //Add the upper bits to the 47-bit timestamp
+			  uint16_t timehigh = (dataword & 0xFFFF0000) >> 16;
+			  db_arr[EVTS].timestamp += timehigh*2147483648; 
+			  
 #ifdef Unpacker_Verbose
-		      cout<<"time high: "<<timehigh<<" timestamp: "<<db_arr[EVTS].timestamp<<endl;;
+			  cout<<"time high: "<<timehigh<<" timestamp: "<<db_arr[EVTS].timestamp<<endl;;
 #endif	 
-
-
+			}
+		      }
+			
 		      //Do the waveform analysis
 		      // CALCULATE THE LEADING EDGE using constant fraction "frac"
 		      int imin=0;
@@ -901,8 +908,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      int NNN=10;
 		      // int id=db_arr[EVTS].ID;
 		      
-		      if(db_arr[EVTS].ID<162) frac=0.04;
-		      else frac=0.1;
+		      //  if(db_arr[EVTS].ID<162) frac=0.04;
+		      // else frac=0.1;
 		
 		      frac=0.2;
 		
