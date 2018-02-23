@@ -1,0 +1,15 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  Release_Notes          *// 
+//*  Last Edit: 02/23/18    *//  
+//***************************//
+
+The purpose of this document is to allow users to more efficiently track and understand changes made to the DANCE Analysis software.
+
+
+Version 3.0.0 - Start of the release notes.  Added the caen2018 data format to the unpacker.  Requires a statement of 'DataFormat caen2018' or 'DataFormat caen2015' to be placed in the .cfg file.  
+
+Version 3.0.1 - Minor efficieny upgrades to waveform unpacking in the caen2018 data format.
+
+Version 3.1.0 - Changed the way the Crystal and DEvent Blocking Times are done.  Before this change the last_timestamp variable in each respective case was updated regardless of the event being valid or invalid.  This is incorrect because a blocked entry or event should not be recorded in the first place and thus the timestamp shouldn't update. 

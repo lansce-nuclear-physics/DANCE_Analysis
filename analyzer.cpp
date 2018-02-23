@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 02/08/18    *//  
+//*  Last Edit: 02/23/18    *//  
 //***************************//
 
 //File includes
@@ -145,13 +145,15 @@ Li6_Event li6event;
 
 /* VARIABLES */
 
-double last_timestamp[256];
-double current_timestamp[256];
+double last_timestamp[256];        //This keeps track of the last timestamp valid or not
+double last_valid_timestamp[256];  //This keeps track of the last timestamp that was valid
+double current_timestamp[256];     //current timestamp 
 
 double last_t0_timestamp;
 double current_t0_timestamp;
 
-double last_devent_timestamp;
+double last_devent_timestamp;       //This keeps track of the last DANCE event timestamp valid or not
+double last_valid_devent_timestamp; //This keeps track of the last DANCE event timestamp that was valid
 
 //TMatrix Things
 int reftoindex1[200];
@@ -745,12 +747,15 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
   
   for(int eye=0; eye<162; eye++) {
     last_timestamp[eye]=0;
+    last_valid_timestamp[eye]=0;
     current_timestamp[eye]=0;
 
     last_t0_timestamp=0;
     current_t0_timestamp=0;
 
     last_devent_timestamp=0;
+    last_valid_devent_timestamp=0;
+
   }
 
   //Diagnostics
@@ -879,7 +884,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
       
       //Blocking Time to avoid retrigger problems
-      if((current_timestamp[id_eye]-last_timestamp[id_eye]) < Crystal_Blocking_Time) {
+      if((current_timestamp[id_eye]-last_valid_timestamp[id_eye]) < Crystal_Blocking_Time) {
 	eventvector[eye].Valid=0;
       }
       
@@ -989,7 +994,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       li6event.Valid = 1; //li6 event now valid
     }
 
-    //Once done the time is the last timestamp
+    /*Non paralyzable model of dead time.  
+    //The valid timestamp is not updated unless the current detector event 
+    falls after the dead-time window following the preveious event */
+    
+    if(eventvector[eye].Valid==1) {
+      //Once done the time is the last timestamp
+      last_valid_timestamp[id_eye] = current_timestamp[id_eye];
+    }
     last_timestamp[id_eye] = current_timestamp[id_eye];
 
     //Write to Binary
@@ -1013,12 +1025,15 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       DANCE_Events_per_T0++;
 
       //DEvent Blocking Time
-      if((devent.tof[0]-last_devent_timestamp) < DEvent_Blocking_Time) {
+      if((devent.tof[0]-last_valid_devent_timestamp) < DEvent_Blocking_Time) {
 	devent.Valid=0;
       }
       else {
 	hTimeBetweenDEvents->Fill(devent.tof[0]-last_devent_timestamp);
-	hTimeBetweenDEvents_ESum_Mcr->Fill(devent.tof[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);	
+	hTimeBetweenDEvents_ESum_Mcr->Fill(devent.tof[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);
+
+	//Update the last valid devent timestamp.  Same non-paralyzable model
+	last_valid_devent_timestamp=devent.tof[0];
       }
      
       //Set Last devent timestamp to current one
