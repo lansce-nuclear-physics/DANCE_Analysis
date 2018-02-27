@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
       midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
     }
     else if(strcmp(DataFormat.c_str(),"caen2018") == 0) {
-      midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(5) << RunNum << ".mid";
+      midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
     }
     cout<<"Main [INFO]: Checking for: "<<midasrunname.str()<<endl;
     

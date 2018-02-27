@@ -12,4 +12,6 @@ Version 3.0.0 - Start of the release notes.  Added the caen2018 data format to t
 
 Version 3.0.1 - Minor efficieny upgrades to waveform unpacking in the caen2018 data format.
 
-Version 3.1.0 - Changed the way the Crystal and DEvent Blocking Times are done.  Before this change the last_timestamp variable in each respective case was updated regardless of the event being valid or invalid.  This is incorrect because a blocked entry or event should not be recorded in the first place and thus the timestamp shouldn't update. 
+Version 3.1.0 - Changed the way the Crystal and DEvent Blocking Times are done.  Before this change the last_timestamp variable in each respective case was updated regardless of the event being valid or invalid.  This is incorrect because a blocked entry or event should not be recorded in the first place and thus the timestamp shouldn't update.
+
+Version 3.1.1 - Added unpacking of 0x8500 + 4n diagnostic register in the scalers

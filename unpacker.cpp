@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 02/21/18    *//  
+//*  Last Edit: 02/26/18    *//  
 //***************************//
 
 //File includes
@@ -229,6 +229,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   uint32_t Acquisition_Status[20];   //0x8104 Acquisition Status
   uint32_t Failure_Status[20];       //0x8178 Board Failure Status
   uint32_t Readout_Status[20];       //0xEF04 Readout Status
+  uint32_t Register_0x8504n[20][8];  //0x8500 + 4n (Tells how many buffers are left to readout in each pair)
 
   //waveform
   // vector<uint16_t> waveform;
@@ -671,7 +672,29 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  TotalBankSize-=sizeof(uint32_t);
 		}
 	      }
+
+	      //These are the 8500 + 4n register values
+	      if (bank.fName[0]=='D' && bank.fName[1]=='I' && bank.fName[2]== 'A' && bank.fName[3]=='G') {
+#ifdef Scaler_Verbose
+		cout<<endl<<"0x8500 + 4n Diagnostics"<<endl;
+#endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<8; jay++) {
+		    gzret=gzread(gz_in,&Register_0x8504n[eye][jay],sizeof(uint32_t));
+		    TotalBankSize-=sizeof(uint32_t);
+		  }
+		}
 	      
+#ifdef Scaler_Verbose
+		for(int eye=0; eye<8; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<Register_0x8504n[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
+	      }
+#endif
+
 	      //These are the ADC Temps
 	      if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
 #ifdef Scaler_Verbose
