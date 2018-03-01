@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 02/26/18    *//  
+//*  Last Edit: 03/01/18    *//  
 //***************************//
 
 //File includes
@@ -810,23 +810,25 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
 		if(header != 10) {
 		  cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
-		  return -1;
+		  cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
+		  run = false;
+		  break;
 		}
 		else {
+		  
+		  //Check for reported board failures
+		  int failbit = (v1730_header.dataword_2 & 0x04000000) >> 26;
+		  if(failbit) {
+		    cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
+		  }
+
 		  int channelmask = (v1730_header.dataword_2 & 0xFF);
-		  // uint32_t eventcounter = (v1730_header.dataword_3 & 0xFFFFFF);
-		  int channelmask2 = (v1730_header.dataword_3 & 0xFF000000) >> 24;
 		  
 #ifdef Unpacker_Verbose
-		  cout<< "header: "<<header<<"  nwords: "<<nwords<<" channelmask: "<<channelmask<<"  "<<channelmask2<<endl;
+		  cout<< "header: "<<header<<"  nwords: "<<nwords<<" channelmask: "<<channelmask<<endl;
 #endif
 		  
-		  if(channelmask2>0) {
-		    cout<<RED<<"Unpacker [ERROR] CAEN Channel Mask 2 is NOT 0!"<<RESET<<endl;
-		    return -1;
-		  }
-		  
-		  //interpret the channel mask 
+			  //interpret the channel mask 
 		  channels.clear();
 		  for(int m=0; m<8; m++) {
 #ifdef Unpacker_Verbose
