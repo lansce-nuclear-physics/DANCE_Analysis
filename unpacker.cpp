@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 03/01/18    *//  
+//*  Last Edit: 03/06/18    *//  
 //***************************//
 
 //File includes
@@ -692,8 +692,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  }
 		  cout<<endl;
 		}
-	      }
 #endif
+	      }
 
 	      //These are the ADC Temps
 	      if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
@@ -714,8 +714,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  }
 		  cout<<endl;
 		}
-	      }
 #endif
+	      }
 	      
 	      //These are the Channel Status
 	      if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
@@ -736,8 +736,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  }
 		  cout<<endl;
 		}
-	      }
 #endif
+	      }
 	      
 	      if(readextra) {
 		uint32_t extra = 0;

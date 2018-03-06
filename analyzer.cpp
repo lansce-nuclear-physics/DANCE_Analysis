@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 02/23/18    *//  
+//*  Last Edit: 03/05/18    *//  
 //***************************//
 
 //File includes
@@ -119,6 +119,7 @@ TH1D *hU235_TOF_Corr; //Corrected TOF for U235 Monitor
 TH1D *hU235_PulseHeight;  //Energy for U235 Monitor
 TH1D *hU235_En;  //Neutron Energy for U235 Monitor 
 TH1D *hU235_En_Corr;  //Neutron Energy for U235 Monitor (From Corrected TOF)
+TH1D *hU235_Time_Between_Events; //Time between U235 hits
 
 TH1D *hLi6_TOF;  //Raw TOF for Li6 Monitor
 TH1D *hLi6_TOF_Corr; //Corrected TOF for Li6 Monitor
@@ -126,12 +127,14 @@ TH1D *hLi6_PulseHeight;  //Energy for Li6 Monitor
 TH1D *hLi6_En;  //Neutron Energy for Li6 Monitor 
 TH1D *hLi6_En_Corr;  //Neutron Energy for Li6 Monitor (From Corrected TOF)
 TH2D *hLi6_PSD; 
+TH1D *hLi6_Time_Between_Events; //Time between U235 hits
 
 TH1D *hHe3_TOF;  //Raw TOF for He3 Monitor
 TH1D *hHe3_TOF_Corr; //Corrected TOF for He3 Monitor
 TH1D *hHe3_PulseHeight;  //Energy for He3 Monitor
 TH1D *hHe3_En;  //Neutron Energy for He3 Monitor 
 TH1D *hHe3_En_Corr;  //Neutron Energy for He3 Monitor (From Corrected TOF)
+TH1D *hHe3_Time_Between_Events; //Time between U235 hits
 
 /* CUTS */
 TCutG *Gamma_Gate;
@@ -599,19 +602,22 @@ int Create_Analyzer_Histograms(bool read_binary) {
   hU235_PulseHeight = new TH1D("U235_PulseHeight","U235_PulseHeight",10000,0,100000);  //Energy for U235 Monitor
   hU235_En = new TH1D("U235_En","U235_En",NEbins,x);  //Neutron Energy for U235 Monitor 
   hU235_En_Corr = new TH1D("U235_En_Corrected","U235_En_Corrected",NEbins,x);  //Neutron Energy for U235 Monitor (From Corrected TOF)
-  
+  hU235_Time_Between_Events = new TH1D("TimeBetweenU235Events","TimeBetweenU235Events",1000,0,100000);
+
   hHe3_TOF = new TH1D("He3_TOF","He3_TOF",600000,0,60000000);  //Raw TOF for He3 Monitor
   hHe3_TOF_Corr = new TH1D("He3_TOF_Corrected","He3_TOF_Corrected",600000,0,60000000); //Corrected TOF for He3 Monitor
   hHe3_PulseHeight = new TH1D("He3_PulseHeight","He3_PulseHeight",10000,0,100000);  //Energy for He3 Monitor
   hHe3_En = new TH1D("He3_En","He3_En",NEbins,x);  //Neutron Energy for He3 Monitor 
   hHe3_En_Corr = new TH1D("He3_En_Corrected","He3_En_Corrected",NEbins,x);  //Neutron Energy for He3 Monitor (From Corrected TOF)
-  
+  hHe3_Time_Between_Events = new TH1D("TimeBetweenHe3Events","TimeBetweenHe3Events",1000,0,100000);
+
   hLi6_TOF = new TH1D("Li6_TOF","Li6_TOF",600000,0,60000000);  //Raw TOF for Li6 Monitor
   hLi6_TOF_Corr = new TH1D("Li6_TOF_Corrected","Li6_TOF_Corrected",600000,0,60000000); //Corrected TOF for Li6 Monitor
   hLi6_PulseHeight = new TH1D("Li6_PulseHeight","Li6_PulseHeight",10000,0,100000);  //Energy for Li6 Monitor
   hLi6_PSD = new TH2D("Li6_PSD","Li6_PSD",600,0,60000,600,0,60000);  //Ifast vs late for Li6 Monitor
   hLi6_En = new TH1D("Li6_En","Li6_En",NEbins,x);  //Neutron Energy for Li6 Monitor 
   hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
+  hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",1000,0,100000);
 
   if(read_binary==1) {
 
@@ -715,6 +721,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
   hU235_PulseHeight->Write();  //Energy for U235 Monitor
   hU235_En->Write();  //Neutron Energy for U235 Monitor 
   hU235_En_Corr->Write();  //Neutron Energy for U235 Monitor (From Corrected TOF)
+  hU235_Time_Between_Events->Write();
   
   hLi6_TOF->Write();  //Raw TOF for Li6 Monitor
   hLi6_TOF_Corr->Write(); //Corrected TOF for Li6 Monitor
@@ -722,13 +729,15 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
   hLi6_En->Write();  //Neutron Energy for Li6 Monitor 
   hLi6_En_Corr->Write();  //Neutron Energy for Li6 Monitor (From Corrected TOF)
   hLi6_PSD->Write(); 
-  
+  hLi6_Time_Between_Events->Write();
+
   hHe3_TOF->Write();  //Raw TOF for He3 Monitor
   hHe3_TOF_Corr->Write(); //Corrected TOF for He3 Monitor
   hHe3_PulseHeight->Write();  //Energy for He3 Monitor
   hHe3_En->Write();  //Neutron Energy for He3 Monitor 
   hHe3_En_Corr->Write();  //Neutron Energy for He3 Monitor (From Corrected TOF)
-  
+  hHe3_Time_Between_Events->Write();
+
   cout<<GREEN<<"Analyzer [INFO]: Wrote Histograms"<<RESET<<endl;
   return 0;
 }
@@ -798,11 +807,11 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 
     //Fill ID histogram
     hID->Fill(eventvector[eye].ID);
-   
     int id_eye=eventvector[eye].ID;
-
-  
-        
+    
+    //Place the current time in the 
+    current_timestamp[id_eye] = eventvector[eye].TOF;
+    
     //this is a dance crystal
     if(id_eye<162) {
 
@@ -876,10 +885,6 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	}
       }  //Done with coincidences 
       
-
-      //Place the current time in the 
-      current_timestamp[id_eye] = eventvector[eye].TOF;
-
       //Fill time between crystal hits
       hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
       
@@ -976,6 +981,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       he3event.Ifast = eventvector[eye].Ifast;
       he3event.Islow = eventvector[eye].Islow;
       he3event.Valid = 1; //he3 event now valid
+
+      //Fill time Diagnostics
+      hHe3_Time_Between_Events->Fill(current_timestamp[id_eye]-last_timestamp[id_eye]);
     }
     
     //U235
@@ -984,16 +992,22 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       u235event.Ifast = eventvector[eye].Ifast;
       u235event.Islow = eventvector[eye].Islow;
       u235event.Valid = 1; //u235 event now valid
-    }
 
+      //Fill time Diagnostics
+      hU235_Time_Between_Events->Fill(current_timestamp[id_eye]-last_timestamp[id_eye]);
+    }
+    
     //Li6
     if(id_eye == 244) {
       li6event.tof = eventvector[eye].TOF;
       li6event.Ifast = eventvector[eye].Ifast;
       li6event.Islow = eventvector[eye].Islow;
       li6event.Valid = 1; //li6 event now valid
+      
+      //Fill time Diagnostics
+      hLi6_Time_Between_Events->Fill(current_timestamp[id_eye]-last_timestamp[id_eye]);
     }
-
+    
     /*Non paralyzable model of dead time.  
     //The valid timestamp is not updated unless the current detector event 
     falls after the dead-time window following the preveious event */

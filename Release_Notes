@@ -17,3 +17,7 @@ Version 3.1.0 - Changed the way the Crystal and DEvent Blocking Times are done. 
 Version 3.1.1 - Added unpacking of 0x8500 + 4n diagnostic register in the scalers
 
 Version 3.1.2 - Added checking of bit 26 (CAEN Board Fail Bit) in the second board aggregate header word.  Result is a warning if it is found high.  Also removed unpacking of channelmask2 since it does not make sense with the data format of our hardware.
+
+Version 3.1.3 - Added time between beam monitor events to look into possible dead time for beam monitors
+
+Version 3.1.4 - Fixed #define statements in the scaler part of the caen2018 unpacker.  They were outside of brackets of for loops causing the code to not compile when #define ScalerVerbose was off
