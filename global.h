@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  global.h               *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 03/07/18    *//  
 //***************************//
 
 #ifndef GLOBAL_H
@@ -42,19 +42,20 @@
 #define STAGE1_ROOT "./stage1_root"
 #define STAGE0_BIN "./stage0_bin"
 #define STAGE1_BIN "./stage1_bin"
+#define DIAGNOSTICS "./diagnostics"
 
 //PI Gates
 #define GAMMAGATE "Gamma.dat"
 #define ALPHAGATE "Alpha.dat"
 
 //Physics Stuff
-#define	DANCE_FlightPath 20.2407  // was 20.28437 meters
-#define U235_FlightPath 22.8299  // was 22.8 //meters
+#define	DANCE_FlightPath 20.2572  // was 20.28437 meters and 20.2407
+#define U235_FlightPath 22.8240  // was 22.8 meters and 22.8299
 #define He3_FlightPath 22.74 //meters
 #define Li6_FlightPath 22.6121 // was 22.607 meters
 
-#define DANCE_Delay 282.26  // ns (Was 523.0 in FARE, and 205.0 in last version)
-#define U235_Delay 578.2201 //ns (Was 322.4 in FARE and 553.2 in previous version)
+#define DANCE_Delay 293.82  // ns (Was 523.0 in FARE, and 205.0 and 282.26 in last version)
+#define U235_Delay 544.1223 //ns (Was 322.4 in FARE and 553.2 and 578.2201 in previous version)
 #define He3_Delay 359.3 //ns (Was -207 in previous version)
 #define Li6_Delay 500.156 //ns (Was 376 in FARE, and 502.9 in previous version)
 

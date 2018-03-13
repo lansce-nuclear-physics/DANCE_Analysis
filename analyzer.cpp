@@ -602,14 +602,14 @@ int Create_Analyzer_Histograms(bool read_binary) {
   hU235_PulseHeight = new TH1D("U235_PulseHeight","U235_PulseHeight",10000,0,100000);  //Energy for U235 Monitor
   hU235_En = new TH1D("U235_En","U235_En",NEbins,x);  //Neutron Energy for U235 Monitor 
   hU235_En_Corr = new TH1D("U235_En_Corrected","U235_En_Corrected",NEbins,x);  //Neutron Energy for U235 Monitor (From Corrected TOF)
-  hU235_Time_Between_Events = new TH1D("TimeBetweenU235Events","TimeBetweenU235Events",1000,0,100000);
+  hU235_Time_Between_Events = new TH1D("TimeBetweenU235Events","TimeBetweenU235Events",100000,0,10000000);
 
   hHe3_TOF = new TH1D("He3_TOF","He3_TOF",600000,0,60000000);  //Raw TOF for He3 Monitor
   hHe3_TOF_Corr = new TH1D("He3_TOF_Corrected","He3_TOF_Corrected",600000,0,60000000); //Corrected TOF for He3 Monitor
   hHe3_PulseHeight = new TH1D("He3_PulseHeight","He3_PulseHeight",10000,0,100000);  //Energy for He3 Monitor
   hHe3_En = new TH1D("He3_En","He3_En",NEbins,x);  //Neutron Energy for He3 Monitor 
   hHe3_En_Corr = new TH1D("He3_En_Corrected","He3_En_Corrected",NEbins,x);  //Neutron Energy for He3 Monitor (From Corrected TOF)
-  hHe3_Time_Between_Events = new TH1D("TimeBetweenHe3Events","TimeBetweenHe3Events",1000,0,100000);
+  hHe3_Time_Between_Events = new TH1D("TimeBetweenHe3Events","TimeBetweenHe3Events",100000,0,10000000);
 
   hLi6_TOF = new TH1D("Li6_TOF","Li6_TOF",600000,0,60000000);  //Raw TOF for Li6 Monitor
   hLi6_TOF_Corr = new TH1D("Li6_TOF_Corrected","Li6_TOF_Corrected",600000,0,60000000); //Corrected TOF for Li6 Monitor
@@ -617,7 +617,7 @@ int Create_Analyzer_Histograms(bool read_binary) {
   hLi6_PSD = new TH2D("Li6_PSD","Li6_PSD",600,0,60000,600,0,60000);  //Ifast vs late for Li6 Monitor
   hLi6_En = new TH1D("Li6_En","Li6_En",NEbins,x);  //Neutron Energy for Li6 Monitor 
   hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
-  hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",1000,0,100000);
+  hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",100000,0,10000000);
 
   if(read_binary==1) {
 

@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.h             *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 03/07/18    *//  
 //***************************//
 
 #ifndef UNPACKER_H
@@ -21,6 +21,7 @@ int Make_DANCE_Map();
 int Create_Unpacker_Histograms();
 int Write_Unpacker_Histograms();
 int Read_TimeDeviations(int runnum, bool FitTimeDev);
+int Make_Output_Diagnostics_File(int RunNumber);
 
 
 #endif

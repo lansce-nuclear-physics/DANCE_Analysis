@@ -50,7 +50,10 @@ using namespace std;
 //define CheckTheDeque
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
-#define Scaler_Verbose
+//#define Scaler_Verbose
+
+//output diagnostics file
+ofstream outputdiagnosticsfile;
 
 //global unpacker variables
 double TimeDeviations[200];
@@ -84,7 +87,27 @@ int Make_DANCE_Map() {
   }  
 }
 
-
+//This function makes the output binary file for stage 0 or 1 filled with time-ordered devt_bank structures
+int Make_Output_Diagnostics_File(int RunNumber) {
+  
+  stringstream outfilename;
+  outfilename.str();
+  
+  outfilename << DIAGNOSTICS;
+  outfilename <<"/diagnostics_run";
+  outfilename << RunNumber << ".txt";
+  
+  outputdiagnosticsfile.open(outfilename.str().c_str(), ios::out);
+  
+  if(outputdiagnosticsfile.is_open()) {
+    cout<<GREEN<<"Analyzer [INFO]: Succesfully created and opened output diagnostics file: "<<outfilename.str()<<RESET<<endl;
+    return 0;
+  }
+  else {
+    cout<<RED<<"Analyzer [ERROR]: Failed to create output diagnostics file: "<<outfilename.str()<<RESET<<endl;
+    return -1;
+  }
+}
 
 int Read_TimeDeviations(int runnum, bool FitTimeDev) {
   cout << "Unpacker [INFO]: Reading Time Deviations" << endl;
@@ -159,10 +182,16 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   //initiliaze the time deviations
   Read_TimeDeviations(runnum,FitTimeDev);
 
+  //Make the ouput diagnostics file
+  if(read_binary == 0 && (strcmp(DataFormat.c_str(),"caen2018") == 0)) {
+    Make_Output_Diagnostics_File(runnum);
+  }
+  
+  //Make the output binary file
   if(write_binary == 1) {
     Make_Output_Binfile(runnum, read_binary);
   }
-
+  
   //keep track of timestamps
   double last_timestamp[2000];
   for(int eye=0; eye<2000; eye++) {
@@ -598,16 +627,22 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      
 	      //This is the time struct
 	      if (bank.fName[0]=='T' && bank.fName[1]=='I' && bank.fName[2]== 'M' && bank.fName[3]=='E') {
+		outputdiagnosticsfile << "TIME\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Time"<<endl;
 #endif
 		gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
 		TotalBankSize-=sizeof(timevalue);
+
+		outputdiagnosticsfile << timevalue.tv_sec<<"  "<<timevalue.tv_usec<<"\n";
 	      }
 	      
 	      //These are the Digitizer Rates
 	      if (bank.fName[0]=='S' && bank.fName[1]=='C' && bank.fName[2]== 'L' && bank.fName[3]=='R') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "SCLR  "<<nactiveboards<<"\n";
+
 #ifdef Scaler_Verbose
 		cout<<endl<<"Digitizer Rates"<<endl;
 #endif
@@ -618,13 +653,15 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  cout<<eye<<"  "<<Digitizer_Rates[eye]<<endl;
 #endif
 		  TotalBankSize-=sizeof(uint32_t);
+		  outputdiagnosticsfile << Digitizer_Rates[eye]<<"\n";
 		}
 	      }
 
 	      //These are the Acquisition Status
 	      if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
-#ifdef Scaler_Verbose
 	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+	      outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
+#ifdef Scaler_Verbose
 		cout<<endl<<"Acquisition Status"<<endl;
 #endif
 		nactiveboards = bank.fDataSize/sizeof(uint32_t);
@@ -634,12 +671,14 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  cout<<eye<<"  "<<Acquisition_Status[eye]<<endl;
 #endif
 		  TotalBankSize-=sizeof(uint32_t);
+		  outputdiagnosticsfile << Acquisition_Status[eye]<<"\n";
 		}
 	      }
 
 	      //These are the Failure Status
 	      if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
 	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+	      outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Failure Status"<<endl;
 #endif
@@ -654,12 +693,14 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  cout<<eye<<"  "<<Failure_Status[eye]<<endl;
 #endif
 		  TotalBankSize-=sizeof(uint32_t);
+		  outputdiagnosticsfile << Failure_Status[eye]<<"\n";
 		}
 	      }
 
 	      //These are the Readout Status
 	      if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
 	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
+	      outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Readout Status"<<endl;
 #endif
@@ -670,11 +711,14 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  cout<<eye<<"  "<<Readout_Status[eye]<<endl;
 #endif
 		  TotalBankSize-=sizeof(uint32_t);
+		  outputdiagnosticsfile << Readout_Status[eye]<<"\n";
 		}
 	      }
 
 	      //These are the 8500 + 4n register values
 	      if (bank.fName[0]=='D' && bank.fName[1]=='I' && bank.fName[2]== 'A' && bank.fName[3]=='G') {
+		outputdiagnosticsfile << "DIAG  "<<nactiveboards<<"\n";
+
 #ifdef Scaler_Verbose
 		cout<<endl<<"0x8500 + 4n Diagnostics"<<endl;
 #endif
@@ -682,7 +726,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  for(int jay=0; jay<8; jay++) {
 		    gzret=gzread(gz_in,&Register_0x8504n[eye][jay],sizeof(uint32_t));
 		    TotalBankSize-=sizeof(uint32_t);
+		    outputdiagnosticsfile << Register_0x8504n[eye][jay]<<"  ";
 		  }
+		  outputdiagnosticsfile <<"\n";
+
 		}
 	      
 #ifdef Scaler_Verbose
@@ -697,6 +744,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 
 	      //These are the ADC Temps
 	      if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
+		outputdiagnosticsfile << "TEMP  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"ADC Temps"<<endl;
 #endif
@@ -704,7 +752,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  for(int jay=0; jay<16; jay++) {
 		    gzret=gzread(gz_in,&ADC_Temp[eye][jay],sizeof(uint16_t));
 		    TotalBankSize-=sizeof(uint16_t);
+		    outputdiagnosticsfile << ADC_Temp[eye][jay]<<"  ";
 		  }
+		  outputdiagnosticsfile <<"\n";
 		}
 	      
 #ifdef Scaler_Verbose
@@ -719,6 +769,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      
 	      //These are the Channel Status
 	      if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
+		outputdiagnosticsfile << "CHST  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Channel Status"<<endl;
 #endif
@@ -726,7 +777,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  for(int jay=0; jay<16; jay++) {
 		    gzret=gzread(gz_in,&Channel_Status[eye][jay],sizeof(uint32_t));
 		    TotalBankSize-=sizeof(uint32_t);
+		    outputdiagnosticsfile << Channel_Status[eye][jay]<<"  ";
 		  }
+		  outputdiagnosticsfile <<"\n";
 		}
 	      
 #ifdef Scaler_Verbose
