@@ -25,3 +25,5 @@ Version 3.1.4 - Fixed #define statements in the scaler part of the caen2018 unpa
 Version 3.2.0 - Added output txt file for diagnostics information in caen2018 format.
 
 Version 3.3.0 - Changed DANCE, U235, and Li6 flight path lengths and time offsets.
+
+Version 3.4.0 - Added waveform hisograms for all IDs in one TH3I. X_Y_Z SampleNumber_WaveformValue_ID.  Also added the hID_Raw spectrum which fills the number of counts for each channel +board*16 up to 256 (14 boards).  This aids in debugging the channel drop problem for non dance crystal channels.  Slight changes to the order of output root file creation in main.cpp

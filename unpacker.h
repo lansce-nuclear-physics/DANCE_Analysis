@@ -13,16 +13,19 @@
 #include <string.h>
 #include <iostream>
 
+//ROOT Includes
+#include "TFile.h"
+
 using namespace std;
 
 //Function prototypes
 int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev,string DataFormat);
 int Make_DANCE_Map();
-int Create_Unpacker_Histograms();
-int Write_Unpacker_Histograms();
 int Read_TimeDeviations(int runnum, bool FitTimeDev);
 int Make_Output_Diagnostics_File(int RunNumber);
 
+int Create_Unpacker_Histograms(bool read_binary);
+int Write_Unpacker_Histograms(TFile *fout, bool read_binary);
 
 #endif
 

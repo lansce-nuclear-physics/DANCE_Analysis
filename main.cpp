@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
   }
 
   //make the root file  
-  TFile *fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),(int)Coincidence_Window,(int)Crystal_Blocking_Time,(int)DEvent_Blocking_Time),"RECREATE");
+  TFile *fout;
   
   //Time profiling stuff
   struct timeval tv;  						// real time  
@@ -212,7 +212,12 @@ int main(int argc, char *argv[]) {
   int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,FitTimeDev,DataFormat);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
+  //Make the file
+  fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),(int)Coincidence_Window,(int)Crystal_Blocking_Time,(int)DEvent_Blocking_Time),"RECREATE");
+  cout<<GREEN<<"Main [INFO]: Rootfile Created"<<RESET<<endl;
+  
   //Write histograms
+  Write_Unpacker_Histograms(fout, Read_Binary);
   Write_Analyzer_Histograms(fout, Read_Binary);
 
   //Write the root file

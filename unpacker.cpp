@@ -24,7 +24,9 @@
 #include <string>
 
 //ROOT includes
-#include "TH1D.h"
+#include "TH1.h"
+#include "TH3.h"
+#include "TH2.h"
 #include "TFile.h"
 #include "TRandom.h"
 
@@ -47,7 +49,7 @@ using namespace std;
 
 
 //Verbosity and Error Checking
-//define CheckTheDeque
+//#define CheckTheDeque
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
 //#define Scaler_Verbose
@@ -60,6 +62,43 @@ double TimeDeviations[200];
 
 //holds the id of each detector from dancemap
 int MapID[20][20];
+
+//Histograms
+TH3S *hWaveform_ID;
+TH1D *hID_Raw;
+//TH2S *hWaveform_T0;
+
+//Histograms for Unpacker Things
+int Create_Unpacker_Histograms(bool read_binary) {
+  
+  cout<<"Unpacker [INFO]: Creating Histograms"<<endl;
+  
+  //Make a histogram for waveforms
+  if(read_binary==0) {
+    hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,256,0,256);
+    hID_Raw = new TH1D("hID_Raw","hID_Raw",256,0,256);
+    //  hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",80,0,80,2000,0,20000);
+  }
+  
+  cout<<GREEN<<"Unpacker [INFO]: Created Histograms"<<RESET<<endl;
+  return 0; 
+  
+}
+
+int Write_Unpacker_Histograms(TFile *fout, bool read_binary) {
+  
+  cout<<"Unpacker [INFO]: Writing Histograms"<<endl;
+  
+  fout->cd();
+
+  if(read_binary==0) {
+    hWaveform_ID->Write();
+    hID_Raw->Write();
+    // hWaveform_T0->Write();
+  }
+  cout<<GREEN<<"Unpacker [INFO]: Wrote Histograms"<<RESET<<endl;
+  return 0;
+}
 
 //Functions
 int Make_DANCE_Map() {
@@ -175,6 +214,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
     cout<<"Time Deviations will be determined following analysis"<<endl;
   }
   cout<<endl;
+
+  //initialize histograms
+  Create_Unpacker_Histograms(read_binary);
   
   //initialize DANCE Map
   Make_DANCE_Map();
@@ -499,6 +541,17 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  for(int i=0;i<db_arr[EVTS].Ns;i++) {
 		  
 		    wf1[i]=evaggr->wavelets[evtnum][i]+8192;
+
+		    //Fill waveform histogram
+		    if(read_binary==0) {
+		      if(db_arr[EVTS].ID<256) {
+			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
+			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+		      }
+		      //  if(db_arr[EVTS].ID==200) {
+		      //    hWaveform_T0->Fill(i,wf1[i],1);
+		      //  }
+		    }
 		  
 		    if(i<NNN) {
 		      base+=(1.*wf1[i]);
@@ -992,6 +1045,17 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      frac=0.2;
 		
 		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+
+			//Fill waveform histogram
+			if(read_binary==0) {
+			  if(db_arr[EVTS].ID<256) {
+			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
+			    hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+			  }
+			  // if(db_arr[EVTS].ID==200) {
+			  //   hWaveform_T0->Fill(i,wf1[i],1);
+			  // }
+			}
 			
 			if(i<NNN) {
 			  base+=(1.*waveform[i]);
