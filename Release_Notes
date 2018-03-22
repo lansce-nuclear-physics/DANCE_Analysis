@@ -30,4 +30,4 @@ Version 3.4.0 - Added waveform hisograms for all IDs in one TH3I. X_Y_Z SampleNu
 
 Version 3.4.1 - Changed the location of the Q-Value gates to the .cfg file for stage 1. Hardcoded maximum of 10 Q-value gates.  Can't imagine a reasonable scenario where someone needs more.  To change this the number of TH3F histograms needs to be changed and the array size of QGates in main.cpp needs to be changed. 
 
-Version 3.4.2 - Added the path for the TimeDeviations and Calibrations to global.h and moved the folders one directory back for my version of the code
+Version 3.4.2 - Added the path for the TimeDeviations and Calibrations to global.h and moved the folders one directory back for my version of the code.
