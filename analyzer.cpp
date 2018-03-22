@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 03/05/18    *//  
+//*  Last Edit: 03/22/18    *//  
 //***************************//
 
 //File includes
@@ -90,14 +90,15 @@ TH2D *hGammaCalib;
 bool QGated_Spectra = true;
 
 //This sets the number of QGates
-const int NQGates = 3;
+//const int NQGates = 3;
 
 //This defines the Qgates for the En_Ecl_Mcl QGated spectra
-double QGates[2*NQGates] = {6.5,7.0,   //QGate 1
-			    6.5,7.5,   //QGate 2
-			    6.5,6.7};  //QGate 3
+//double QGates[2*NQGates] = {6.5,7.0,   //QGate 1
+//			    6.5,7.5,   //QGate 2
+//			    6.5,6.7};  //QGate 3
+//
 
-TH3F *En_Ecl_Mcl_QGated[NQGates];
+TH3F *En_Ecl_Mcl_QGated[10]; //Max is 10 QGates. 
 
 
 //3D Histograms
@@ -196,7 +197,7 @@ int Make_Time_Deviations(int RunNumber) {
   //Stringstream for the outpout file name of td_out
   stringstream outfilename;
   outfilename.str();
-  outfilename << "./TimeDeviations/TimeDeviations_Run_" << RunNumber << ".txt";
+  outfilename << TIMEDEV_DIR << "/TimeDeviations_Run_" << RunNumber << ".txt";
   
   //initialize the time deviation to 0.  Its cumulative...
   double time_deviation=0;
@@ -339,8 +340,7 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary) {
   
   stringstream cal_name;
   cal_name.str();
-  cal_name << "./Calibrations/";
-  cal_name << "param_out_" << RunNumber << ".txt";
+  cal_name << CALIB_DIR << "/param_out_" << RunNumber << ".txt";
   
   ifstream encal;
   encal.open(cal_name.str().c_str());
@@ -373,8 +373,12 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary) {
   if(read_binary==0 || encalfail==true)
     cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
   
+  stringstream idealcal_name;
+  idealcal_name.str();
+  idealcal_name << CALIB_DIR << "/calib_ideal.dat";
+  
   ifstream idealcal;
-  idealcal.open("./Calibrations/calib_ideal.dat");
+  idealcal.open(idealcal_name.str().c_str());
   
   if(idealcal.is_open()) {
     while(!idealcal.eof()) {
@@ -389,7 +393,7 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary) {
 	break;
       }
     }
-    cout<<GREEN<<"Analyzer [INFO]: Opened ./Calibrations/calib_ideal.dat"<<RESET<<endl;
+    cout<<GREEN<<"Analyzer [INFO]: Opened "<<idealcal_name.str()<<RESET<<endl;
     return 0;
   }
   else {
@@ -525,7 +529,7 @@ int Read_TMatrix() {
 }
 
 
-int Create_Analyzer_Histograms(bool read_binary) {
+int Create_Analyzer_Histograms(bool read_binary, int NQGates, double QGates[]) {
   
   cout<<"Analyzer [INFO]: Creating Histograms"<<endl;
 
@@ -653,7 +657,7 @@ int Create_Analyzer_Histograms(bool read_binary) {
 }
 
 
-int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
+int Write_Analyzer_Histograms(TFile *fout, bool read_binary,int NQGates, double QGates[]) {
   
   cout<<"Analyzer [INFO]: Writing Histograms"<<endl;
   
@@ -743,7 +747,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary) {
 }
 
 
-int Initialize_Analyzer(bool read_binary, bool write_binary) {
+int Initialize_Analyzer(bool read_binary, bool write_binary,int NQGates, double QGates[]) {
 
   cout<<BLUE<<"Analyzer [INIT]: Initializing Analyzer"<<RESET<<endl;
   
@@ -752,7 +756,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
   Read_PI_Gates();
   totalindex = Read_TMatrix();
   Read_DMatrix();
-  Create_Analyzer_Histograms(read_binary);
+  Create_Analyzer_Histograms(read_binary,NQGates,QGates);
   
   for(int eye=0; eye<162; eye++) {
     last_timestamp[eye]=0;
@@ -782,7 +786,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary) {
 }
 
 
-int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold) {
+int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, int NQGates, double QGates[]) {
 
   int Crystal_Mult=0;
 

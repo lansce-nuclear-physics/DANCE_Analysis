@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 03/06/18    *//  
+//*  Last Edit: 03/22/18    *//  
 //***************************//
 
 //File includes
@@ -165,7 +165,7 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev) {
     stringstream fname;
     fname.str();
     
-    fname<<"./TimeDeviations/TimeDeviations_Run_" << std::setfill('0') << std::setw(5) << runnum << ".txt";
+    fname<<TIMEDEV_DIR"/TimeDeviations_Run_" << std::setfill('0') << std::setw(5) << runnum << ".txt";
     cout<<"Unpacker [INFO]: Looking for TimeDeviations File: "<<fname.str()<<endl;
     
     ifstream fdata;
@@ -192,7 +192,7 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev) {
 }
 
 
-int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat) {
+int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat, int NQGates, double QGates[]) {
 
   ofstream faillog;
   faillog.open("Readout_Status_Failures.txt", ios::app);
@@ -1268,7 +1268,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
 		//Send it to the analyzer
-		Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
+		Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
 	      }
 	    }
 	    else {
@@ -1407,7 +1407,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	  }
     
 	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold);
+	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold,NQGates,QGates);
 	}
     
 	if(datadeque.size()==0) {
@@ -1536,7 +1536,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	  
 	  //Send the current event to analyzer
 	  if(eventvector.size()>0) {
-	    Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold);
+	    Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
 	    eventvector.clear();
 	  }
 	  

@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  global.h               *// 
-//*  Last Edit: 03/07/18    *//  
+//*  Last Edit: 03/22/18    *//  
 //***************************//
 
 #ifndef GLOBAL_H
@@ -43,6 +43,8 @@
 #define STAGE0_BIN "./stage0_bin"
 #define STAGE1_BIN "./stage1_bin"
 #define DIAGNOSTICS "./diagnostics"
+#define TIMEDEV_DIR "../TimeDeviations"
+#define CALIB_DIR "../Calibrations"
 
 //PI Gates
 #define GAMMAGATE "Gamma.dat"

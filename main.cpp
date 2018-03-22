@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  main.cpp               *// 
-//*  Last Edit: 02/07/18    *//  
+//*  Last Edit: 03/20/18    *//  
 //***************************//
 
 //File includes
@@ -38,7 +38,8 @@ int main(int argc, char *argv[]) {
   double Energy_Threshold=0.15; //MeV
   bool FitTimeDev=0;
   string DataFormat;
-
+  int NQGates;
+  double QGates[20];  //This gives 10 pairs
   
   // ./DANCE_Analysis  PathToData  RunNumber  .cfgFile
   if(argc>4) {
@@ -85,10 +86,28 @@ int main(int argc, char *argv[]) {
       if(item.compare("DataFormat") == 0) {
 	cfgf>>DataFormat;
       }
+      if(item.compare("NQGates") == 0) {
+	cfgf>>NQGates;
+	for(int eye=0; eye<2*NQGates; eye++) {
+	  cfgf >> QGates[eye];
+	}
+      }
     }
     
     cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
-    // cout<<"Coincidence Window: "<<Coincidence_Window<<"  "<<Read_Binary<<"  "<<Write_Binary<<"  "<<Crystal_Blocking_Time<<"  "<<DEvent_Blocking_Time<<"  "<<HAVE_Threshold<<"  "<<Energy_Threshold<<endl;
+    cout<<"Coincidence Window: "<<Coincidence_Window<<endl;
+    cout<<"Read Binary: "<<Read_Binary<<endl;
+    cout<<"Write Binary: "<<Write_Binary<<endl;
+    cout<<"Crystal Blocking Time: "<<Crystal_Blocking_Time<<endl;
+    cout<<"DANCE Event Blocking Time: "<<DEvent_Blocking_Time<<endl;
+    cout<<"Have Threshold: "<<HAVE_Threshold<<endl;
+    cout<<"Energy Threshold: "<<Energy_Threshold<<endl;
+    cout<<"Fit Time Deviations: "<<FitTimeDev<<endl;
+    cout<<"Data Format: "<<DataFormat<<endl;
+    cout<<"Number of Q-Value Gates: "<<NQGates<<endl;
+    for(int eye=0; eye<NQGates; eye++) {
+      cout<<"Q-Value Gate "<<eye<<": "<<QGates[2*eye]<<" to "<<QGates[2*eye+1]<<" MeV"<<endl;
+    }
   }
   else {
     cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
@@ -177,7 +196,7 @@ int main(int argc, char *argv[]) {
   }
   
   //Initialize Things
-  Initialize_Analyzer(Read_Binary, Write_Binary);
+  Initialize_Analyzer(Read_Binary, Write_Binary,NQGates,QGates);
 
   //Name of the output root file
   stringstream rootfilename;
@@ -209,7 +228,7 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,FitTimeDev,DataFormat);
+  int events_analyzed=  Unpack_Data(gz_in, begin, RunNum, Read_Binary, Write_Binary, Coincidence_Window,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,FitTimeDev,DataFormat,NQGates,QGates);
   cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
   
   //Make the file
@@ -218,7 +237,7 @@ int main(int argc, char *argv[]) {
   
   //Write histograms
   Write_Unpacker_Histograms(fout, Read_Binary);
-  Write_Analyzer_Histograms(fout, Read_Binary);
+  Write_Analyzer_Histograms(fout, Read_Binary,NQGates,QGates);
 
   //Write the root file
   fout->Write();

@@ -27,3 +27,7 @@ Version 3.2.0 - Added output txt file for diagnostics information in caen2018 fo
 Version 3.3.0 - Changed DANCE, U235, and Li6 flight path lengths and time offsets.
 
 Version 3.4.0 - Added waveform hisograms for all IDs in one TH3I. X_Y_Z SampleNumber_WaveformValue_ID.  Also added the hID_Raw spectrum which fills the number of counts for each channel +board*16 up to 256 (14 boards).  This aids in debugging the channel drop problem for non dance crystal channels.  Slight changes to the order of output root file creation in main.cpp
+
+Version 3.4.1 - Changed the location of the Q-Value gates to the .cfg file for stage 1. Hardcoded maximum of 10 Q-value gates.  Can't imagine a reasonable scenario where someone needs more.  To change this the number of TH3F histograms needs to be changed and the array size of QGates in main.cpp needs to be changed. 
+
+Version 3.4.2 - Added the path for the TimeDeviations and Calibrations to global.h and moved the folders one directory back for my version of the code

@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.h             *// 
-//*  Last Edit: 03/07/18    *//  
+//*  Last Edit: 03/22/18    *//  
 //***************************//
 
 #ifndef UNPACKER_H
@@ -19,7 +19,7 @@
 using namespace std;
 
 //Function prototypes
-int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev,string DataFormat);
+int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev,string DataFormat,int NQGates, double QGates[]);
 int Make_DANCE_Map();
 int Read_TimeDeviations(int runnum, bool FitTimeDev);
 int Make_Output_Diagnostics_File(int RunNumber);
