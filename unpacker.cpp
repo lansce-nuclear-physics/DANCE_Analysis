@@ -35,7 +35,7 @@ using namespace std;
 //Some Global Unpacker Variables (DONT CHANGE UNLESS NEEDED)
 
 /*size of the DEVT array in the unpacker*/
-#define MaxDEVTArrSize 10000000  //this should be a big number 
+#define MaxDEVTArrSize 100000000  //this should be a big number like 1e8 but pay attention
 
 /*size of the block buffer. The unpacker waits this many
   events before looking at the deque and time sorting.  This 
@@ -52,7 +52,7 @@ using namespace std;
 //#define CheckTheDeque
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
-//#define Scaler_Verbose
+#define Scaler_Verbose
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -301,6 +301,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   uint32_t Failure_Status[20];       //0x8178 Board Failure Status
   uint32_t Readout_Status[20];       //0xEF04 Readout Status
   uint32_t Register_0x8504n[20][8];  //0x8500 + 4n (Tells how many buffers are left to readout in each pair)
+  uint32_t Register_0x1n2C[20][16]; 
 
   //waveform
   // vector<uint16_t> waveform;
@@ -644,7 +645,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	    free (fData);	
 	  }
 	  
-	  else if(head.fEventId==2){
+	  else if(head.fEventId==8){
 	    
 	    // this is scaler data
 	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));	
@@ -819,6 +820,31 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		}
 #endif
 	      }
+
+	      //These are the 0x1n2C values
+	      if (bank.fName[0]=='1' && bank.fName[1]=='n' && bank.fName[2]== '2' && bank.fName[3]=='C') {
+		outputdiagnosticsfile << "1n2C  "<<nactiveboards<<"\n";
+#ifdef Scaler_Verbose
+		cout<<endl<<"Register 0x1n2C"<<endl;
+#endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<16; jay++) {
+		    gzret=gzread(gz_in,&Register_0x1n2C[eye][jay],sizeof(uint32_t));
+		    TotalBankSize-=sizeof(uint32_t);
+		    outputdiagnosticsfile << Register_0x1n2C[eye][jay]<<"  ";
+		  }
+		  outputdiagnosticsfile <<"\n";
+		}
+	      
+#ifdef Scaler_Verbose
+		for(int eye=0; eye<16; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<Register_0x1n2C[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
+#endif
+	      }
 	      
 	      //These are the Channel Status
 	      if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
@@ -916,6 +942,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
 		if(header != 10) {
 		  cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
+		  cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
 		  cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
 		  run = false;
 		  break;
@@ -1128,6 +1155,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		TotalBankSize -= sizeof(extra);
 	      }
 	    }
+	  }
+	  else {
+	    cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
 	  }
 	}	
       }

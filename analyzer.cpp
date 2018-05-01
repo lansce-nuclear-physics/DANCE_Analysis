@@ -25,6 +25,11 @@
 
 using namespace std;
 
+//Analyzer stats
+uint32_t events_analyzed;
+uint32_t entries_analyzed;
+uint32_t analyzer_counter;
+
 //output binary file
 ofstream outputbinfile;
 
@@ -88,6 +93,8 @@ TH2D *hGammaCalib;
 
 //Flag to turn on the QGated spectra
 bool QGated_Spectra = true;
+
+
 
 //This sets the number of QGates
 //const int NQGates = 3;
@@ -542,7 +549,7 @@ int Create_Analyzer_Histograms(bool read_binary, int NQGates, double QGates[]) {
   hTimeDev = new TH2D("TimeDev","TimeDev",10000,-500,500,162,0,162);  //Time deviations
 
   //Diagnostics
-  hEventLength = new TH1D("EventLength","EventLength",10000,0,10000);
+  hEventLength = new TH1D("EventLength","EventLength",10000,0,100);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
   hTimeBetweenDEvents_ESum_Mcr = new TH3D("TimeBetweenDEvents_ESum_Mcr","TimeBetweenDEvents_ESum_Mcr",1000,0,10000,500,0,10,20,0,20);
@@ -752,6 +759,11 @@ int Initialize_Analyzer(bool read_binary, bool write_binary,int NQGates, double 
   cout<<BLUE<<"Analyzer [INIT]: Initializing Analyzer"<<RESET<<endl;
   
   //Initialize Analysis Stuff
+
+  events_analyzed=0;
+  entries_analyzed=0;
+  analyzer_counter=1;
+
   Read_Moderation_Time_Graphs();
   Read_PI_Gates();
   totalindex = Read_TMatrix();
@@ -780,14 +792,19 @@ int Initialize_Analyzer(bool read_binary, bool write_binary,int NQGates, double 
   DANCE_Entries_per_T0=0;
   DANCE_Events_per_T0=0;
 
-
-  
   return 0;
 }
 
 
 int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, int NQGates, double QGates[]) {
 
+
+  //Progress indicator
+  if( entries_analyzed > analyzer_counter*ProgressInterval) {
+    cout<< events_analyzed<<" Events Comprised of "<<entries_analyzed<<" Entries Analyzed. "<<
+      "Average Mult: "<<1.0*entries_analyzed/(1.0*events_analyzed)<<endl;
+    analyzer_counter++;
+  }
   int Crystal_Mult=0;
 
   //Initialize DANCE Event
@@ -802,12 +819,16 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
     
   
   //Fill Event Length (mult 1 events just give 0 so require mult>1 to fill this)
-  if(eventvector.size() > 1) {
-    hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
-  }
-
+  //  if(eventvector.size() > 1) {
+  hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
+  // }
+  // if(eventvector.size() > 10) {
+  //  cout<<eventvector.size()<<endl;
+  //   cout<<eventvector[eventvector.size()-1].TOF-eventvector[0].TOF<<endl;
+  // }
+  
   //Loop over event 
-  for(uint32_t eye=0; eye<eventvector.size(); eye++) {
+    for(uint32_t eye=0; eye<eventvector.size(); eye++) {
 
     //Fill ID histogram
     hID->Fill(eventvector[eye].ID);
@@ -1030,6 +1051,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       devt_out.ID = eventvector[eye].ID;
       outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_STAGE1));
     }    
+
+    entries_analyzed++;
   } //end of eventvector loop
   
   
@@ -1295,6 +1318,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
   }
 
   //Done with Event Processing
+  //increment counter
+  events_analyzed++;
 
   return 0;
 }

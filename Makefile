@@ -13,8 +13,6 @@ CCLD=gcc
 CXXFLAGS= -g -Wall -I -I$  -pthread -fPIC -DPIC
 CCFLAGS=$(CXXFLAGS)
 
-#ROOTSYS = /opt64/root/new/
-
 ROOTCFLAGS   := $(shell ${ROOTSYS}/bin/root-config --cflags)
 ROOTGLIBS    := $(shell ${ROOTSYS}/bin/root-config --glibs)
 ROOTLDFLAGS  := $(shell ${ROOTSYS}/bin/root-config --ldflags)
