@@ -52,7 +52,7 @@ using namespace std;
 //#define CheckTheDeque
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
-#define Scaler_Verbose
+//#define Scaler_Verbose
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -880,7 +880,27 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 #ifdef Scaler_Verbose
 	    cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
 #endif
-	  }  //End of Event ID 2
+	  }  //End of Event ID 8
+
+else if (head.fEventId!=1) {
+
+TotalBankSize=TotalDataSize;
+
+//gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
+//TotalBankSize = bhead.fDataSize;
+
+//gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+//TotalBankSize -= sizeof(Bank32_t);
+
+
+uint32_t garbage;
+while(TotalBankSize > 0) {
+gzret = gzread(gz_in,&garbage, sizeof(garbage));
+TotalBankSize -= sizeof(garbage);
+//cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
+}
+
+}
     
 	  //Data
 	  else if(head.fEventId==1){
@@ -917,6 +937,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      if(EventBankSize%8 !=0) {
 		readextra = true; 
 	      }
+
+
 	      
 	      //Read the firmware version and board ID
 	      uint32_t firmware_version;
@@ -924,6 +946,12 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      TotalBankSize -= sizeof(firmware_version);
 	      EventBankSize -=  sizeof(firmware_version);
 	           
+	      //Read the user extras word
+	      uint32_t user_extras;
+	      gzret=gzread(gz_in,&user_extras,sizeof(user_extras));
+	      TotalBankSize -= sizeof(user_extras);
+	      EventBankSize -=  sizeof(user_extras);
+	      
 #ifdef Unpacker_Verbose
 	      cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<(firmware_version & 0xFF)<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
 #endif
