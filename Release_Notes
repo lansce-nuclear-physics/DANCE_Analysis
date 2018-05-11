@@ -37,3 +37,5 @@ Version 3.5.0 - Changed the unpacker to reflect the new caen2018 data format wit
 Version 4.0.0 - Added the ability to run simulated data through the analysis.  More features added to hCrID_Diagnostics in utilities.
 
 Version 4.1.0 - Added the vme scalers to the unpacker for both caen2015 and caen2018 formats. Scaler description file is now in the Config directory.
+
+Version 4.1.1 - Changed the verobosity flags for scalers adding on for diagnostics. 
