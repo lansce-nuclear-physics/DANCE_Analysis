@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 05/08/18    *//  
+//*  Last Edit: 05/11/18    *//  
 //***************************//
 
 //File includes
@@ -66,6 +66,7 @@ int MapID[20][20];
 //Histograms
 TH3S *hWaveform_ID;
 TH1D *hID_Raw;
+TH1D *hScalers;
 //TH2S *hWaveform_T0;
 
 //Histograms for Unpacker Things
@@ -77,6 +78,7 @@ int Create_Unpacker_Histograms(bool read_binary) {
   if(read_binary==0) {
     hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,256,0,256);
     hID_Raw = new TH1D("hID_Raw","hID_Raw",256,0,256);
+    hScalers = new TH1D("Scalers","Scalers",35,0,35);
     //  hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",80,0,80,2000,0,20000);
   }
   
@@ -94,7 +96,7 @@ int Write_Unpacker_Histograms(TFile *fout, bool read_binary) {
   if(read_binary==0) {
     hWaveform_ID->Write();
     hID_Raw->Write();
-    // hWaveform_T0->Write();
+    hScalers->Write();
   }
   cout<<GREEN<<"Unpacker [INFO]: Wrote Histograms"<<RESET<<endl;
   return 0;
@@ -277,6 +279,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   BankHeader_t bhead;           //MIDAS bank header
   Bank32_t bank32;              //MIDAS 32-bit bank
   Bank_t bank;                  //MIDAS 16-bit bank
+
+  Sclr_Totals_t sclr_totals;    //Scaler Totals
+  Sclr_Rates_t sclr_rates;      //Scaler Rates
 
   uint32_t TotalDataSize=0;     // head.fDataSize;
   uint32_t TotalBankSize=0;     // bhead.fDataSize;
@@ -601,14 +606,101 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      }  //End of if on CEVT bank
 	      break;
 	    } //End of loop on EventBankSize
-	  }
+	 
+	  } //End of event type 1
+	  
 
-	  else { //scalers and other crap
+	  
+	  //Scalers
+	  else if(head.fEventId==2) {
+	      
+	    TotalBankSize  = head.fDataSize;
+
+#ifdef Scaler_Verbose
+	    cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+	    gzread(gz_in,&bhead,sizeof(BankHeader_t));
+	    TotalBankSize -= sizeof( BankHeader_t );
+	    
+#ifdef Scaler_Verbose
+	    cout << "Bank_HEADER " << endl;
+	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+	    cout << dec << bhead.fFlags << endl;
+#endif
+	    while (TotalBankSize > 0) {
+
+	      //MLTM
+	      gzread( gz_in, &bank32, sizeof( Bank32_t ) );
+	      TotalBankSize -= sizeof( Bank32_t );
+
+#ifdef Scaler_Verbose
+	      cout << "BANK " << endl;
+	      cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+	      cout << dec << bank32.fType << endl;
+	      cout << "Size: "<<dec << bank32.fDataSize << endl;
+#endif
+	      //see if data is on an 8-byte boundary
+	      bool readextra = false;
+	      if(bank32.fDataSize%8 !=0) {
+		readextra = true; 
+	      }
+	      
+	      if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
+		
+		uint32_t time_seconds;
+		gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
+		TotalBankSize-=sizeof(time_seconds);
+
+#ifdef Scaler_Verbose
+		cout << time_seconds<<"\n";
+#endif
+	      }
+	      if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
+
+		gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
+		TotalBankSize-=sizeof(sclr_totals);
+	
+		for(int kay=0; kay<N_SCLR; kay++) {
+		  hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
+#ifdef Scaler_Verbose
+		  cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
+#endif
+		}
+	      }
+	      
+	      if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
+	       
+		gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
+		TotalBankSize-=sizeof(sclr_rates);
+
+#ifdef Scaler_Verbose
+		for(int kay=0; kay<N_SCLR; kay++) {
+		  cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
+		}
+#endif
+	      }
+	      
+	      if(readextra) {
+		uint32_t extra = 0;
+		gzret=gzread(gz_in,&extra,sizeof(extra));
+		TotalBankSize -= sizeof(extra);
+	      }	
+	      
+#ifdef Scaler_Verbose
+	      cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+
+	    } //End of while(TotalBankSize > 0)
+	  
+	  } //end of scalers
+
+	  
+	  else { // other crap
 	    char *fData;
 	    fData=(char*)malloc(head.fDataSize);
 	    gzret=gzread(gz_in,fData,head.fDataSize);
 	    free (fData);
-	  } //end of scalers and stuff
+	  } //end of crap
 	}  //checking to see if gzret > 0
       }
 
@@ -713,8 +805,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 
 	      //These are the Acquisition Status
 	      if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Acquisition Status"<<endl;
 #endif
@@ -731,8 +823,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 
 	      //These are the Failure Status
 	      if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Failure Status"<<endl;
 #endif
@@ -753,8 +845,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 
 	      //These are the Readout Status
 	      if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
 #ifdef Scaler_Verbose
 		cout<<endl<<"Readout Status"<<endl;
 #endif
@@ -880,315 +972,399 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 #ifdef Scaler_Verbose
 	    cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
 #endif
-	  }  //End of Event ID 8
-
-else if (head.fEventId!=1) {
-
-TotalBankSize=TotalDataSize;
-
-//gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
-//TotalBankSize = bhead.fDataSize;
-
-//gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-//TotalBankSize -= sizeof(Bank32_t);
+	  }  //End of Event ID 8 (Diagnostics)
 
 
-uint32_t garbage;
-while(TotalBankSize > 0) {
-gzret = gzread(gz_in,&garbage, sizeof(garbage));
-TotalBankSize -= sizeof(garbage);
-//cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
-}
+	  //Scalers
+	  else if(head.fEventId==2) {
+	      
+	    TotalBankSize  = head.fDataSize;
 
-}
-    
-	  //Data
-	  else if(head.fEventId==1){
+#ifdef Scaler_Verbose
+	    cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+	    gzread(gz_in,&bhead,sizeof(BankHeader_t));
+	    TotalBankSize -= sizeof( BankHeader_t );
 	    
-	    TotalBankSize=0;
-	    EventBankSize=0;
-	    
-	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
-#ifdef Unpacker_Verbose
-	    cout<<"Event Data"<<endl;
+#ifdef Scaler_Verbose
 	    cout << "Bank_HEADER " << endl;
-	    cout <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	    cout << bhead.fFlags << endl;
+	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+	    cout << dec << bhead.fFlags << endl;
 #endif
-	    
-	    TotalBankSize = bhead.fDataSize;
-	    
-	    while(TotalBankSize>0) {
-	      
-	      gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-	      TotalBankSize -= sizeof(Bank32_t);
-	      
-#ifdef Unpacker_Verbose
-	      cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;    
-	      cout << "BANK  " << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+	    while (TotalBankSize > 0) {
+
+	      //MLTM
+	      gzread( gz_in, &bank32, sizeof( Bank32_t ) );
+	      TotalBankSize -= sizeof( Bank32_t );
+
+#ifdef Scaler_Verbose
+	      cout << "BANK " << endl;
+	      cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
 	      cout << dec << bank32.fType << endl;
-	      cout << dec << bank32.fDataSize << endl;
+	      cout << "Size: "<<dec << bank32.fDataSize << endl;
 #endif
-	
-	      EventBankSize = bank32.fDataSize;
-	      
-	      //the data lie on 8 byte boundaries so there will be an extra 4 bytes at the end of the data that is "unaccounted" for in the header
+	      //see if data is on an 8-byte boundary
 	      bool readextra = false;
-	      if(EventBankSize%8 !=0) {
+	      if(bank32.fDataSize%8 !=0) {
 		readextra = true; 
 	      }
-
-
 	      
-	      //Read the firmware version and board ID
-	      uint32_t firmware_version;
-	      gzret=gzread(gz_in,&firmware_version,sizeof(firmware_version));
-	      TotalBankSize -= sizeof(firmware_version);
-	      EventBankSize -=  sizeof(firmware_version);
-	           
-	      //Read the user extras word
-	      uint32_t user_extras;
-	      gzret=gzread(gz_in,&user_extras,sizeof(user_extras));
-	      TotalBankSize -= sizeof(user_extras);
-	      EventBankSize -=  sizeof(user_extras);
-	      
-#ifdef Unpacker_Verbose
-	      cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<(firmware_version & 0xFF)<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
+	      if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
+		
+		uint32_t time_seconds;
+		
+		cout<<N_SCLR<<endl;
+		gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
+		TotalBankSize-=sizeof(time_seconds);
+
+#ifdef Scaler_Verbose
+		cout << time_seconds<<"\n";
 #endif
-	      
-	      while(EventBankSize>0) {
-	    
-		uint32_t dataword =0;
-		uint32_t BytesRead =0;
-		
-		//Unpack digitizer header (4 32 bit words)
-		gzret=gzread(gz_in,&v1730_header,sizeof(v1730_header));
-		BytesRead += sizeof(v1730_header);
-		
-		//extract stuff
-		uint32_t nwords = v1730_header.dataword_1 & 0xFFFFFFF;
-		int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
-		if(header != 10) {
-		  cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
-		  cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
-		  cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
-		  run = false;
-		  break;
+	      }
+	      if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
+
+		gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
+		TotalBankSize-=sizeof(sclr_totals);
+	
+		for(int kay=0; kay<N_SCLR; kay++) {
+		  hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
+#ifdef Scaler_Verbose
+		  cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
+#endif
 		}
-		else {
-		  
-		  //Check for reported board failures
-		  int failbit = (v1730_header.dataword_2 & 0x04000000) >> 26;
-		  if(failbit) {
-		    cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
-		  }
+	      }
+	      
+	      if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
+	       
+		gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
+		TotalBankSize-=sizeof(sclr_rates);
 
-		  int channelmask = (v1730_header.dataword_2 & 0xFF);
-		  
-#ifdef Unpacker_Verbose
-		  cout<< "header: "<<header<<"  nwords: "<<nwords<<" channelmask: "<<channelmask<<endl;
-#endif
-		  
-			  //interpret the channel mask 
-		  channels.clear();
-		  for(int m=0; m<8; m++) {
-#ifdef Unpacker_Verbose
-		    cout<<m<<"  "<<((channelmask >> m) & 0x1)<<endl;
-#endif
-		    if(((channelmask >> m) & 0x1)) {
-		      channels.push_back(2*m);
-		    }
-		  }
-		  
-		  int wordstoread = nwords-4;
-		  int chaggcounter = 0;
-		  
-		  while (wordstoread>0) {
-		    
-		    gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
-		    BytesRead += sizeof(v1730_chagg_header);
-		    wordstoread -= sizeof(v1730_chagg_header);
-		    
-		    int chaggsize = (v1730_chagg_header.dataword_1 & 0x3FFFFF);
-		    int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
-		    if(chagghead !=1) {
-		      cout<<"Unpacker [ERROR] CAEN Channel Aggregate Header is NOT 1"<<endl;
-		      return -1;
-		    }
-		    
-		    int nsdb8 = (v1730_chagg_header.dataword_2 & 0xFFFF);
-#ifdef Unpacker_Verbose
-		    cout<<"Waveform Size: "<<db_arr[EVTS].Ns<<endl;
-#endif
-		    int extras_format = (v1730_chagg_header.dataword_2 & 0x7000000) >> 24;
-#ifdef Unpacker_Verbose 
-		    cout<<"Extras Format: "<<extras_format<<endl;
-#endif
-		    int extras_enabled = (v1730_chagg_header.dataword_2 & 0x10000000) >> 28;
-#ifdef Unpacker_Verbose
-		    cout<<"Extras Enabled: "<<extras_enabled<<endl;
-#endif
-		    int chaggwordstoread = chaggsize-2;
-		    
-		    //Unpack the channel aggreate
-		    while (chaggwordstoread>0) {
-
-		      //Need to set the board and Ns here
-		      db_arr[EVTS].Valid = 1;
-		      db_arr[EVTS].board = ((firmware_version & 0xFC000000) >> 26);
-		      db_arr[EVTS].Ns = 8*nsdb8;
-		      
-		      //TTT and Ch
-		      gzret=gzread(gz_in,&dataword,sizeof(dataword));
-		      db_arr[EVTS].timestamp = (dataword & 0x7FFFFFFF);
-#ifdef Unpacker_Verbose
-		      cout<<"TTT: "<<db_arr[EVTS].timestamp<<endl;
-#endif	      
-		      // int ch = (dataword & 0x80000000) >> 31;
-		      db_arr[EVTS].channel = ((dataword & 0x80000000) >> 31) + channels[chaggcounter];
-
-		      //Map it
-		      db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];         
-
-		      BytesRead += sizeof(dataword);
-		      wordstoread--;
-		      chaggwordstoread--;
-		      
-		      //unpack waveform
-		      gzret=gzread(gz_in,&waveform[0],db_arr[EVTS].Ns*sizeof(uint16_t));
-		      
-		      BytesRead += gzret;
-		      wordstoread -= nsdb8*4;
-		      chaggwordstoread -= nsdb8*4;
-		      
-		      for(int eye=0; eye<db_arr[EVTS].Ns; eye++) {
-			waveform[eye] = waveform[eye] & 0x3FFF;
-		      }
-		      
- 		      
-		      //Extras
-		      if(extras_enabled) {
-			gzret=gzread(gz_in,&dataword,sizeof(dataword));
-			BytesRead += sizeof(dataword);
-			wordstoread--;
-			chaggwordstoread--;
-			if(extras_format <= 2) {
-			  
-			  //Add the upper bits to the 47-bit timestamp
-			  uint16_t timehigh = (dataword & 0xFFFF0000) >> 16;
-			  db_arr[EVTS].timestamp += timehigh*2147483648; 
-			  
-#ifdef Unpacker_Verbose
-			  cout<<"time high: "<<timehigh<<" timestamp: "<<db_arr[EVTS].timestamp<<endl;;
-#endif	 
-			}
-		      }
-			
-		      //Do the waveform analysis
-		      // CALCULATE THE LEADING EDGE using constant fraction "frac"
-		      int imin=0;
-		      double sigmin=1e9;
-		      double frac=0.04;
-		      double base=0;
-		      double secmom=0.;	
-		      int NNN=10;
-		      // int id=db_arr[EVTS].ID;
-		      
-		      //  if(db_arr[EVTS].ID<162) frac=0.04;
-		      // else frac=0.1;
-		
-		      frac=0.2;
-		
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-
-			//Fill waveform histogram
-			if(read_binary==0) {
-			  if(db_arr[EVTS].ID<256) {
-			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
-			    hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
-			  }
-			  // if(db_arr[EVTS].ID==200) {
-			  //   hWaveform_T0->Fill(i,wf1[i],1);
-			  // }
-			}
-			
-			if(i<NNN) {
-			  base+=(1.*waveform[i]);
-			  secmom+=(1.*waveform[i]*1.*waveform[i]);
-			}		  
-			if((1.*waveform[i])<sigmin) {
-			  sigmin=1.*waveform[i];
-			  imin=i;
-			}
-		      }
-		
-		      double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
-		      double dT=0;
-		      int iLD=0;
-		      for(int i=imin;i>1;i--){
-			if((1.*waveform[i])<thr && (1.*waveform[i-1])>thr){
-			  double dSig=(1.*waveform[i-1]-1.*waveform[i]);
-			  if(dSig!=0) dT=(1.*waveform[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
-			  else dT=(i-1)*2.;
-			  iLD=i;
-			}		
-		      }      
-
-		      //TOF
-		      db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
-
-		      //need to add the time deviations (if any) before time sorting
-		      if(db_arr[EVTS].ID < 200) {
-			db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
-		      }
-		      
-		      //keep track of the smallest timestamp
-		      if(db_arr[EVTS].TOF<smallest_timestamp) {
-			smallest_timestamp=db_arr[EVTS].TOF;
-		      }    
-		      
-		      //Energies
-		      gzret=gzread(gz_in,&dataword,sizeof(dataword));
-		      db_arr[EVTS].Ifast = (dataword & 0x7FFF);
-		      db_arr[EVTS].Islow = (dataword & 0xFFFF0000) >> 16;
-
-#ifdef Unpacker_Verbose	      
-		      cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ISlow: "<<db_arr[EVTS].Islow<<endl;
-#endif
-      
-		      BytesRead += sizeof(dataword);
-		      wordstoread--;	    
-		      chaggwordstoread--;
-		      
-		      //incriment counters
-		      EVTS++;
-		      TOTAL_EVTS++;
-
-#ifdef Unpacker_Verbose
-		      cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
-#endif
-		    }
-		    chaggcounter++;
-		  }
-		  
-		  EventBankSize -= BytesRead;
-		  TotalBankSize -= BytesRead;
-		  
+#ifdef Scaler_Verbose
+		for(int kay=0; kay<N_SCLR; kay++) {
+		  cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
 		}
+#endif
 	      }
 	      
 	      if(readextra) {
 		uint32_t extra = 0;
 		gzret=gzread(gz_in,&extra,sizeof(extra));
 		TotalBankSize -= sizeof(extra);
+	      }	
+	      
+#ifdef Scaler_Verbose
+	      cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+
+	    } //End of while(TotalBankSize > 0)
+	  
+	  } // End of Event ID 2 (Scalers)
+	  
+        
+	  //Data
+	  else if(head.fEventId==1){
+	    
+	      TotalBankSize=0;
+	      EventBankSize=0;
+	    
+	      gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
+#ifdef Unpacker_Verbose
+	      cout<<"Event Data"<<endl;
+	      cout << "Bank_HEADER " << endl;
+	      cout <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+	      cout << bhead.fFlags << endl;
+#endif
+	    
+	      TotalBankSize = bhead.fDataSize;
+	    
+	      while(TotalBankSize>0) {
+	      
+		gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+		TotalBankSize -= sizeof(Bank32_t);
+	      
+#ifdef Unpacker_Verbose
+		cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;    
+		cout << "BANK  " << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+		cout << dec << bank32.fType << endl;
+		cout << dec << bank32.fDataSize << endl;
+#endif
+	
+		EventBankSize = bank32.fDataSize;
+	      
+		//the data lie on 8 byte boundaries so there will be an extra 4 bytes at the end of the data that is "unaccounted" for in the header
+		bool readextra = false;
+		if(EventBankSize%8 !=0) {
+		  readextra = true; 
+		}
+
+
+	      
+		//Read the firmware version and board ID
+		uint32_t firmware_version;
+		gzret=gzread(gz_in,&firmware_version,sizeof(firmware_version));
+		TotalBankSize -= sizeof(firmware_version);
+		EventBankSize -=  sizeof(firmware_version);
+	           
+		//Read the user extras word
+		uint32_t user_extras;
+		gzret=gzread(gz_in,&user_extras,sizeof(user_extras));
+		TotalBankSize -= sizeof(user_extras);
+		EventBankSize -=  sizeof(user_extras);
+	      
+#ifdef Unpacker_Verbose
+		cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<(firmware_version & 0xFF)<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
+#endif
+	      
+		while(EventBankSize>0) {
+	    
+		  uint32_t dataword =0;
+		  uint32_t BytesRead =0;
+		
+		  //Unpack digitizer header (4 32 bit words)
+		  gzret=gzread(gz_in,&v1730_header,sizeof(v1730_header));
+		  BytesRead += sizeof(v1730_header);
+		
+		  //extract stuff
+		  uint32_t nwords = v1730_header.dataword_1 & 0xFFFFFFF;
+		  int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
+		  if(header != 10) {
+		    cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
+		    cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
+		    cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
+		    run = false;
+		    break;
+		  }
+		  else {
+		  
+		    //Check for reported board failures
+		    int failbit = (v1730_header.dataword_2 & 0x04000000) >> 26;
+		    if(failbit) {
+		      cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
+		    }
+
+		    int channelmask = (v1730_header.dataword_2 & 0xFF);
+		  
+#ifdef Unpacker_Verbose
+		    cout<< "header: "<<header<<"  nwords: "<<nwords<<" channelmask: "<<channelmask<<endl;
+#endif
+		  
+		    //interpret the channel mask 
+		    channels.clear();
+		    for(int m=0; m<8; m++) {
+#ifdef Unpacker_Verbose
+		      cout<<m<<"  "<<((channelmask >> m) & 0x1)<<endl;
+#endif
+		      if(((channelmask >> m) & 0x1)) {
+			channels.push_back(2*m);
+		      }
+		    }
+		  
+		    int wordstoread = nwords-4;
+		    int chaggcounter = 0;
+		  
+		    while (wordstoread>0) {
+		    
+		      gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
+		      BytesRead += sizeof(v1730_chagg_header);
+		      wordstoread -= sizeof(v1730_chagg_header);
+		    
+		      int chaggsize = (v1730_chagg_header.dataword_1 & 0x3FFFFF);
+		      int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
+		      if(chagghead !=1) {
+			cout<<"Unpacker [ERROR] CAEN Channel Aggregate Header is NOT 1"<<endl;
+			return -1;
+		      }
+		    
+		      int nsdb8 = (v1730_chagg_header.dataword_2 & 0xFFFF);
+#ifdef Unpacker_Verbose
+		      cout<<"Waveform Size: "<<db_arr[EVTS].Ns<<endl;
+#endif
+		      int extras_format = (v1730_chagg_header.dataword_2 & 0x7000000) >> 24;
+#ifdef Unpacker_Verbose 
+		      cout<<"Extras Format: "<<extras_format<<endl;
+#endif
+		      int extras_enabled = (v1730_chagg_header.dataword_2 & 0x10000000) >> 28;
+#ifdef Unpacker_Verbose
+		      cout<<"Extras Enabled: "<<extras_enabled<<endl;
+#endif
+		      int chaggwordstoread = chaggsize-2;
+		    
+		      //Unpack the channel aggreate
+		      while (chaggwordstoread>0) {
+
+			//Need to set the board and Ns here
+			db_arr[EVTS].Valid = 1;
+			db_arr[EVTS].board = ((firmware_version & 0xFC000000) >> 26);
+			db_arr[EVTS].Ns = 8*nsdb8;
+		      
+			//TTT and Ch
+			gzret=gzread(gz_in,&dataword,sizeof(dataword));
+			db_arr[EVTS].timestamp = (dataword & 0x7FFFFFFF);
+#ifdef Unpacker_Verbose
+			cout<<"TTT: "<<db_arr[EVTS].timestamp<<endl;
+#endif	      
+			// int ch = (dataword & 0x80000000) >> 31;
+			db_arr[EVTS].channel = ((dataword & 0x80000000) >> 31) + channels[chaggcounter];
+
+			//Map it
+			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];         
+
+			BytesRead += sizeof(dataword);
+			wordstoread--;
+			chaggwordstoread--;
+		      
+			//unpack waveform
+			gzret=gzread(gz_in,&waveform[0],db_arr[EVTS].Ns*sizeof(uint16_t));
+		      
+			BytesRead += gzret;
+			wordstoread -= nsdb8*4;
+			chaggwordstoread -= nsdb8*4;
+		      
+			for(int eye=0; eye<db_arr[EVTS].Ns; eye++) {
+			  waveform[eye] = waveform[eye] & 0x3FFF;
+			}
+		      
+ 		      
+			//Extras
+			if(extras_enabled) {
+			  gzret=gzread(gz_in,&dataword,sizeof(dataword));
+			  BytesRead += sizeof(dataword);
+			  wordstoread--;
+			  chaggwordstoread--;
+			  if(extras_format <= 2) {
+			  
+			    //Add the upper bits to the 47-bit timestamp
+			    uint16_t timehigh = (dataword & 0xFFFF0000) >> 16;
+			    db_arr[EVTS].timestamp += timehigh*2147483648; 
+			  
+#ifdef Unpacker_Verbose
+			    cout<<"time high: "<<timehigh<<" timestamp: "<<db_arr[EVTS].timestamp<<endl;;
+#endif	 
+			  }
+			}
+			
+			//Do the waveform analysis
+			// CALCULATE THE LEADING EDGE using constant fraction "frac"
+			int imin=0;
+			double sigmin=1e9;
+			double frac=0.04;
+			double base=0;
+			double secmom=0.;	
+			int NNN=10;
+			// int id=db_arr[EVTS].ID;
+		      
+			//  if(db_arr[EVTS].ID<162) frac=0.04;
+			// else frac=0.1;
+		
+			frac=0.2;
+		
+			for(int i=0;i<db_arr[EVTS].Ns;i++) {
+
+			  //Fill waveform histogram
+			  if(read_binary==0) {
+			    if(db_arr[EVTS].ID<256) {
+			      hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
+			      hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+			    }
+			    // if(db_arr[EVTS].ID==200) {
+			    //   hWaveform_T0->Fill(i,wf1[i],1);
+			    // }
+			  }
+			
+			  if(i<NNN) {
+			    base+=(1.*waveform[i]);
+			    secmom+=(1.*waveform[i]*1.*waveform[i]);
+			  }		  
+			  if((1.*waveform[i])<sigmin) {
+			    sigmin=1.*waveform[i];
+			    imin=i;
+			  }
+			}
+		
+			double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
+			double dT=0;
+			int iLD=0;
+			for(int i=imin;i>1;i--){
+			  if((1.*waveform[i])<thr && (1.*waveform[i-1])>thr){
+			    double dSig=(1.*waveform[i-1]-1.*waveform[i]);
+			    if(dSig!=0) dT=(1.*waveform[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
+			    else dT=(i-1)*2.;
+			    iLD=i;
+			  }		
+			}      
+
+			//TOF
+			db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
+
+			//need to add the time deviations (if any) before time sorting
+			if(db_arr[EVTS].ID < 200) {
+			  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+			}
+		      
+			//keep track of the smallest timestamp
+			if(db_arr[EVTS].TOF<smallest_timestamp) {
+			  smallest_timestamp=db_arr[EVTS].TOF;
+			}    
+		      
+			//Energies
+			gzret=gzread(gz_in,&dataword,sizeof(dataword));
+			db_arr[EVTS].Ifast = (dataword & 0x7FFF);
+			db_arr[EVTS].Islow = (dataword & 0xFFFF0000) >> 16;
+
+#ifdef Unpacker_Verbose	      
+			cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ISlow: "<<db_arr[EVTS].Islow<<endl;
+#endif
+      
+			BytesRead += sizeof(dataword);
+			wordstoread--;	    
+			chaggwordstoread--;
+		      
+			//incriment counters
+			EVTS++;
+			TOTAL_EVTS++;
+
+#ifdef Unpacker_Verbose
+			cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
+#endif
+		      }
+		      chaggcounter++;
+		    }
+		  
+		    EventBankSize -= BytesRead;
+		    TotalBankSize -= BytesRead;
+		  }
+		}
+	      
+		if(readextra) {
+		  uint32_t extra = 0;
+		  gzret=gzread(gz_in,&extra,sizeof(extra));
+		  TotalBankSize -= sizeof(extra);
+		}
 	      }
-	    }
-	  }
+	    }  //Endf of EventID 1 (Data)
+	  
 	  else {
 	    cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
-	  }
-	}	
-      }
+
+	    TotalBankSize=TotalDataSize;
+	    
+	    //gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
+	    //TotalBankSize = bhead.fDataSize;
+	    
+	    //gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+	    //TotalBankSize -= sizeof(Bank32_t);
+	    
+	    
+	    uint32_t garbage;
+	    while(TotalBankSize > 0) {
+	      gzret = gzread(gz_in,&garbage, sizeof(garbage));
+	      TotalBankSize -= sizeof(garbage);
+	      //cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
+	    }	    
+
+	  }  //End of catchall   
+	}  //End of EventHeader gzret > 0	
+      } //End of caen2018 format check
       else {
 	cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<DataFormat<<RESET<<endl;
 	return -1;
@@ -1462,7 +1638,7 @@ TotalBankSize -= sizeof(garbage);
 #ifdef Eventbuilder_Verbose
 	  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
-	  }
+	}
     
 	if(eventvector.size()>0) {
 	  Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold,NQGates,QGates);

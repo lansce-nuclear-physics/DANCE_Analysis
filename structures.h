@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  structures.h           *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 05/11/18    *//  
 //***************************//
 
 #ifndef STRUCTURES_H
@@ -16,6 +16,9 @@
 
 /*size of the CEVT_BANK P Array*/
 #define MaxHitsPerT0 500000  
+
+//Number of Scalers to read
+#define N_SCLR 35
 
 //MIDAS Event Structures
 
@@ -46,6 +49,14 @@ struct Bank32_t {
   char fName[4];      ///< bank name
   uint32_t fType;     ///< type of data (see midas.h TID_xxx)
   uint32_t fDataSize;
+};
+
+struct Sclr_Totals_t {
+  uint32_t totals[N_SCLR];
+};
+
+struct Sclr_Rates_t {
+  uint32_t rates[N_SCLR];
 };
 
 /// Scalers

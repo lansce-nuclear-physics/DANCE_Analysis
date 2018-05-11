@@ -1,7 +1,8 @@
 #!/bin/bash
 
-PATHTODATA=hygelac14
-#PATHTODATA=MIDAS_Data_dancedaq_6
+#PATHTODATA=caen2018
+#PATHTODATA=hygelac14
+PATHTODATA=dancedaq7
 
 #These all live on data/14/
 
@@ -23,23 +24,33 @@ PATHTODATA=hygelac14
 #for i in `seq 64693 64833`;  #Cu63
 
 #for i in `seq 60409 60451`;  #Au197 4mm
-for i in `seq 60572 60584`;  #Au197 4mm
-#for i in `seq 63590 63649`;  #Au197 4mm
-#for i in `seq 68104 68126`;  #Au197 4mm
+#for i in `seq 5010 5240`;  #Au197 4mm
+#for i in `seq 5241 5410`;  #Au197 4mm
+#for i in `seq 5410 5500`;  #Au197 4mm
 
-#for i in `seq 59715 59842`;  #Pb208 
-#for i in `seq 60622 60811`;  #Pb208 
-#for i in `seq 62695 62735`;  #Pb208 
+#for i in `seq 5501 5600`;  #Pb208 
+#for i in `seq 5601 5820`;  #Pb208 
+#for i in `seq 5821 5940`;  #Pb208 
 
-#for i in `seq 63650 64136`;  #Pb208 
-#for i in `seq 63865 63870`;  #Pb208 
+#for i in `seq 5841 6020`;  #Pb208 
+#for i in `seq 6021 6160`;  #Pb208 
+
+#for i in `seq 7001 7090`;  #Pb208 
+#for i in `seq 7091 7440`;  #Pb208 
 
 #for i in `seq 64834 64987`;  #Pb208 
 #for i in `seq 68040 68103`;  #Pb208 
 
+#for i in `seq 67519 67835`; 
+#for i in `seq 67966 68039`;
+#for i in `seq 68247 68900`;
+
+for i in `seq 100016 100025`;
+
+
 do
     echo Processing Run: $i;
-#    ./DANCE_Analysis $PATHTODATA $i stage0.cfg;
-    ./DANCE_Analysis $PATHTODATA $i stage1.cfg;
+   #./DANCE_Analysis $PATHTODATA $i stage1.cfg;
+   ./DANCE_Analysis $PATHTODATA $i stage0_caen2018.cfg;
 
 done
