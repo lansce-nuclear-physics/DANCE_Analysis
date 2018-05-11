@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 03/22/18    *//  
+//*  Last Edit: 05/08/18    *//  
 //***************************//
 
 //File includes
@@ -330,83 +330,90 @@ int Make_Output_Binfile(int RunNumber, bool read_binary) {
   }
 }
 
-int Read_Energy_Calibrations(int RunNumber, bool read_binary) {
+int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulation) {
   
   int id=0;
   double temp[5] = {0,0,0,0,0};
 
-  for(int eye=0; eye<200; eye++) {
-    slow_offset[eye]=0;
-    slow_slope[eye]=1;
-    slow_quad[eye]=0;
-    fast_offset[eye]=0;
-    fast_slope[eye]=1;  
-  }
+    for(int eye=0; eye<200; eye++) {
+      slow_offset[eye]=0;
+      slow_slope[eye]=1;
+      slow_quad[eye]=0;
+      fast_offset[eye]=0;
+      fast_slope[eye]=1;  
+    }
 
   cout<<"Analyzer [INFO]: Reading Energy Calibrations"<<endl;
-  
-  stringstream cal_name;
-  cal_name.str();
-  cal_name << CALIB_DIR << "/param_out_" << RunNumber << ".txt";
-  
-  ifstream encal;
-  encal.open(cal_name.str().c_str());
 
-  bool encalfail=false;
+  if(read_simulation == 0) {
+
+
+    stringstream cal_name;
+    cal_name.str();
+    cal_name << CALIB_DIR << "/param_out_" << RunNumber << ".txt";
+    
+    ifstream encal;
+    encal.open(cal_name.str().c_str());
   
-  if(read_binary==1) {
-    if(encal.is_open()) {
-      while(!encal.eof()) {
-	encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
+    bool encalfail=false;
+  
+    if(read_binary==1) {
+      if(encal.is_open()) {
+	while(!encal.eof()) {
+	  encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
+	  slow_offset[id]=temp[0];
+	  slow_slope[id]=temp[1];
+	  slow_quad[id]=temp[2];
+	  fast_offset[id]=temp[3];
+	  fast_slope[id]=temp[4];
+	
+	  if(encal.eof()) {
+	    break;
+	  }
+	}  
+      
+	cout<<GREEN<<"Analyzer [INFO]: Read Energy Calibrations File: "<<cal_name.str()<<RESET<<endl;
+	return 0;
+      }
+      else {
+	cout<<RED<<"Analyzer [ERROR]: File: "<<cal_name.str()<<" NOT found..."<<RESET<<endl;
+	encalfail=true;
+      }
+    }
+    if(read_binary==0 || encalfail==true)
+      cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
+  
+    stringstream idealcal_name;
+    idealcal_name.str();
+    idealcal_name << CALIB_DIR << "/calib_ideal.dat";
+  
+    ifstream idealcal;
+    idealcal.open(idealcal_name.str().c_str());
+  
+    if(idealcal.is_open()) {
+      while(!idealcal.eof()) {
+	idealcal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
 	slow_offset[id]=temp[0];
 	slow_slope[id]=temp[1];
 	slow_quad[id]=temp[2];
 	fast_offset[id]=temp[3];
 	fast_slope[id]=temp[4];
-	
-	if(encal.eof()) {
+      
+	if(idealcal.eof()) {
 	  break;
 	}
-      }  
-      
-      cout<<GREEN<<"Analyzer [INFO]: Read Energy Calibrations File: "<<cal_name.str()<<RESET<<endl;
+      }
+      cout<<GREEN<<"Analyzer [INFO]: Opened "<<idealcal_name.str()<<RESET<<endl;
       return 0;
     }
     else {
-      cout<<RED<<"Analyzer [ERROR]: File: "<<cal_name.str()<<" NOT found..."<<RESET<<endl;
-      encalfail=true;
+      cout<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
+      return-1;
     }
-  }
-  if(read_binary==0 || encalfail==true)
-    cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
-  
-  stringstream idealcal_name;
-  idealcal_name.str();
-  idealcal_name << CALIB_DIR << "/calib_ideal.dat";
-  
-  ifstream idealcal;
-  idealcal.open(idealcal_name.str().c_str());
-  
-  if(idealcal.is_open()) {
-    while(!idealcal.eof()) {
-      idealcal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
-      slow_offset[id]=temp[0];
-      slow_slope[id]=temp[1];
-      slow_quad[id]=temp[2];
-      fast_offset[id]=temp[3];
-      fast_slope[id]=temp[4];
-      
-      if(idealcal.eof()) {
-	break;
-      }
-    }
-    cout<<GREEN<<"Analyzer [INFO]: Opened "<<idealcal_name.str()<<RESET<<endl;
-    return 0;
-  }
-  else {
-    cout<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
-    return-1;
-  }
+  }  
+  cout<<GREEN<<"Analyzer [INFO]: Set all calibrations off for simulations"<<RESET<<endl;
+  return 0;
+
 }
 
 int Read_PI_Gates() {
@@ -536,7 +543,7 @@ int Read_TMatrix() {
 }
 
 
-int Create_Analyzer_Histograms(bool read_binary, int NQGates, double QGates[]) {
+int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGates, double QGates[]) {
   
   cout<<"Analyzer [INFO]: Creating Histograms"<<endl;
 
@@ -565,7 +572,7 @@ int Create_Analyzer_Histograms(bool read_binary, int NQGates, double QGates[]) {
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",600000,0,60000000);
 
-  if(read_binary==0) {
+  if(read_binary==0 && read_simulation==0) {
     hDetectorLoad = new TH1D("DetectorLoad","DetectorLoad",10000000,0,10000000);
   }
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
@@ -630,7 +637,7 @@ int Create_Analyzer_Histograms(bool read_binary, int NQGates, double QGates[]) {
   hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
   hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",100000,0,10000000);
 
-  if(read_binary==1) {
+  if(read_binary==1 || read_simulation==1) {
 
     hEn = new TH1D("En","En",NEbins,x); //Raw En
     hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
@@ -664,7 +671,7 @@ int Create_Analyzer_Histograms(bool read_binary, int NQGates, double QGates[]) {
 }
 
 
-int Write_Analyzer_Histograms(TFile *fout, bool read_binary,int NQGates, double QGates[]) {
+int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulation, int NQGates, double QGates[]) {
   
   cout<<"Analyzer [INFO]: Writing Histograms"<<endl;
   
@@ -687,7 +694,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary,int NQGates, double 
   hDANCE_Entries_per_T0->Write();
   hDANCE_Events_per_T0->Write();
 
-  if(read_binary==0) { 
+  if(read_binary==0 && read_simulation==0) { 
     for(int eye=0; eye<10000000; eye++) {
       hDetectorLoad->SetBinContent(eye+1,Detector_Load[eye]/(160.0*T0_Counter));
     }
@@ -705,7 +712,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary,int NQGates, double 
   Alpha_Gate->Write();
   Gamma_Gate->Write();
 
-  if(read_binary==1) {
+  if(read_binary==1 || read_simulation == 1) {
     hTOF->Write();
     hTOF_Corr->Write();
 
@@ -754,7 +761,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary,int NQGates, double 
 }
 
 
-int Initialize_Analyzer(bool read_binary, bool write_binary,int NQGates, double QGates[]) {
+int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulation, int NQGates, double QGates[]) {
 
   cout<<BLUE<<"Analyzer [INIT]: Initializing Analyzer"<<RESET<<endl;
   
@@ -768,7 +775,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary,int NQGates, double 
   Read_PI_Gates();
   totalindex = Read_TMatrix();
   Read_DMatrix();
-  Create_Analyzer_Histograms(read_binary,NQGates,QGates);
+  Create_Analyzer_Histograms(read_binary,read_simulation,NQGates,QGates);
   
   for(int eye=0; eye<162; eye++) {
     last_timestamp[eye]=0;
@@ -796,7 +803,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary,int NQGates, double 
 }
 
 
-int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, int NQGates, double QGates[]) {
+int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, bool read_simulation, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, int NQGates, double QGates[]) {
 
 
   //Progress indicator
@@ -828,7 +835,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
   // }
   
   //Loop over event 
-    for(uint32_t eye=0; eye<eventvector.size(); eye++) {
+  for(uint32_t eye=0; eye<eventvector.size(); eye++) {
 
     //Fill ID histogram
     hID->Fill(eventvector[eye].ID);
@@ -851,7 +858,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       eventvector[eye].Efast = 0.001*(temp_fast*fast_slope[eventvector[eye].ID] +
 				      fast_offset[eventvector[eye].ID]);
       
-      
+      //  cout<<eventvector[eye].Eslow<<"  "<<temp_slow<<endl;
+
       if(HAVE_Threshold==1) {
 	if(eventvector[eye].Eslow < Energy_Threshold) {
 	  eventvector[eye].Valid=0;
@@ -928,7 +936,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
 	}
 	
-	if( Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
+	if( (Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || read_simulation) {
 
 	  //Fill some Calibration Spectra
 	  hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
@@ -955,7 +963,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	ADC_calib_Invalid->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
       } //end of not valid else
       
-      if(read_binary==0) {
+      if(read_binary==0 && read_simulation==0) {
 	//Fill detecotor load
 	if(last_t0_timestamp > 0) {
 	  uint32_t temptof = (uint32_t)(eventvector[eye].TOF-last_t0_timestamp);
@@ -1110,7 +1118,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
     }
   } //end check of devent.Valid
   
-  if(read_binary==1) {
+  if(read_binary==1 || read_simulation ==1 ) {
     
     //Handle various events and do some physics
     if(devent.Valid==1) {

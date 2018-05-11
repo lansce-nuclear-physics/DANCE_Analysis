@@ -42,6 +42,7 @@
 #define STAGE1_ROOT "./stage1_root"
 #define STAGE0_BIN "./stage0_bin"
 #define STAGE1_BIN "./stage1_bin"
+#define STAGE0_SIM "./stage0_simulated"
 #define DIAGNOSTICS "./diagnostics"
 #define TIMEDEV_DIR "../TimeDeviations"
 #define CALIB_DIR "../Calibrations"

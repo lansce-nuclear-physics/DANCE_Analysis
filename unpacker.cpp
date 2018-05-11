@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 03/22/18    *//  
+//*  Last Edit: 05/08/18    *//  
 //***************************//
 
 //File includes
@@ -148,7 +148,7 @@ int Make_Output_Diagnostics_File(int RunNumber) {
   }
 }
 
-int Read_TimeDeviations(int runnum, bool FitTimeDev) {
+int Read_TimeDeviations(int runnum, bool FitTimeDev, bool read_simulations) {
   cout << "Unpacker [INFO]: Reading Time Deviations" << endl;
   
   for(int eye=0; eye<200; eye++) {
@@ -161,7 +161,7 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev) {
   }
   
   //if we have time deviations then obtain them from the files
-  else {
+  else if(read_simulations==0) {
     stringstream fname;
     fname.str();
     
@@ -192,7 +192,7 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev) {
 }
 
 
-int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat, int NQGates, double QGates[]) {
+int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, bool read_simulation, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat, int NQGates, double QGates[]) {
 
   ofstream faillog;
   faillog.open("Readout_Status_Failures.txt", ios::app);
@@ -222,10 +222,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   Make_DANCE_Map();
 
   //initiliaze the time deviations
-  Read_TimeDeviations(runnum,FitTimeDev);
+  Read_TimeDeviations(runnum,FitTimeDev,read_simulation);
 
   //Make the ouput diagnostics file
-  if(read_binary == 0 && (strcmp(DataFormat.c_str(),"caen2018") == 0)) {
+  if(read_binary == 0 && (strcmp(DataFormat.c_str(),"caen2018") == 0) && read_simulation==0) {
     Make_Output_Diagnostics_File(runnum);
   }
   
@@ -318,7 +318,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   cout<<"Unpacker [INFO]: Data Format: "<<DataFormat<<endl;
   
   //Stage 0 unpacking
-  if(read_binary==0) {
+  if(read_binary==0 && read_simulation==0) {
     while(run) {
      
       if(TOTAL_EVTS > EventLimit) {
@@ -1326,7 +1326,7 @@ TotalBankSize -= sizeof(garbage);
 		cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
 		//Send it to the analyzer
-		Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
+		Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
 	      }
 	    }
 	    else {
@@ -1465,7 +1465,7 @@ TotalBankSize -= sizeof(garbage);
 	  }
     
 	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold,NQGates,QGates);
+	  Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold,NQGates,QGates);
 	}
     
 	if(datadeque.size()==0) {
@@ -1479,7 +1479,7 @@ TotalBankSize -= sizeof(garbage);
 
 
   //Stage 1 unpacker
-  if(read_binary==1) {
+  if(read_binary==1 || read_simulation==1) {
 
     while(run) {
       
@@ -1594,7 +1594,7 @@ TotalBankSize -= sizeof(garbage);
 	  
 	  //Send the current event to analyzer
 	  if(eventvector.size()>0) {
-	    Analyze_Data(eventvector, read_binary, write_binary,Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
+	    Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
 	    eventvector.clear();
 	  }
 	  
