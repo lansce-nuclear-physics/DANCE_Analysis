@@ -39,3 +39,5 @@ Version 4.0.0 - Added the ability to run simulated data through the analysis.  M
 Version 4.1.0 - Added the vme scalers to the unpacker for both caen2015 and caen2018 formats. Scaler description file is now in the Config directory.
 
 Version 4.1.1 - Changed the verobosity flags for scalers adding on for diagnostics. 
+
+Version 5.0.0 - Changed the way the main is invoked removing extra command line options.  For Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \",for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \" and for Simulations: \"./DANCE_Analysis cfgfile.cfg \".  Minor changes in unpacker so variables that dont matter at a particular stage are not output to screen.

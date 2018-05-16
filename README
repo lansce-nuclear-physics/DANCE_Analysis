@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  README                 *// 
-//*  Last Edit: 02/23/18    *//  
+//*  Last Edit: 05/16/18    *//  
 //***************************//
 
 The purpose of this document is to explain how the program works.
@@ -15,6 +15,7 @@ The purpose of this document is to explain how the program works.
    'stage0_bin' (the location of the binary output from stage 0 and the input for stage 1), 
    'stage1_root' (the location of the root output from stage 1), and 
    'stage1_bin' (if wanted the binary output from stage 1)
+   'stage0_simulated' (the location of .bin files made by the GEANT4 simulation)
 
    There also needs to be a symbolic link or local directory containing MIDAS data
 
@@ -25,6 +26,8 @@ The purpose of this document is to explain how the program works.
 
    The code is invoked by the following command and arguments:
 
+FOR STAGE0 ANALYSIS
+
    "./DANCE_Analysis /pathtodata runnumber cfgfile.cfg"
    
    The argument 'pathtodata' is either a symbolic link to the location or the location of the .mid or .mid.gz files. 
@@ -32,6 +35,20 @@ The purpose of this document is to explain how the program works.
    The runnumber is padded with 6 zeros and other padding formats would need require a minor change in main.cpp
 
    Sample .cfg files are included when you clone the package and can be modified thereafter.
+
+
+FOR STAGE1 ANALYSIS
+
+   "./DANCE_Analysis runnumber cfgfile.cfg"
+
+   Here the path to the data is whatever the symbolic link "stage0_bin" points to
+
+
+FOR SIMULATION ANLYSIS
+
+   "./DANCE_Analysis cfgfile.cfg"
+
+   Here the path to the data is whatever the symbolic link "stage0_simulated" points to
 
 
 3) What Stage 0 does

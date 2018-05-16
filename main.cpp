@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  main.cpp               *// 
-//*  Last Edit: 05/08/18    *//  
+//*  Last Edit: 05/16/18    *//  
 //***************************//
 
 //File includes
@@ -43,16 +43,41 @@ int main(int argc, char *argv[]) {
   double QGates[20];  //This gives 10 pairs
   bool Read_Simulation=false;
 
-  // ./DANCE_Analysis  PathToData  RunNumber  .cfgFile
-  if(argc>4) {
-    cout<<RED<<"Main [ERROR]: Too many arguments provided.  I just need a path, a run number, and a .cfg file"<<RESET<<endl;
+
+  //Control things
+  int RunNum=0;
+  string pathtodata;
+  string cfgfile;
+
+  if(argc<2) {
+    cout<<RED<<"Main [ERROR]: Too few arguments provided.  See README file"<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \""<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \""<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Simulations: \"./DANCE_Analysis cfgfile.cfg \""<<RESET<<endl;
     return -1;
   }
   
-  //get the file number from command line args
-  int RunNum = atoi(argv[2]);
-  string pathtodata = argv[1];
-  string cfgfile = argv[3];
+  else if(argc==2) {
+    cfgfile = argv[1];
+  }
+  else if(argc==3) {
+    RunNum = atoi(argv[1]);
+    cfgfile = argv[2];
+  }
+  else if(argc==4) {
+    pathtodata = argv[1];
+    RunNum = atoi(argv[2]);
+    cfgfile = argv[3];
+  }
+  else {
+    cout<<RED<<"Main [ERROR]: Too many arguments provided.  See README file"<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \""<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \""<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Simulations: \"./DANCE_Analysis cfgfile.cfg \""<<RESET<<endl;
+    return -1;
+  }
+  
+
 
   ifstream cfgf;
   cfgf.open(cfgfile.c_str());

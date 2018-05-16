@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 05/11/18    *//  
+//*  Last Edit: 05/16/18    *//  
 //***************************//
 
 //File includes
@@ -49,6 +49,7 @@ using namespace std;
 
 
 //Verbosity and Error Checking
+
 //#define CheckTheDeque
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
@@ -321,10 +322,12 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   double unpack_begin = tv.tv_sec+(tv.tv_usec/1000000.0);
 
   cout<<GREEN<<"Unpacker [INFO]: Started Unpacking: "<<RESET<<endl;
-  cout<<"Unpacker [INFO]: Data Format: "<<DataFormat<<endl;
-  
+    
   //Stage 0 unpacking
   if(read_binary==0 && read_simulation==0) {
+
+    cout<<"Unpacker [INFO]: Data Format: "<<DataFormat<<endl;
+
     while(run) {
      
       if(TOTAL_EVTS > EventLimit) {
@@ -1060,284 +1063,284 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	  //Data
 	  else if(head.fEventId==1){
 	    
-	      TotalBankSize=0;
-	      EventBankSize=0;
+	    TotalBankSize=0;
+	    EventBankSize=0;
 	    
-	      gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
+	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
 #ifdef Unpacker_Verbose
-	      cout<<"Event Data"<<endl;
-	      cout << "Bank_HEADER " << endl;
-	      cout <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	      cout << bhead.fFlags << endl;
+	    cout<<"Event Data"<<endl;
+	    cout << "Bank_HEADER " << endl;
+	    cout <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+	    cout << bhead.fFlags << endl;
 #endif
 	    
-	      TotalBankSize = bhead.fDataSize;
+	    TotalBankSize = bhead.fDataSize;
 	    
-	      while(TotalBankSize>0) {
+	    while(TotalBankSize>0) {
 	      
-		gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-		TotalBankSize -= sizeof(Bank32_t);
+	      gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+	      TotalBankSize -= sizeof(Bank32_t);
 	      
 #ifdef Unpacker_Verbose
-		cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;    
-		cout << "BANK  " << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
-		cout << dec << bank32.fType << endl;
-		cout << dec << bank32.fDataSize << endl;
+	      cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;    
+	      cout << "BANK  " << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+	      cout << dec << bank32.fType << endl;
+	      cout << dec << bank32.fDataSize << endl;
 #endif
 	
-		EventBankSize = bank32.fDataSize;
+	      EventBankSize = bank32.fDataSize;
 	      
-		//the data lie on 8 byte boundaries so there will be an extra 4 bytes at the end of the data that is "unaccounted" for in the header
-		bool readextra = false;
-		if(EventBankSize%8 !=0) {
-		  readextra = true; 
-		}
+	      //the data lie on 8 byte boundaries so there will be an extra 4 bytes at the end of the data that is "unaccounted" for in the header
+	      bool readextra = false;
+	      if(EventBankSize%8 !=0) {
+		readextra = true; 
+	      }
 
 
 	      
-		//Read the firmware version and board ID
-		uint32_t firmware_version;
-		gzret=gzread(gz_in,&firmware_version,sizeof(firmware_version));
-		TotalBankSize -= sizeof(firmware_version);
-		EventBankSize -=  sizeof(firmware_version);
+	      //Read the firmware version and board ID
+	      uint32_t firmware_version;
+	      gzret=gzread(gz_in,&firmware_version,sizeof(firmware_version));
+	      TotalBankSize -= sizeof(firmware_version);
+	      EventBankSize -=  sizeof(firmware_version);
 	           
-		//Read the user extras word
-		uint32_t user_extras;
-		gzret=gzread(gz_in,&user_extras,sizeof(user_extras));
-		TotalBankSize -= sizeof(user_extras);
-		EventBankSize -=  sizeof(user_extras);
+	      //Read the user extras word
+	      uint32_t user_extras;
+	      gzret=gzread(gz_in,&user_extras,sizeof(user_extras));
+	      TotalBankSize -= sizeof(user_extras);
+	      EventBankSize -=  sizeof(user_extras);
 	      
 #ifdef Unpacker_Verbose
-		cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<(firmware_version & 0xFF)<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
+	      cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<(firmware_version & 0xFF)<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
 #endif
 	      
-		while(EventBankSize>0) {
+	      while(EventBankSize>0) {
 	    
-		  uint32_t dataword =0;
-		  uint32_t BytesRead =0;
+		uint32_t dataword =0;
+		uint32_t BytesRead =0;
 		
-		  //Unpack digitizer header (4 32 bit words)
-		  gzret=gzread(gz_in,&v1730_header,sizeof(v1730_header));
-		  BytesRead += sizeof(v1730_header);
+		//Unpack digitizer header (4 32 bit words)
+		gzret=gzread(gz_in,&v1730_header,sizeof(v1730_header));
+		BytesRead += sizeof(v1730_header);
 		
-		  //extract stuff
-		  uint32_t nwords = v1730_header.dataword_1 & 0xFFFFFFF;
-		  int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
-		  if(header != 10) {
-		    cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
-		    cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
-		    cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
-		    run = false;
-		    break;
+		//extract stuff
+		uint32_t nwords = v1730_header.dataword_1 & 0xFFFFFFF;
+		int header = (v1730_header.dataword_1 & 0xF0000000) >> 28;
+		if(header != 10) {
+		  cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
+		  cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
+		  cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
+		  run = false;
+		  break;
+		}
+		else {
+		  
+		  //Check for reported board failures
+		  int failbit = (v1730_header.dataword_2 & 0x04000000) >> 26;
+		  if(failbit) {
+		    cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
 		  }
-		  else {
-		  
-		    //Check for reported board failures
-		    int failbit = (v1730_header.dataword_2 & 0x04000000) >> 26;
-		    if(failbit) {
-		      cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
-		    }
 
-		    int channelmask = (v1730_header.dataword_2 & 0xFF);
+		  int channelmask = (v1730_header.dataword_2 & 0xFF);
 		  
 #ifdef Unpacker_Verbose
-		    cout<< "header: "<<header<<"  nwords: "<<nwords<<" channelmask: "<<channelmask<<endl;
+		  cout<< "header: "<<header<<"  nwords: "<<nwords<<" channelmask: "<<channelmask<<endl;
 #endif
 		  
-		    //interpret the channel mask 
-		    channels.clear();
-		    for(int m=0; m<8; m++) {
+		  //interpret the channel mask 
+		  channels.clear();
+		  for(int m=0; m<8; m++) {
 #ifdef Unpacker_Verbose
-		      cout<<m<<"  "<<((channelmask >> m) & 0x1)<<endl;
+		    cout<<m<<"  "<<((channelmask >> m) & 0x1)<<endl;
 #endif
-		      if(((channelmask >> m) & 0x1)) {
-			channels.push_back(2*m);
-		      }
+		    if(((channelmask >> m) & 0x1)) {
+		      channels.push_back(2*m);
 		    }
+		  }
 		  
-		    int wordstoread = nwords-4;
-		    int chaggcounter = 0;
+		  int wordstoread = nwords-4;
+		  int chaggcounter = 0;
 		  
-		    while (wordstoread>0) {
+		  while (wordstoread>0) {
 		    
-		      gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
-		      BytesRead += sizeof(v1730_chagg_header);
-		      wordstoread -= sizeof(v1730_chagg_header);
+		    gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
+		    BytesRead += sizeof(v1730_chagg_header);
+		    wordstoread -= sizeof(v1730_chagg_header);
 		    
-		      int chaggsize = (v1730_chagg_header.dataword_1 & 0x3FFFFF);
-		      int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
-		      if(chagghead !=1) {
-			cout<<"Unpacker [ERROR] CAEN Channel Aggregate Header is NOT 1"<<endl;
-			return -1;
-		      }
+		    int chaggsize = (v1730_chagg_header.dataword_1 & 0x3FFFFF);
+		    int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
+		    if(chagghead !=1) {
+		      cout<<"Unpacker [ERROR] CAEN Channel Aggregate Header is NOT 1"<<endl;
+		      return -1;
+		    }
 		    
-		      int nsdb8 = (v1730_chagg_header.dataword_2 & 0xFFFF);
+		    int nsdb8 = (v1730_chagg_header.dataword_2 & 0xFFFF);
 #ifdef Unpacker_Verbose
-		      cout<<"Waveform Size: "<<db_arr[EVTS].Ns<<endl;
+		    cout<<"Waveform Size: "<<db_arr[EVTS].Ns<<endl;
 #endif
-		      int extras_format = (v1730_chagg_header.dataword_2 & 0x7000000) >> 24;
+		    int extras_format = (v1730_chagg_header.dataword_2 & 0x7000000) >> 24;
 #ifdef Unpacker_Verbose 
-		      cout<<"Extras Format: "<<extras_format<<endl;
+		    cout<<"Extras Format: "<<extras_format<<endl;
 #endif
-		      int extras_enabled = (v1730_chagg_header.dataword_2 & 0x10000000) >> 28;
+		    int extras_enabled = (v1730_chagg_header.dataword_2 & 0x10000000) >> 28;
 #ifdef Unpacker_Verbose
-		      cout<<"Extras Enabled: "<<extras_enabled<<endl;
+		    cout<<"Extras Enabled: "<<extras_enabled<<endl;
 #endif
-		      int chaggwordstoread = chaggsize-2;
+		    int chaggwordstoread = chaggsize-2;
 		    
-		      //Unpack the channel aggreate
-		      while (chaggwordstoread>0) {
+		    //Unpack the channel aggreate
+		    while (chaggwordstoread>0) {
 
-			//Need to set the board and Ns here
-			db_arr[EVTS].Valid = 1;
-			db_arr[EVTS].board = ((firmware_version & 0xFC000000) >> 26);
-			db_arr[EVTS].Ns = 8*nsdb8;
+		      //Need to set the board and Ns here
+		      db_arr[EVTS].Valid = 1;
+		      db_arr[EVTS].board = ((firmware_version & 0xFC000000) >> 26);
+		      db_arr[EVTS].Ns = 8*nsdb8;
 		      
-			//TTT and Ch
-			gzret=gzread(gz_in,&dataword,sizeof(dataword));
-			db_arr[EVTS].timestamp = (dataword & 0x7FFFFFFF);
+		      //TTT and Ch
+		      gzret=gzread(gz_in,&dataword,sizeof(dataword));
+		      db_arr[EVTS].timestamp = (dataword & 0x7FFFFFFF);
 #ifdef Unpacker_Verbose
-			cout<<"TTT: "<<db_arr[EVTS].timestamp<<endl;
+		      cout<<"TTT: "<<db_arr[EVTS].timestamp<<endl;
 #endif	      
-			// int ch = (dataword & 0x80000000) >> 31;
-			db_arr[EVTS].channel = ((dataword & 0x80000000) >> 31) + channels[chaggcounter];
+		      // int ch = (dataword & 0x80000000) >> 31;
+		      db_arr[EVTS].channel = ((dataword & 0x80000000) >> 31) + channels[chaggcounter];
 
-			//Map it
-			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];         
+		      //Map it
+		      db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];         
 
+		      BytesRead += sizeof(dataword);
+		      wordstoread--;
+		      chaggwordstoread--;
+		      
+		      //unpack waveform
+		      gzret=gzread(gz_in,&waveform[0],db_arr[EVTS].Ns*sizeof(uint16_t));
+		      
+		      BytesRead += gzret;
+		      wordstoread -= nsdb8*4;
+		      chaggwordstoread -= nsdb8*4;
+		      
+		      for(int eye=0; eye<db_arr[EVTS].Ns; eye++) {
+			waveform[eye] = waveform[eye] & 0x3FFF;
+		      }
+		      
+ 		      
+		      //Extras
+		      if(extras_enabled) {
+			gzret=gzread(gz_in,&dataword,sizeof(dataword));
 			BytesRead += sizeof(dataword);
 			wordstoread--;
 			chaggwordstoread--;
-		      
-			//unpack waveform
-			gzret=gzread(gz_in,&waveform[0],db_arr[EVTS].Ns*sizeof(uint16_t));
-		      
-			BytesRead += gzret;
-			wordstoread -= nsdb8*4;
-			chaggwordstoread -= nsdb8*4;
-		      
-			for(int eye=0; eye<db_arr[EVTS].Ns; eye++) {
-			  waveform[eye] = waveform[eye] & 0x3FFF;
-			}
-		      
- 		      
-			//Extras
-			if(extras_enabled) {
-			  gzret=gzread(gz_in,&dataword,sizeof(dataword));
-			  BytesRead += sizeof(dataword);
-			  wordstoread--;
-			  chaggwordstoread--;
-			  if(extras_format <= 2) {
+			if(extras_format <= 2) {
 			  
-			    //Add the upper bits to the 47-bit timestamp
-			    uint16_t timehigh = (dataword & 0xFFFF0000) >> 16;
-			    db_arr[EVTS].timestamp += timehigh*2147483648; 
+			  //Add the upper bits to the 47-bit timestamp
+			  uint16_t timehigh = (dataword & 0xFFFF0000) >> 16;
+			  db_arr[EVTS].timestamp += timehigh*2147483648; 
 			  
 #ifdef Unpacker_Verbose
-			    cout<<"time high: "<<timehigh<<" timestamp: "<<db_arr[EVTS].timestamp<<endl;;
+			  cout<<"time high: "<<timehigh<<" timestamp: "<<db_arr[EVTS].timestamp<<endl;;
 #endif	 
+			}
+		      }
+			
+		      //Do the waveform analysis
+		      // CALCULATE THE LEADING EDGE using constant fraction "frac"
+		      int imin=0;
+		      double sigmin=1e9;
+		      double frac=0.04;
+		      double base=0;
+		      double secmom=0.;	
+		      int NNN=10;
+		      // int id=db_arr[EVTS].ID;
+		      
+		      //  if(db_arr[EVTS].ID<162) frac=0.04;
+		      // else frac=0.1;
+		
+		      frac=0.2;
+		
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+
+			//Fill waveform histogram
+			if(read_binary==0) {
+			  if(db_arr[EVTS].ID<256) {
+			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
+			    hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
 			  }
+			  // if(db_arr[EVTS].ID==200) {
+			  //   hWaveform_T0->Fill(i,wf1[i],1);
+			  // }
 			}
 			
-			//Do the waveform analysis
-			// CALCULATE THE LEADING EDGE using constant fraction "frac"
-			int imin=0;
-			double sigmin=1e9;
-			double frac=0.04;
-			double base=0;
-			double secmom=0.;	
-			int NNN=10;
-			// int id=db_arr[EVTS].ID;
-		      
-			//  if(db_arr[EVTS].ID<162) frac=0.04;
-			// else frac=0.1;
-		
-			frac=0.2;
-		
-			for(int i=0;i<db_arr[EVTS].Ns;i++) {
-
-			  //Fill waveform histogram
-			  if(read_binary==0) {
-			    if(db_arr[EVTS].ID<256) {
-			      hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
-			      hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
-			    }
-			    // if(db_arr[EVTS].ID==200) {
-			    //   hWaveform_T0->Fill(i,wf1[i],1);
-			    // }
-			  }
-			
-			  if(i<NNN) {
-			    base+=(1.*waveform[i]);
-			    secmom+=(1.*waveform[i]*1.*waveform[i]);
-			  }		  
-			  if((1.*waveform[i])<sigmin) {
-			    sigmin=1.*waveform[i];
-			    imin=i;
-			  }
+			if(i<NNN) {
+			  base+=(1.*waveform[i]);
+			  secmom+=(1.*waveform[i]*1.*waveform[i]);
+			}		  
+			if((1.*waveform[i])<sigmin) {
+			  sigmin=1.*waveform[i];
+			  imin=i;
 			}
+		      }
 		
-			double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
-			double dT=0;
-			int iLD=0;
-			for(int i=imin;i>1;i--){
-			  if((1.*waveform[i])<thr && (1.*waveform[i-1])>thr){
-			    double dSig=(1.*waveform[i-1]-1.*waveform[i]);
-			    if(dSig!=0) dT=(1.*waveform[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
-			    else dT=(i-1)*2.;
-			    iLD=i;
-			  }		
-			}      
+		      double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
+		      double dT=0;
+		      int iLD=0;
+		      for(int i=imin;i>1;i--){
+			if((1.*waveform[i])<thr && (1.*waveform[i-1])>thr){
+			  double dSig=(1.*waveform[i-1]-1.*waveform[i]);
+			  if(dSig!=0) dT=(1.*waveform[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
+			  else dT=(i-1)*2.;
+			  iLD=i;
+			}		
+		      }      
 
-			//TOF
-			db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
+		      //TOF
+		      db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
 
-			//need to add the time deviations (if any) before time sorting
-			if(db_arr[EVTS].ID < 200) {
-			  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
-			}
+		      //need to add the time deviations (if any) before time sorting
+		      if(db_arr[EVTS].ID < 200) {
+			db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+		      }
 		      
-			//keep track of the smallest timestamp
-			if(db_arr[EVTS].TOF<smallest_timestamp) {
-			  smallest_timestamp=db_arr[EVTS].TOF;
-			}    
+		      //keep track of the smallest timestamp
+		      if(db_arr[EVTS].TOF<smallest_timestamp) {
+			smallest_timestamp=db_arr[EVTS].TOF;
+		      }    
 		      
-			//Energies
-			gzret=gzread(gz_in,&dataword,sizeof(dataword));
-			db_arr[EVTS].Ifast = (dataword & 0x7FFF);
-			db_arr[EVTS].Islow = (dataword & 0xFFFF0000) >> 16;
+		      //Energies
+		      gzret=gzread(gz_in,&dataword,sizeof(dataword));
+		      db_arr[EVTS].Ifast = (dataword & 0x7FFF);
+		      db_arr[EVTS].Islow = (dataword & 0xFFFF0000) >> 16;
 
 #ifdef Unpacker_Verbose	      
-			cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ISlow: "<<db_arr[EVTS].Islow<<endl;
+		      cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ISlow: "<<db_arr[EVTS].Islow<<endl;
 #endif
       
-			BytesRead += sizeof(dataword);
-			wordstoread--;	    
-			chaggwordstoread--;
+		      BytesRead += sizeof(dataword);
+		      wordstoread--;	    
+		      chaggwordstoread--;
 		      
-			//incriment counters
-			EVTS++;
-			TOTAL_EVTS++;
+		      //incriment counters
+		      EVTS++;
+		      TOTAL_EVTS++;
 
 #ifdef Unpacker_Verbose
-			cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
+		      cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
 #endif
-		      }
-		      chaggcounter++;
 		    }
-		  
-		    EventBankSize -= BytesRead;
-		    TotalBankSize -= BytesRead;
+		    chaggcounter++;
 		  }
-		}
-	      
-		if(readextra) {
-		  uint32_t extra = 0;
-		  gzret=gzread(gz_in,&extra,sizeof(extra));
-		  TotalBankSize -= sizeof(extra);
+		  
+		  EventBankSize -= BytesRead;
+		  TotalBankSize -= BytesRead;
 		}
 	      }
-	    }  //Endf of EventID 1 (Data)
+	      
+	      if(readextra) {
+		uint32_t extra = 0;
+		gzret=gzread(gz_in,&extra,sizeof(extra));
+		TotalBankSize -= sizeof(extra);
+	      }
+	    }
+	  }  //Endf of EventID 1 (Data)
 	  
 	  else {
 	    // cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
@@ -1663,7 +1666,13 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
       //Progress indicator
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
-	cout<<"Processing Run Number: "<<runnum<<endl;
+	if(read_simulation == 0) {
+	  cout<<"Processing Run Number: "<<runnum<<endl;
+	}
+	else {
+	  cout<<"Processing Simulated Data"<<endl;
+	}
+
 	if(timesort && datadeque.size()>0) {
 	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
 	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
