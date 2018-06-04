@@ -227,11 +227,14 @@ int Make_Time_Deviations(int RunNumber) {
     hTimeDev->GetXaxis()->SetRangeUser(-500,500);
 
     //Iteratively Close in on the proper range 
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-100.0, hTimeDev->GetMean()+100.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-50.0, hTimeDev->GetMean()+50.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-10.0, hTimeDev->GetMean()+10.0);
     hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
     hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
     hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
     cout<<hTimeDev->GetMean()<<"  "<<time_deviation<<endl;
     time_deviation += hTimeDev->GetMean();
     td_out <<index2[eye]<<"   \t"<<time_deviation<<"\n";
@@ -335,13 +338,13 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
   int id=0;
   double temp[5] = {0,0,0,0,0};
 
-    for(int eye=0; eye<200; eye++) {
-      slow_offset[eye]=0;
-      slow_slope[eye]=1;
-      slow_quad[eye]=0;
-      fast_offset[eye]=0;
-      fast_slope[eye]=1;  
-    }
+  for(int eye=0; eye<200; eye++) {
+    slow_offset[eye]=0;
+    slow_slope[eye]=1;
+    slow_quad[eye]=0;
+    fast_offset[eye]=0;
+    fast_slope[eye]=1;  
+  }
 
   cout<<"Analyzer [INFO]: Reading Energy Calibrations"<<endl;
 
@@ -930,31 +933,33 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	//Fill ADC Calib
 	ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
 	
+	//First check to see if it is in the alpha gate
 	if(Alpha_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
 	  //Fill some Calibration Spectra
 	  hAlpha->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	  hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
 	}
 	
-	if( (Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || read_simulation) {
-
-	  //Fill some Calibration Spectra
-	  hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
-	  hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+	//If it is not in the alpha gate then check the gamma gate or whether its simulated data
+	else ((Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || read_simulation) {
+	    
+	    //Fill some Calibration Spectra
+	    hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
+	    hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+	    
+	    //Make a DANCE Event
+	    devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
+	    devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
+	    devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
+	    devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
+	    devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
+	    devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
+	    devent.ESum += eventvector[eye].Eslow; //ESum 
+	    devent.Crystal_mult++;
+	    devent.Valid=1;  //event is now valid
+	    Crystal_Mult++;	
 	  
-	  //Make a DANCE Event
-	  devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
-	  devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
-	  devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
-	  devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
-	  devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
-	  devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
-	  devent.ESum += eventvector[eye].Eslow; //ESum 
-	  devent.Crystal_mult++;
-	  devent.Valid=1;  //event is now valid
-	  Crystal_Mult++;	
-	  
-	}
+	  }
 	
 	DANCE_Entries_per_T0++;
 	

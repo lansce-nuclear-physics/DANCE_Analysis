@@ -17,14 +17,19 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <vector>
 
-void Run_hadd(string Isotope, int Start, int End) {
+//Global exlcudes
+std::vector<int> Exclude_Run;
+std::vector<int> Exclude_Reason;
 
+void run_hadd(string Isotope, int Start, int End) {
+  
   bool force = false;
 
   int Coincidence_Window = 10;
   int Crystal_Blocking_Time = 2000;
-  int DEvent_Blocking_Time = 500;
+  int DEvent_Blocking_Time = 0;
   
   stringstream text;
   text.str();
@@ -56,43 +61,43 @@ void Script_hadd() {
 
   /*
   //Fe57
-  Run_hadd("Fe57",59236,59714);
-  Run_hadd("Fe57",59862,60363);
+  run_hadd("Fe57",59236,59714);
+  run_hadd("Fe57",59862,60363);
   */
   
  
   //Pb208
-  Run_hadd("Pb208",59715,59842);
-  Run_hadd("Pb208",60622,60811);
-  Run_hadd("Pb208",62695,62735);
-  // Run_hadd("Pb208",63650,64136);
-  Run_hadd("Pb208",64834,64987);
-  Run_hadd("Pb208",68040,68103);
+  run_hadd("Pb208",59715,59842);
+  run_hadd("Pb208",60622,60811);
+  run_hadd("Pb208",62695,62735);
+  // run_hadd("Pb208",63650,64136);
+  run_hadd("Pb208",64834,64987);
+  run_hadd("Pb208",68040,68103);
  
   
   /*
   //Au197 4mm
-  Run_hadd("Au197",60409,60451);
-  Run_hadd("Au197",60572,60584);
-  Run_hadd("Au197",63590,63649);
-  Run_hadd("Au197",68104,68126);
+  run_hadd("Au197",60409,60451);
+  run_hadd("Au197",60572,60584);
+  run_hadd("Au197",63590,63649);
+  run_hadd("Au197",68104,68126);
   */
  
   //Cu65
-  Run_hadd("Cu65",60834,61251);
-  Run_hadd("Cu65",63015,63589);
-  Run_hadd("Cu65",64137,64692);
-  Run_hadd("Cu65",64989,65265);
+  run_hadd("Cu65",60834,61251);
+  run_hadd("Cu65",63015,63589);
+  run_hadd("Cu65",64137,64692);
+  run_hadd("Cu65",64989,65265);
   
   //Cu63
-  Run_hadd("Cu63",64693,64833);
+  run_hadd("Cu63",64693,64833);
   
   /*
   //Co59
-  Run_hadd("Co59_9p9mg",67836,68039);
-  Run_hadd("Co59_141p0mg",67339,67358);
-  Run_hadd("Co59_329p4mg",67359,67835);
-  Run_hadd("Co59_329p4mg",68128,68900);
+  run_hadd("Co59_9p9mg",67836,68039);
+  run_hadd("Co59_141p0mg",67339,67358);
+  run_hadd("Co59_329p4mg",67359,67835);
+  run_hadd("Co59_329p4mg",68128,68900);
   */ 
 
   cout<<"Done!"<<endl;
@@ -116,7 +121,7 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 
   int Coincidence_Window = 10;
   int Crystal_Blocking_Time = 2000;
-  int DEvent_Blocking_Time = 500;
+  int DEvent_Blocking_Time = 0;
   
   int nruns = End-Start+1;
 
@@ -189,7 +194,7 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
     //Do the base level add
     for(int eye=0; eye<nbladds; eye++) {
       outfilenames[eye].str();
-      outfilenames[eye] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[eye]<<"_"<<last_run[eye]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
+      outfilenames[eye] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[eye]<<"_"<<last_run[eye]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT_Excluded.root ";
       
       // command_text[eye].str();
       command_text[eye] << " xterm -e hadd ";
@@ -208,8 +213,21 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 
 
       for(int jay=first_run[eye]; jay<last_run[eye]+1; jay++) {
-	command_text[eye] << "../stage1_root/Stage1_Histograms_Run_"<<jay<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
-      }      
+	bool exclude_this = false;
+	for(int kay=0; kay<(int)Exclude_Run.size(); kay++) {
+	  if(jay==Exclude_Run[eye]) {
+	    exclude_this = true;
+	  }
+	}
+	if(exclude_this) {
+	  cout<<"Run "<<jay<<" Excluded"<<endl;
+	}
+	else {
+	  command_text[eye] << "../stage1_root/Stage1_Histograms_Run_"<<jay<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
+	} 
+      }
+
+      
       if(force==true) {
 	command_text[eye] <<" -f";
       }
@@ -264,7 +282,7 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 	last_run[add_counter] = last_run[2*(jay+1)*level_counter-1];
 	
 	outfilenames[add_counter].str();
-	outfilenames[add_counter] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[add_counter]<<"_"<<last_run[add_counter]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
+	outfilenames[add_counter] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[add_counter]<<"_"<<last_run[add_counter]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT_Excluded.root ";
 	
 	command_text[add_counter].str();
 	//	command_text[add_counter] << "echo ";
@@ -280,9 +298,9 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 	add_status[add_counter] << outfilenames[add_counter].str();
 	add_status[add_counter] << "> "<<add_status_fname[add_counter].str();
 	
-	command_text[add_counter] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[2*jay*level_counter]<<"_"<<last_run[2*jay*level_counter+level_counter-1]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
+	command_text[add_counter] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[2*jay*level_counter]<<"_"<<last_run[2*jay*level_counter+level_counter-1]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT_Excluded.root ";
 	
-	command_text[add_counter] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[2*jay*level_counter+level_counter]<<"_"<<last_run[2*(jay+1)*level_counter-1]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT.root ";
+	command_text[add_counter] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[2*jay*level_counter+level_counter]<<"_"<<last_run[2*(jay+1)*level_counter-1]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT_Excluded.root ";
 	
      
 	if(force==true) {
@@ -368,26 +386,46 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 
 void Launch_Merge_hadd() {
 
+  int exc_run;
+  int exc_reason;
+  
+  //Read in the exlcuded runs file
+  ifstream exclude;
+  exclude.open("exclude.txt");
+  
+  if(exclude.is_open()){ 
+    while(true) {
+      exclude >> exc_run >> exc_reason;
+      if(exc_run < 0 || exc_reason < 0) {
+	break;
+      }
+      Exclude_Run.push_back(exc_run);
+      Exclude_Reason.push_back(exc_reason);
+    }
+    
+    cout<<"There are a total of "<<Exclude_Run.size()<<" Runs in all of the data to exclude from adding"<<endl;
+  }
+  
   //Pb208
-  Merge_hadd("Pb208",59715,59842,4);
-  Merge_hadd("Pb208",60622,60811,4);
-  Merge_hadd("Pb208",62695,62735,4);
-  Merge_hadd("Pb208",63650,64136,4);
-  Merge_hadd("Pb208",64834,64987,4);
-  Merge_hadd("Pb208",68040,68103,4);
+  //  Merge_hadd("Pb208",59715,59842,4);
+  // Merge_hadd("Pb208",60622,60811,4);
+  // Merge_hadd("Pb208",62695,62735,4);
+  // Merge_hadd("Pb208",63650,64136,4);
+  // Merge_hadd("Pb208",64834,64987,4);
+  // Merge_hadd("Pb208",68040,68103,4);
 
   //Au197
   Merge_hadd("Au197",60409,60451,2);
-  Merge_hadd("Au197",60572,60584,2);
-  Merge_hadd("Au197",63590,63649,2);
-  Merge_hadd("Au197",68104,68126,2);
+  // Merge_hadd("Au197",60572,60584,2);
+  // Merge_hadd("Au197",63590,63649,2);
+  // Merge_hadd("Au197",68104,68126,2);
 
   //Cu65
-  Merge_hadd("Cu65",60834,61251,4);
-  Merge_hadd("Cu65",63015,63589,4);
-  Merge_hadd("Cu65",64137,64692,4);
-  Merge_hadd("Cu65",64989,65265,3);
+  // Merge_hadd("Cu65",60834,61251,4);
+  // Merge_hadd("Cu65",63015,63589,4);
+  // Merge_hadd("Cu65",64137,64692,4);
+  // Merge_hadd("Cu65",64989,65265,3);
 
   //Cu63
-  Merge_hadd("Cu63",64693,64833,3);
+  // Merge_hadd("Cu63",64693,64833,3);
 }

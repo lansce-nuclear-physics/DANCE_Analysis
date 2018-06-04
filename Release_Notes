@@ -41,3 +41,7 @@ Version 4.1.0 - Added the vme scalers to the unpacker for both caen2015 and caen
 Version 4.1.1 - Changed the verobosity flags for scalers adding on for diagnostics. 
 
 Version 5.0.0 - Changed the way the main is invoked removing extra command line options.  For Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \",for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \" and for Simulations: \"./DANCE_Analysis cfgfile.cfg \".  Minor changes in unpacker so variables that dont matter at a particular stage are not output to screen.
+
+Version 5.1.0 - Changed the time deviations such that it looks for a wider window for the mean and progressively closes in.  It was possible for low stats channels with larger backgrounds that it missed entirely.   
+
+Version 5.2.0 - Changed the gates slightly. First one checks to see if it is in the alpha gate then if not checks to see if its in the gamma gate.  Should be a minor performace improvement and allow for a gamma gate that overlaps with the alpha gate.     

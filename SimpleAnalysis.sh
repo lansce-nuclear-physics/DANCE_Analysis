@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #PATHTODATA=caen2018
-#PATHTODATA=hygelac14
-PATHTODATA=dancedaq7
+PATHTODATA=hygelac14
+#PATHTODATA=dancedaq7
 
 #These all live on data/14/
 
@@ -45,12 +45,12 @@ PATHTODATA=dancedaq7
 #for i in `seq 67966 68039`;
 #for i in `seq 68247 68900`;
 
-for i in `seq 100016 100025`;
+for i in `seq 61292 61296`;
 
 
 do
     echo Processing Run: $i;
    #./DANCE_Analysis $PATHTODATA $i stage1.cfg;
-   ./DANCE_Analysis $PATHTODATA $i stage0_caen2018.cfg;
+   ./DANCE_Analysis $PATHTODATA $i stage0_caen2015.cfg;
 
 done

@@ -26,7 +26,7 @@ void hCrID_Diagnostics() {
   int CBT1 = 2000;
   int DEBT1 = 0;
 
-  double fraction = 0.5;  //If the value is less than the average by more than this factor exclude
+  double fraction = 0.75;  //If the value is less than the average by more than this factor exclude
 
   double average_T0=0;
   double average_Li6=0;
@@ -40,50 +40,50 @@ void hCrID_Diagnostics() {
   
   //These are the Au197 runs
 
-  //    int start_run = 60572;
-  //    int end_run = 60584;
+  //  int start_run = 60572;
+  //  int end_run = 60584;
 
   //   int start_run = 60409;
   //   int end_run = 60451;
 
-      int start_run = 63590;
-     int end_run = 63649;
+  //  int start_run = 63590;
+  //  int end_run = 63649;
 
-  //    int start_run = 68104;
-  //     int end_run = 68126;
+  //  int start_run = 68104;
+  //  int end_run = 68126;
   
   ////////////////////////////
   
   //These are the Cu65 runs
   
-  //    int start_run = 60834;
-  //   int end_run = 61251;
+  //  int start_run = 60834;
+  //  int end_run = 61251;
 
-  //  int start_run = 63015;
-  //  int end_run = 63589;
+  //int start_run = 63015;
+  //int end_run = 63589;
    
-  //  int start_run = 64138;
-  //  int end_run = 64692;
+  // int start_run = 64138;
+  // int end_run = 64692;
 
-  //  int start_run = 64989;
-  //   int end_run = 65265;
+  // int start_run = 64989;
+  //  int end_run = 65265;
 
   ////////////////////////
 
 
   //These are the Pb208 runs
   
-  //   int start_run = 60622;
-  //   int end_run = 60811;
+  //  int start_run = 60622;
+  //  int end_run = 60811;
 
-  // int start_run = 62695;
+  //  int start_run = 62695;
   // int end_run = 62735;
    
   //  int start_run = 63650;
-  //  int end_run = 64136;
+     // int end_run = 64136;
 
-  //  int start_run = 64834;
-  // int end_run = 64987;
+  //   int start_run = 64834;
+  //  int end_run = 64987;
 
   //   int start_run = 68040;
   //  int end_run = 68103;
@@ -93,8 +93,8 @@ void hCrID_Diagnostics() {
 
   //These are the Cu63 runs
   
-  //  int start_run = 64693;
-  //  int end_run = 64833;
+    int start_run = 64693;
+    int end_run = 64833;
   
   ////////////////////////
 
@@ -611,12 +611,12 @@ void hCrID_Diagnostics() {
   
   cout<<"Exclude these for lack of data"<<endl;
   for(int eye=0; eye<exclude_T0.size(); eye++) {
-    cout<<exclude_T0[eye]<<endl;
+    cout<<exclude_T0[eye]<<"\t1"<<endl;
   }
 
   cout<<"Exclude these for data drops"<<endl;
   for(int eye=0; eye<exclude_DD.size(); eye++) {
-    cout<<exclude_DD[eye]<<endl;
+    cout<<exclude_DD[eye]<<"\t2"<<endl;
   }
   
   fout->Write();
