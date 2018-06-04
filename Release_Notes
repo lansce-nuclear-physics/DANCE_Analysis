@@ -47,3 +47,5 @@ Version 5.1.0 - Changed the time deviations such that it looks for a wider windo
 Version 5.2.0 - Changed the gates slightly. First one checks to see if it is in the alpha gate then if not checks to see if its in the gamma gate.  Should be a minor performace improvement and allow for a gamma gate that overlaps with the alpha gate.     
 
 Version 5.2.0 - Fixed coding error in analyzer.cpp and changed the range of ADC_calib and ADC_calib_invalid from 800,0,16,1000,0,10 to 2400,0,24,800,0,8.
+
+Version 5.2.1 - Made some of the diagnostics such as Waveform Histograms and Detector Load enabled or disabled via #defines. 

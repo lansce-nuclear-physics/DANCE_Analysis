@@ -25,6 +25,8 @@
 
 using namespace std;
 
+//#define Histogram_DetectorLoad
+
 //Analyzer stats
 uint32_t events_analyzed;
 uint32_t entries_analyzed;
@@ -575,9 +577,12 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",600000,0,60000000);
 
+#ifdef Histogram_DetectorLoad
   if(read_binary==0 && read_simulation==0) {
     hDetectorLoad = new TH1D("DetectorLoad","DetectorLoad",10000000,0,10000000);
   }
+#endif
+
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
   
@@ -697,12 +702,17 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   hDANCE_Entries_per_T0->Write();
   hDANCE_Events_per_T0->Write();
 
+
+#ifdef Histogram_DetectorLoad
   if(read_binary==0 && read_simulation==0) { 
     for(int eye=0; eye<10000000; eye++) {
       hDetectorLoad->SetBinContent(eye+1,Detector_Load[eye]/(160.0*T0_Counter));
     }
     hDetectorLoad->Write();
   }
+#endif
+
+
   ADC_calib->Write();
   ADC_calib_Invalid->Write();
   
@@ -795,9 +805,12 @@ int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulatio
 
   //Diagnostics
   T0_Counter=0;
+
+#ifdef Histogram_DetectorLoad
   for(int eye=0; eye<100000000; eye++) {
     Detector_Load[eye]=0;
   }
+#endif
 
   DANCE_Entries_per_T0=0;
   DANCE_Events_per_T0=0;
@@ -970,6 +983,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       } //end of not valid else
       
       if(read_binary==0 && read_simulation==0) {
+
+#ifdef Histogram_DetectorLoad
 	//Fill detecotor load
 	if(last_t0_timestamp > 0) {
 	  uint32_t temptof = (uint32_t)(eventvector[eye].TOF-last_t0_timestamp);
@@ -981,6 +996,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	    }
 	  }
 	}
+#endif
+
       }
     }
       

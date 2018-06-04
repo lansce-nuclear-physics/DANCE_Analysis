@@ -54,7 +54,8 @@ using namespace std;
 //#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
 //#define Scaler_Verbose
-//define Diagnostic_Verbose
+//#define Diagnostic_Verbose
+//#define Histogram_Waveforms 
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -78,7 +79,9 @@ int Create_Unpacker_Histograms(bool read_binary) {
   
   //Make a histogram for waveforms
   if(read_binary==0) {
+#ifdef Histogram_Waveforms 
     hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,256,0,256);
+#endif
     hID_Raw = new TH1D("hID_Raw","hID_Raw",256,0,256);
     hScalers = new TH1D("Scalers","Scalers",35,0,35);
     //  hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",80,0,80,2000,0,20000);
@@ -96,7 +99,9 @@ int Write_Unpacker_Histograms(TFile *fout, bool read_binary) {
   fout->cd();
 
   if(read_binary==0) {
+#ifdef Histogram_Waveforms
     hWaveform_ID->Write();
+#endif
     hID_Raw->Write();
     hScalers->Write();
   }
@@ -555,7 +560,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		    //Fill waveform histogram
 		    if(read_binary==0) {
 		      if(db_arr[EVTS].ID<256) {
+#ifdef Histogram_Waveforms
 			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
+#endif
 			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
 		      }
 		    }
@@ -1262,7 +1269,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 			//Fill waveform histogram
 			if(read_binary==0) {
 			  if(db_arr[EVTS].ID<256) {
+#ifdef Histogram_Waveforms
 			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
+#endif
 			    hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
 			  }
 			  // if(db_arr[EVTS].ID==200) {
