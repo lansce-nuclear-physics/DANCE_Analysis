@@ -582,8 +582,8 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
   
   //Energy Histograms
-  ADC_calib=new TH2D("ADC_calib","ADC_calib",800,0.,16.,1000,0.,10.);
-  ADC_calib_Invalid=new TH2D("ADC_calib_Invalid","ADC_calib_Invalid",800,0.,16.,1000,0.,10.);
+  ADC_calib=new TH2D("ADC_calib","ADC_calib",2400,0.,24.,800,0.,8.);
+  ADC_calib_Invalid=new TH2D("ADC_calib_Invalid","ADC_calib_Invalid",2400,0.,24.,800,0.,8.);
   
   //Gamma Histograms
   hGamma = new TH2D("hGamma","hGamma",1500,0,30000,162,0,162);
@@ -941,8 +941,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	}
 	
 	//If it is not in the alpha gate then check the gamma gate or whether its simulated data
-	else ((Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || read_simulation) {
-	    
+	else {
+	  if((Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || read_simulation) {
+	  
 	    //Fill some Calibration Spectra
 	    hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	    hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
@@ -958,8 +959,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	    devent.Crystal_mult++;
 	    devent.Valid=1;  //event is now valid
 	    Crystal_Mult++;	
-	  
 	  }
+	}
 	
 	DANCE_Entries_per_T0++;
 	
