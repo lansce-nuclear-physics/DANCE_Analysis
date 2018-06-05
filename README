@@ -10,9 +10,13 @@ The purpose of this document is to explain how the program works.
 
 1) Prerequisites 
 
+   At the same level as the DANCE_Analysis directory make two directories for Time Deviations and Energy Calibrations.  The names of these don't matter but they have to match what is being looked for by the code in global.h
+
+   In the Calibrations directory sym link the calib_ideal.dat file
+
    One will need to make symbolic links for:
    'stage0_root' (the location of the root output from stage 0), 
-   'stage0_bin' (the location of the binary output from stage 0 and the input for stage 1), 
+   'stage0_bin' (the location of the binary output from stage 0 and potentially the input for stage 1), 
    'stage1_root' (the location of the root output from stage 1), and 
    'stage1_bin' (if wanted the binary output from stage 1)
    'stage0_simulated' (the location of .bin files made by the GEANT4 simulation)
@@ -26,7 +30,7 @@ The purpose of this document is to explain how the program works.
 
    The code is invoked by the following command and arguments:
 
-FOR STAGE0 ANALYSIS
+FOR STAGE0 and STAGE1 ANALYSIS
 
    "./DANCE_Analysis /pathtodata runnumber cfgfile.cfg"
    
@@ -35,13 +39,6 @@ FOR STAGE0 ANALYSIS
    The runnumber is padded with 6 zeros and other padding formats would need require a minor change in main.cpp
 
    Sample .cfg files are included when you clone the package and can be modified thereafter.
-
-
-FOR STAGE1 ANALYSIS
-
-   "./DANCE_Analysis runnumber cfgfile.cfg"
-
-   Here the path to the data is whatever the symbolic link "stage0_bin" points to
 
 
 FOR SIMULATION ANLYSIS

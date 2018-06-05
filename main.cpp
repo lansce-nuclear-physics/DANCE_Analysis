@@ -60,19 +60,19 @@ int main(int argc, char *argv[]) {
   else if(argc==2) {
     cfgfile = argv[1];
   }
-  else if(argc==3) {
-    RunNum = atoi(argv[1]);
-    cfgfile = argv[2];
-  }
+  //  else if(argc==3) {
+  //   RunNum = atoi(argv[1]);
+  //   cfgfile = argv[2];
+  // }
   else if(argc==4) {
     pathtodata = argv[1];
     RunNum = atoi(argv[2]);
     cfgfile = argv[3];
   }
   else {
-    cout<<RED<<"Main [ERROR]: Too many arguments provided.  See README file"<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \""<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \""<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: Too many or too few arguments provided.  See README file"<<RESET<<endl;
+    cout<<RED<<"Main [ERROR]: for Stage0 and Stage1: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \""<<RESET<<endl;
+    // cout<<RED<<"Main [ERROR]: for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \""<<RESET<<endl;
     cout<<RED<<"Main [ERROR]: for Simulations: \"./DANCE_Analysis cfgfile.cfg \""<<RESET<<endl;
     return -1;
   }
@@ -200,7 +200,7 @@ int main(int argc, char *argv[]) {
     
     stringstream binaryrunname;
     binaryrunname.str();
-    binaryrunname << STAGE0_BIN << "/stage0_run_" << RunNum << ".bin";
+    binaryrunname << pathtodata << "/stage0_run_" << RunNum << ".bin";
     cout<<"Main [INFO]: Checking for: "<<binaryrunname.str()<<endl;
     
     //Look for uncompressed .bin files

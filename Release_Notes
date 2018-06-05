@@ -49,3 +49,5 @@ Version 5.2.0 - Changed the gates slightly. First one checks to see if it is in 
 Version 5.2.0 - Fixed coding error in analyzer.cpp and changed the range of ADC_calib and ADC_calib_invalid from 800,0,16,1000,0,10 to 2400,0,24,800,0,8.
 
 Version 5.2.1 - Made some of the diagnostics such as Waveform Histograms and Detector Load enabled or disabled via #defines. 
+
+Version 6.0.0 - Changed the stage1 analysis commands again.  Since I have been making an automated DANCE analysis on hygelac.  The command is identical to stage0 but pathtodata needs to point to a binary file directory.  The sym link to stage0_bin is still needed for the output of stage0. 
