@@ -51,3 +51,5 @@ Version 5.2.0 - Fixed coding error in analyzer.cpp and changed the range of ADC_
 Version 5.2.1 - Made some of the diagnostics such as Waveform Histograms and Detector Load enabled or disabled via #defines. 
 
 Version 6.0.0 - Changed the stage1 analysis commands again.  Since I have been making an automated DANCE analysis on hygelac.  The command is identical to stage0 but pathtodata needs to point to a binary file directory.  The sym link to stage0_bin is still needed for the output of stage0. 
+
+Version 6.0.1 - Changed the order of the else if statements in stage0 unpacking such that it takes the most probable types first.  Data (1), Diagnostics (8), Scalers (2), then begin and end of runs.  Should be an efficiency improvement. 
