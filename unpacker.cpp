@@ -978,6 +978,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      db_arr[EVTS].Ifast = (dataword & 0x7FFF);
 		      db_arr[EVTS].Islow = (dataword & 0xFFFF0000) >> 16;
 
+		      //Subtract the short integral
+		      db_arr[EVTS].Islow -= db_arr[EVTS].Ifast;
+
+
 #ifdef Unpacker_Verbose	      
 		      cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ISlow: "<<db_arr[EVTS].Islow<<endl;
 #endif
