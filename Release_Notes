@@ -55,3 +55,5 @@ Version 6.0.0 - Changed the stage1 analysis commands again.  Since I have been m
 Version 6.0.1 - Changed the order of the else if statements in stage0 unpacking such that it takes the most probable types first.  Data (1), Diagnostics (8), Scalers (2), then begin and end of runs.  Should be an efficiency improvement. 
 
 Version 7.0.0 - Changed the energy calculation for the slow integral.  It is now the same as it is in the caen2015 unpacker where the short gate is subtracted from the long gate.  This is important because the alphas and gammas have differing amounts of light in the slow components and thus the gain extracted from the alpha calibrator on the caen2018 data was inconsistent with the caen2015.  
+
+Version 7.0.1 - Removed the cout statements in the Make_Time_Deviations function.  These were just adding more lines of output for the automated analysis on hugelac with no real benefit. 

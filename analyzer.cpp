@@ -222,7 +222,7 @@ int Make_Time_Deviations(int RunNumber) {
 
   //Fill in the rest
   for(int eye=0; eye<totalindex; eye++) {
-    cout<<index1[eye]<<"  "<<index2[eye]<<endl;
+    // cout<<index1[eye]<<"  "<<index2[eye]<<endl;
     
     //Set the range of the Time Deviations 2D histogram to the proper bin 
     hTimeDev->GetYaxis()->SetRangeUser(index1[eye],index1[eye]+1);
@@ -237,7 +237,7 @@ int Make_Time_Deviations(int RunNumber) {
     hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
     hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
     hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
-    cout<<hTimeDev->GetMean()<<"  "<<time_deviation<<endl;
+    // cout<<hTimeDev->GetMean()<<"  "<<time_deviation<<endl;
     time_deviation += hTimeDev->GetMean();
     td_out <<index2[eye]<<"   \t"<<time_deviation<<"\n";
   }
