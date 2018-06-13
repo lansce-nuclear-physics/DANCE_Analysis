@@ -55,7 +55,7 @@ using namespace std;
 //#define Unpacker_Verbose
 //#define Scaler_Verbose
 //#define Diagnostic_Verbose
-//#define Histogram_Waveforms 
+#define Histogram_Waveforms 
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -68,6 +68,10 @@ int MapID[20][20];
 
 //Histograms
 TH3S *hWaveform_ID;
+TH2S *hWaveform_Li6;
+TH2S *hWaveform_U235;
+TH2S *hWaveform_Bkg;
+TH2S *hWaveform_He3;
 TH1D *hID_Raw;
 TH1D *hScalers;
 //TH2S *hWaveform_T0;
@@ -81,6 +85,10 @@ int Create_Unpacker_Histograms(bool read_binary) {
   if(read_binary==0) {
 #ifdef Histogram_Waveforms 
     hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,256,0,256);
+    hWaveform_Li6 = new TH2S("Waveform_Li6","Waveform_Li6",600,0,600,2000,0,20000);
+    hWaveform_U235 = new TH2S("Waveform_U235","Waveform_U235",600,0,600,2000,0,20000);
+    hWaveform_Bkg = new TH2S("Waveform_Bkg","Waveform_Bkg",600,0,600,2000,0,20000);
+    hWaveform_He3 = new TH2S("Waveform_He3","Waveform_He3",600,0,600,2000,0,20000);
 #endif
     hID_Raw = new TH1D("hID_Raw","hID_Raw",256,0,256);
     hScalers = new TH1D("Scalers","Scalers",35,0,35);
@@ -101,6 +109,10 @@ int Write_Unpacker_Histograms(TFile *fout, bool read_binary) {
   if(read_binary==0) {
 #ifdef Histogram_Waveforms
     hWaveform_ID->Write();
+    hWaveform_Li6->Write();
+    hWaveform_U235->Write();
+    hWaveform_Bkg->Write();
+    hWaveform_He3->Write();
 #endif
     hID_Raw->Write();
     hScalers->Write();
@@ -537,7 +549,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  else frac=0.1;
 		
 		  frac=0.2;
-		
+
+		  hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+
 		  for(int i=0;i<db_arr[EVTS].Ns;i++) {
 		  
 		    wf1[i]=evaggr->wavelets[evtnum][i]+8192;
@@ -547,8 +561,21 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      if(db_arr[EVTS].ID<256) {
 #ifdef Histogram_Waveforms
 			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
+
+			if(db_arr[EVTS].ID == 241) {
+			  hWaveform_He3->Fill(i,wf1[i]);
+			} 
+			if(db_arr[EVTS].ID == 242) {
+			  hWaveform_Bkg->Fill(i,wf1[i]);
+			} 
+			if(db_arr[EVTS].ID == 243) {
+			  hWaveform_U235->Fill(i,wf1[i]);
+			} 
+			if(db_arr[EVTS].ID == 244) {
+			  hWaveform_Li6->Fill(i,wf1[i]);
+			} 
+
 #endif
-			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
 		      }
 		    }
 		  
@@ -923,6 +950,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		
 		      frac=0.2;
 		
+		      hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+
 		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
 
 			//Fill waveform histogram
@@ -930,8 +959,20 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 			  if(db_arr[EVTS].ID<256) {
 #ifdef Histogram_Waveforms
 			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
+
+			    if(db_arr[EVTS].ID == 241) {
+			      hWaveform_He3->Fill(i,waveform[i]);
+			    } 
+			    if(db_arr[EVTS].ID == 242) {
+			      hWaveform_Bkg->Fill(i,waveform[i]);
+			    } 
+			    if(db_arr[EVTS].ID == 243) {
+			      hWaveform_U235->Fill(i,waveform[i]);
+			    } 
+			    if(db_arr[EVTS].ID == 244) {
+			      hWaveform_Li6->Fill(i,waveform[i]);
+			    } 
 #endif
-			    hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
 			  }
 			  // if(db_arr[EVTS].ID==200) {
 			  //   hWaveform_T0->Fill(i,wf1[i],1);
