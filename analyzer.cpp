@@ -653,8 +653,8 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
-    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",7500,0,15000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",7500,0,15000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",5100,0,51000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",5100,0,51000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
     En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);

@@ -35,7 +35,7 @@ using namespace std;
 //Some Global Unpacker Variables (DONT CHANGE UNLESS NEEDED)
 
 /*size of the DEVT array in the unpacker*/
-#define MaxDEVTArrSize 100000000  //this should be a big number like 1e8 but pay attention
+#define MaxDEVTArrSize 500000000  //this should be a big number like 5e8 but pay attention
 
 /*size of the block buffer. The unpacker waits this many
   events before looking at the deque and time sorting.  This 
@@ -56,6 +56,7 @@ using namespace std;
 //#define Scaler_Verbose
 //#define Diagnostic_Verbose
 #define Histogram_Waveforms 
+//#define Histogram_Digital_Probes 
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -68,10 +69,13 @@ int MapID[20][20];
 
 //Histograms
 TH3S *hWaveform_ID;
+TH3S *hDigital_Probe1_ID;
+TH3S *hDigital_Probe2_ID;
 TH2S *hWaveform_Li6;
 TH2S *hWaveform_U235;
 TH2S *hWaveform_Bkg;
 TH2S *hWaveform_He3;
+TH2S *hWaveform_T0;
 TH1D *hID_Raw;
 TH1D *hScalers;
 //TH2S *hWaveform_T0;
@@ -84,15 +88,21 @@ int Create_Unpacker_Histograms(bool read_binary) {
   //Make a histogram for waveforms
   if(read_binary==0) {
 #ifdef Histogram_Waveforms 
-    hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,256,0,256);
+    hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,162,0,162);
+    hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",80,0,80,2000,0,20000);
+    hWaveform_Li6 = new TH2S("Waveform_Li6","Waveform_Li6",600,0,600,2000,0,20000);
     hWaveform_Li6 = new TH2S("Waveform_Li6","Waveform_Li6",600,0,600,2000,0,20000);
     hWaveform_U235 = new TH2S("Waveform_U235","Waveform_U235",600,0,600,2000,0,20000);
     hWaveform_Bkg = new TH2S("Waveform_Bkg","Waveform_Bkg",600,0,600,2000,0,20000);
     hWaveform_He3 = new TH2S("Waveform_He3","Waveform_He3",600,0,600,2000,0,20000);
 #endif
+
+#ifdef Histogram_Digital_Probes
+    hDigital_Probe1_ID = new TH3S("Digital_Probe1_ID","Digital_Probe1_ID",80,0,80,2,0,2,162,0,162);
+    hDigital_Probe2_ID = new TH3S("Digital_Probe2_ID","Digital_Probe2_ID",80,0,80,2,0,2,162,0,162);
+#endif
     hID_Raw = new TH1D("hID_Raw","hID_Raw",256,0,256);
     hScalers = new TH1D("Scalers","Scalers",35,0,35);
-    //  hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",80,0,80,2000,0,20000);
   }
   
   cout<<GREEN<<"Unpacker [INFO]: Created Histograms"<<RESET<<endl;
@@ -109,11 +119,18 @@ int Write_Unpacker_Histograms(TFile *fout, bool read_binary) {
   if(read_binary==0) {
 #ifdef Histogram_Waveforms
     hWaveform_ID->Write();
+    hWaveform_T0->Write();
     hWaveform_Li6->Write();
     hWaveform_U235->Write();
     hWaveform_Bkg->Write();
     hWaveform_He3->Write();
 #endif
+
+#ifdef Histogram_Digital_Probes
+    hDigital_Probe1_ID->Write();
+    hDigital_Probe2_ID->Write();
+#endif
+
     hID_Raw->Write();
     hScalers->Write();
   }
@@ -330,6 +347,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   //waveform
   // vector<uint16_t> waveform;
   uint16_t waveform[1000];
+
+  //digital probes
+  uint8_t digital_probe1[1000];
+  uint8_t digital_probe2[1000];
 
   //channel vector
   vector<int> channels;
@@ -549,36 +570,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  else frac=0.1;
 		
 		  frac=0.2;
-
-		  hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
-
-		  for(int i=0;i<db_arr[EVTS].Ns;i++) {
 		  
+		  for(int i=0;i<db_arr[EVTS].Ns;i++) {
 		    wf1[i]=evaggr->wavelets[evtnum][i]+8192;
 
-		    //Fill waveform histogram
-		    if(read_binary==0) {
-		      if(db_arr[EVTS].ID<256) {
-#ifdef Histogram_Waveforms
-			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
-
-			if(db_arr[EVTS].ID == 241) {
-			  hWaveform_He3->Fill(i,wf1[i]);
-			} 
-			if(db_arr[EVTS].ID == 242) {
-			  hWaveform_Bkg->Fill(i,wf1[i]);
-			} 
-			if(db_arr[EVTS].ID == 243) {
-			  hWaveform_U235->Fill(i,wf1[i]);
-			} 
-			if(db_arr[EVTS].ID == 244) {
-			  hWaveform_Li6->Fill(i,wf1[i]);
-			} 
-
-#endif
-		      }
-		    }
-		  
 		    if(i<NNN) {
 		      base+=(1.*wf1[i]);
 		      secmom+=(1.*wf1[i]*1.*wf1[i]);
@@ -588,7 +583,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      imin=i;
 		    }
 		  }
-		
+		  
 		  double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
 		  double dT=0;
 		  int iLD=0;
@@ -600,7 +595,48 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      iLD=i;
 		    }		
 		  }
-		
+		  
+		  //Fill raw IDs
+		  hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+
+#ifdef Histogram_Waveforms
+
+		  //Fill waveform histogram
+		  if(read_binary==0) {
+		    if(db_arr[EVTS].ID<162) {
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
+		      }
+		    } 
+		    
+		    if(db_arr[EVTS].ID == 241) {
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			hWaveform_He3->Fill(i,wf1[i]);
+		      }			  
+		    } 
+		    if(db_arr[EVTS].ID == 242) {
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			hWaveform_Bkg->Fill(i,wf1[i]);
+		      } 
+		    }
+		    if(db_arr[EVTS].ID == 243) {
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			hWaveform_U235->Fill(i,wf1[i]);
+		      }
+		    } 
+		    if(db_arr[EVTS].ID == 244) {
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			hWaveform_Li6->Fill(i,wf1[i]);
+		      } 
+		    }
+		    if(db_arr[EVTS].ID == 200) {
+		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			hWaveform_T0->Fill(i,wf1[i]);
+		      } 
+		    }
+		  }
+#endif
+		      
 		  //Put the TOF into 1ns units including the CFD time
 		  db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
    
@@ -912,10 +948,23 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      wordstoread -= nsdb8*4;
 		      chaggwordstoread -= nsdb8*4;
 		      
+		      //fill probes and waveforms
 		      for(int eye=0; eye<db_arr[EVTS].Ns; eye++) {
+			//digital probes
+			digital_probe1[eye] = (waveform[eye] & 0x4000) >> 14;
+			digital_probe2[eye] = (waveform[eye] & 0x8000) >> 15;
+			
+			//waveform
 			waveform[eye] = waveform[eye] & 0x3FFF;
 		      }
-		      
+		      /* 
+		      //clear the unused samples
+		      for(int eye=db_arr[EVTS].Ns; eye<1000; eye++) {
+			waveform[eye]=0;
+			digital_probe1[eye]=0;
+			digital_probe2[eye]=0;
+		      }		      
+		      */
  		      
 		      //Extras
 		      if(extras_enabled) {
@@ -953,32 +1002,6 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
 
 		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-
-			//Fill waveform histogram
-			if(read_binary==0) {
-			  if(db_arr[EVTS].ID<256) {
-#ifdef Histogram_Waveforms
-			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
-
-			    if(db_arr[EVTS].ID == 241) {
-			      hWaveform_He3->Fill(i,waveform[i]);
-			    } 
-			    if(db_arr[EVTS].ID == 242) {
-			      hWaveform_Bkg->Fill(i,waveform[i]);
-			    } 
-			    if(db_arr[EVTS].ID == 243) {
-			      hWaveform_U235->Fill(i,waveform[i]);
-			    } 
-			    if(db_arr[EVTS].ID == 244) {
-			      hWaveform_Li6->Fill(i,waveform[i]);
-			    } 
-#endif
-			  }
-			  // if(db_arr[EVTS].ID==200) {
-			  //   hWaveform_T0->Fill(i,wf1[i],1);
-			  // }
-			}
-			
 			if(i<NNN) {
 			  base+=(1.*waveform[i]);
 			  secmom+=(1.*waveform[i]*1.*waveform[i]);
@@ -988,7 +1011,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 			  imin=i;
 			}
 		      }
-		
+		      
 		      double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
 		      double dT=0;
 		      int iLD=0;
@@ -1000,6 +1023,61 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 			  iLD=i;
 			}		
 		      }      
+		      
+
+#ifdef Histogram_Digital_Probes
+		      //Fill probe histograms
+		      if(read_binary==0) {
+			if(db_arr[EVTS].ID<162) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    //digital probes
+			    hDigital_Probe1_ID->Fill(i,digital_probe1[i],db_arr[EVTS].ID,1);
+			    hDigital_Probe2_ID->Fill(i,digital_probe2[i],db_arr[EVTS].ID,1);
+			  }
+			}
+		      }
+#endif
+		      
+#ifdef Histogram_Waveforms
+		      //Fill waveform histograms
+		      if(read_binary==0) {
+			if(db_arr[EVTS].ID<162) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    hWaveform_ID->Fill(i,waveform[i],db_arr[EVTS].ID,1);
+			  }
+			}
+			
+			
+			if(db_arr[EVTS].ID == 241) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    hWaveform_He3->Fill(i,waveform[i]);
+			  } 
+			}
+			if(db_arr[EVTS].ID == 242) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    hWaveform_Bkg->Fill(i,waveform[i]);
+			  }
+			} 
+			if(db_arr[EVTS].ID == 243) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    hWaveform_U235->Fill(i,waveform[i]);
+			  } 
+			}
+			if(db_arr[EVTS].ID == 244) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    hWaveform_Li6->Fill(i,waveform[i]);
+			  } 
+			}
+			
+			if(db_arr[EVTS].ID==200) {
+			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
+			    hWaveform_T0->Fill(i,wf1[i],1);
+			  }
+			}
+		      }
+#endif
+		
+
 
 		      //TOF
 		      db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
