@@ -837,7 +837,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      TotalBankSize -= sizeof(firmware_version);
 	      EventBankSize -=  sizeof(firmware_version);
 	       
-	      int firmware_majrev = firmware_version && 0xFF;
+	      int firmware_majrev = firmware_version & 0xFF;
     
 	      //Read the user extras word
 	      uint32_t user_extras;
@@ -846,7 +846,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      EventBankSize -=  sizeof(user_extras);
 	      
 #ifdef Unpacker_Verbose
-	      cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<(firmware_version & 0xFF)<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
+	      cout<< "board: "<<((firmware_version & 0xFC000000) >> 26)<<" Firmware: "<<firmware_majrev<< "."<<((firmware_version & 0x3F00) >> 8)<<endl;
 #endif
 	      
 	      while(EventBankSize>0) {
@@ -866,15 +866,16 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
 		  cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
 		  run = false;
+		  return -1;
 		  break;
 		}
 		else {
 		  
 		  //Check for reported board failures
 		  int failbit = (v1730_header.dataword_2 & 0x04000000) >> 26;
-		  if(failbit) {
-		    cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
-		  }
+		  //if(failbit) {
+		  //  cout<<RED<<"Unpacker [WARNING] CAEN Fail Bit on Board "<<((firmware_version & 0xFC000000) >> 26)<<" is Active!"<<RESET<<endl;
+		  //}
 
 		  int channelmask = (v1730_header.dataword_2 & 0xFF);
 		  
@@ -907,9 +908,12 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      chaggsize = (v1730_chagg_header.dataword_1 & 0x003FFFFF);
 		    }
 		    else if(firmware_majrev == 139) {
-	              chaggsize = (v1730_chagg_header.dataword_1 & 0x4FFFFFFF);		                             }   
-		    int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
-		    
+	              chaggsize = (v1730_chagg_header.dataword_1 & 0x4FFFFFFF);   
+		    }
+	            int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
+		    #ifdef Unpacker_Verbose	
+	cout<<" chaggsize: "<<chaggsize<<"  chagghead: "<<chagghead<<endl;
+	#endif
 		   
 		    /*
                     if(chagghead !=1) {
