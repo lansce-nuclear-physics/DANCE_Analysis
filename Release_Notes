@@ -61,3 +61,5 @@ Version 7.0.1 - Removed the cout statements in the Make_Time_Deviations function
 Version 7.1.1 - Fixed a coding error filling the hID_Raw histogram and added beam monitor waveform histograms 
 
 Version 7.1.2 - Made some changes to the unpacker histograms and added histograms for the digital probes.  Increased the max devt array size to 5e8 to accomodate the large 10GB files with > 1e8 events in them.  In the analyzer I changed the TOF_ESum_MCl histogram TOF range to 51 ms.  
+
+Version 7.2.2 - Added some histograms and additional support for PHA unpacking.

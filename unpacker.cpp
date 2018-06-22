@@ -55,8 +55,10 @@ using namespace std;
 //#define Unpacker_Verbose
 //#define Scaler_Verbose
 //#define Diagnostic_Verbose
+
+//Diagnostics Histogramming
 #define Histogram_Waveforms 
-//#define Histogram_Digital_Probes 
+#define Histogram_Digital_Probes 
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -69,15 +71,17 @@ int MapID[20][20];
 
 //Histograms
 TH3S *hWaveform_ID;
-TH3S *hDigital_Probe1_ID;
-TH3S *hDigital_Probe2_ID;
 TH2S *hWaveform_Li6;
 TH2S *hWaveform_U235;
 TH2S *hWaveform_Bkg;
 TH2S *hWaveform_He3;
 TH2S *hWaveform_T0;
-TH1D *hID_Raw;
-TH1D *hScalers;
+
+TH2C *hDigital_Probe1_ID;
+TH2C *hDigital_Probe2_ID;
+
+TH1I *hID_Raw;
+TH1I *hScalers;
 //TH2S *hWaveform_T0;
 
 //Histograms for Unpacker Things
@@ -98,11 +102,11 @@ int Create_Unpacker_Histograms(bool read_binary) {
 #endif
 
 #ifdef Histogram_Digital_Probes
-    hDigital_Probe1_ID = new TH3S("Digital_Probe1_ID","Digital_Probe1_ID",80,0,80,2,0,2,162,0,162);
-    hDigital_Probe2_ID = new TH3S("Digital_Probe2_ID","Digital_Probe2_ID",80,0,80,2,0,2,162,0,162);
+    hDigital_Probe1_ID = new TH2C("Digital_Probe1_ID","Digital_Probe1_ID",300,0,300,256,0,256);
+    hDigital_Probe2_ID = new TH2C("Digital_Probe2_ID","Digital_Probe2_ID",300,0,300,256,0,256);
 #endif
-    hID_Raw = new TH1D("hID_Raw","hID_Raw",256,0,256);
-    hScalers = new TH1D("Scalers","Scalers",35,0,35);
+    hID_Raw = new TH1I("hID_Raw","hID_Raw",256,0,256);
+    hScalers = new TH1I("Scalers","Scalers",35,0,35);
   }
   
   cout<<GREEN<<"Unpacker [INFO]: Created Histograms"<<RESET<<endl;
@@ -832,7 +836,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      gzret=gzread(gz_in,&firmware_version,sizeof(firmware_version));
 	      TotalBankSize -= sizeof(firmware_version);
 	      EventBankSize -=  sizeof(firmware_version);
-	           
+	       
+	      int firmware_majrev = firmware_version && 0xFF;
+    
 	      //Read the user extras word
 	      uint32_t user_extras;
 	      gzret=gzread(gz_in,&user_extras,sizeof(user_extras));
@@ -895,14 +901,22 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		    gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
 		    BytesRead += sizeof(v1730_chagg_header);
 		    wordstoread -= sizeof(v1730_chagg_header);
-		    
-		    int chaggsize = (v1730_chagg_header.dataword_1 & 0x3FFFFF);
+		   
+		    int chaggsize=0; 
+		    if(firmware_majrev == 136) {
+		      chaggsize = (v1730_chagg_header.dataword_1 & 0x003FFFFF);
+		    }
+		    else if(firmware_majrev == 139) {
+	              chaggsize = (v1730_chagg_header.dataword_1 & 0x4FFFFFFF);		                             }   
 		    int chagghead = (v1730_chagg_header.dataword_1 & 0x80000000) >> 31;
-		    if(chagghead !=1) {
+		    
+		   
+		    /*
+                    if(chagghead !=1) {
 		      cout<<"Unpacker [ERROR] CAEN Channel Aggregate Header is NOT 1"<<endl;
 		      return -1;
 		    }
-		    
+		    */
 		    int nsdb8 = (v1730_chagg_header.dataword_2 & 0xFFFF);
 #ifdef Unpacker_Verbose
 		    cout<<"Waveform Size: "<<db_arr[EVTS].Ns<<endl;
@@ -1028,11 +1042,11 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 #ifdef Histogram_Digital_Probes
 		      //Fill probe histograms
 		      if(read_binary==0) {
-			if(db_arr[EVTS].ID<162) {
+			if(db_arr[EVTS].ID<256) {
 			  for(int i=0;i<db_arr[EVTS].Ns;i++) {
 			    //digital probes
-			    hDigital_Probe1_ID->Fill(i,digital_probe1[i],db_arr[EVTS].ID,1);
-			    hDigital_Probe2_ID->Fill(i,digital_probe2[i],db_arr[EVTS].ID,1);
+			    hDigital_Probe1_ID->Fill(i,db_arr[EVTS].ID,digital_probe1[i]);
+			    hDigital_Probe2_ID->Fill(i,db_arr[EVTS].ID,digital_probe2[i]);
 			  }
 			}
 		      }
@@ -1098,8 +1112,13 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		      db_arr[EVTS].Islow = (dataword & 0xFFFF0000) >> 16;
 
 		      //Subtract the short integral
-		      db_arr[EVTS].Islow -= db_arr[EVTS].Ifast;
-
+		      if(firmware_majrev == 136) {
+			db_arr[EVTS].Islow -= db_arr[EVTS].Ifast;
+                      }
+	              else if(firmware_majrev == 139) {
+                        db_arr[EVTS].Islow = db_arr[EVTS].Ifast;
+                      }
+		     
 #ifdef Unpacker_Verbose	      
 		      cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ISlow: "<<db_arr[EVTS].Islow<<endl;
 #endif

@@ -74,8 +74,12 @@ TH2D *hTimeDev_Rel0;  //Time deviations of all crystals to crystal 0
 TH2D *hTimeDev;  //Time deviations relative to adjacent crystals
 
 //Energy Histograms
-TH2D *ADC_calib;  //2D PSD Plot 
-TH2D *ADC_calib_Invalid;  //2D PSD Plot for Invalid events 
+TH2D *ADC_calib;  //2D PSD Plot (calibrated)
+TH2D *ADC_raw;    //2D PSD Plot (uncalibrated)
+TH2D *ADC_calib_Invalid;  //2D PSD Plot of invalid events (calibrated)
+
+TH3D *ADC_raw_ID;    //3D Plot of 2D PSD plot (uncalibrated) vs DANCE Crystal ID (z)
+TH3D *ADC_calib_ID;  //3D Plot of 2D PSD plot (calibrated) vs DANCE Crystal ID (z)
 
 //Physics Spectra
 TH1D *hEn; //Neutron Energy from dance events
@@ -95,8 +99,6 @@ TH2D *hGammaCalib;
 
 //Flag to turn on the QGated spectra
 bool QGated_Spectra = true;
-
-
 
 //This sets the number of QGates
 //const int NQGates = 3;
@@ -126,6 +128,7 @@ TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
 //Beam Monitors
 TH1D *hU235_TOF;  //Raw TOF for U235 Monitor
 TH1D *hU235_TOF_Corr; //Corrected TOF for U235 Monitor
+TH2D *hU235_PH_TOF;
 TH1D *hU235_PulseHeight;  //Energy for U235 Monitor
 TH1D *hU235_En;  //Neutron Energy for U235 Monitor 
 TH1D *hU235_En_Corr;  //Neutron Energy for U235 Monitor (From Corrected TOF)
@@ -403,6 +406,8 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
 	slow_quad[id]=temp[2];
 	fast_offset[id]=temp[3];
 	fast_slope[id]=temp[4];
+
+	  cout<<id<<"  "<<slow_slope[id]<<"  "<<fast_slope[id]<<endl;
       
 	if(idealcal.eof()) {
 	  break;
@@ -586,10 +591,15 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
   
-  //Energy Histograms
+  //PSD Histograms
   ADC_calib=new TH2D("ADC_calib","ADC_calib",2400,0.,24.,800,0.,8.);
+  ADC_raw=new TH2D("ADC_raw","ADC_raw",1800,0.,72000.,180,0.,7200);
   ADC_calib_Invalid=new TH2D("ADC_calib_Invalid","ADC_calib_Invalid",2400,0.,24.,800,0.,8.);
   
+  ADC_raw_ID=new TH3D("ADC_raw_ID","ADC_raw_ID",1800,0.,72000.,180,0.,7200,162,0,162);
+  ADC_calib_ID=new TH3D("ADC_calib_ID","ADC_calib_ID",600,0.,24.,200,0.,8.0,162,0,162);
+
+
   //Gamma Histograms
   hGamma = new TH2D("hGamma","hGamma",1500,0,30000,162,0,162);
   hGammaCalib = new TH2D("hGammaCalib","hGammaCalib",2000,0.0,20.0,162,0,162);
@@ -625,6 +635,11 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   //Beam Monitors
   hU235_TOF = new TH1D("U235_TOF","U235_TOF",600000,0,60000000);  //Raw TOF for U235 Monitor
   hU235_TOF_Corr = new TH1D("U235_TOF_Corrected","U235_TOF_Corrected",600000,0,60000000); //Corrected TOF for U235 Monitor
+
+  hU235_PH_TOF = new TH2D("U235_PH_TOF","U235_PH_TOF",6000,0,60000000,250,0,100000);  //Raw PH vs TOF for U235 Monitor
+
+  
+
   hU235_PulseHeight = new TH1D("U235_PulseHeight","U235_PulseHeight",10000,0,100000);  //Energy for U235 Monitor
   hU235_En = new TH1D("U235_En","U235_En",NEbins,x);  //Neutron Energy for U235 Monitor 
   hU235_En_Corr = new TH1D("U235_En_Corrected","U235_En_Corrected",NEbins,x);  //Neutron Energy for U235 Monitor (From Corrected TOF)
@@ -714,8 +729,12 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
 
 
   ADC_calib->Write();
+  ADC_raw->Write();
   ADC_calib_Invalid->Write();
-  
+
+  ADC_raw_ID->Write();
+  ADC_calib_ID->Write();
+
   hAlpha->Write();
   hAlphaCalib->Write();
 
@@ -749,6 +768,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   //Beam Monitors
   hU235_TOF->Write();  //Raw TOF for U235 Monitor
   hU235_TOF_Corr->Write(); //Corrected TOF for U235 Monitor
+  hU235_PH_TOF->Write();
   hU235_PulseHeight->Write();  //Energy for U235 Monitor
   hU235_En->Write();  //Neutron Energy for U235 Monitor 
   hU235_En_Corr->Write();  //Neutron Energy for U235 Monitor (From Corrected TOF)
@@ -945,7 +965,11 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       if(eventvector[eye].Valid==1) {
 	//Fill ADC Calib
 	ADC_calib->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
-	
+	ADC_raw->Fill(eventvector[eye].Islow, eventvector[eye].Ifast,1);
+
+	ADC_calib_ID->Fill(eventvector[eye].Eslow, eventvector[eye].Efast, id_eye,1);
+	ADC_raw_ID->Fill(eventvector[eye].Islow, eventvector[eye].Ifast,id_eye,1);
+
 	//First check to see if it is in the alpha gate
 	if(Alpha_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) {
 	  //Fill some Calibration Spectra
@@ -1263,7 +1287,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //Fill TOF spectra
       hU235_TOF->Fill(u235event.tof);
       hU235_TOF_Corr->Fill(u235event.tof_corr);
-      
+      hU235_PH_TOF->Fill(u235event.tof,u235event.Islow);
     } //end check over last t0 timestamp
     else {
       u235event.Valid=0;
@@ -1317,7 +1341,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
   if(li6event.Valid == 1) {
     if(last_t0_timestamp > 0) {
       //Fill Pulse Height Spectrum
-      hLi6_PulseHeight->Fill(li6event.Islow);
+      hLi6_PulseHeight->Fill(li6event.Islow-li6event.Ifast);
       hLi6_PSD->Fill(li6event.Islow,li6event.Ifast);
       //Make TOF relative to last T0
       li6event.tof -= last_t0_timestamp;
