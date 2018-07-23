@@ -2,7 +2,7 @@
 ##  Christopher J. Prokop  ##
 ##  cprokop@lanl.gov       ##
 ##  Makefile               ## 
-##  Last Edit: 02/07/18    ##  
+##  Last Edit: 07/23/18    ##  
 ##*************************##
 
 CC=g++
@@ -18,13 +18,13 @@ ROOTGLIBS    := $(shell ${ROOTSYS}/bin/root-config --glibs)
 ROOTLDFLAGS  := $(shell ${ROOTSYS}/bin/root-config --ldflags)
 CXXFLAGS += $(ROOTCFLAGS)
 
-INCLUDES:= analyzer.h main.h sort_functions.h structures.h unpacker.h 
+INCLUDES:= analyzer.h main.h sort_functions.h structures.h unpacker.h unpack_vx725_vx730.h
 
-OBJECTS:= analyzer.o main.o sort_functions.o unpacker.o
+OBJECTS:= analyzer.o main.o sort_functions.o unpacker.o unpack_vx725_vx730.o
 
 LIBS  = -lm $(ROOTGLIBS) -lz
 
-SRCS:= analyzer.cpp main.cpp sort_functions.cpp unpacker.cpp	
+SRCS:= analyzer.cpp main.cpp sort_functions.cpp unpacker.cpp unpack_vx725_vx730.cpp	
 
 all: main
 

@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  Release_Notes          *// 
-//*  Last Edit: 03/01/18    *//  
+//*  Last Edit: 07/23/18    *//  
 //***************************//
 
 The purpose of this document is to allow users to more efficiently track and understand changes made to the DANCE Analysis software.
@@ -63,3 +63,9 @@ Version 7.1.1 - Fixed a coding error filling the hID_Raw histogram and added bea
 Version 7.1.2 - Made some changes to the unpacker histograms and added histograms for the digital probes.  Increased the max devt array size to 5e8 to accomodate the large 10GB files with > 1e8 events in them.  In the analyzer I changed the TOF_ESum_MCl histogram TOF range to 51 ms.  
 
 Version 7.2.2 - Added some histograms and additional support for PHA unpacking.
+
+Version 7.3.2 - Added a better way of rejecting the retrigger.  There is now a 2D gate on the space of (Energy of crsytal n hit[m] / Energy of crystal n hit[m-1] as a function of time difference between the two hits in crystal n.  The low time differnce low energy ratio events are all retrigger.  This is better than the time cut across all energies because it rejects far fewer real short time-difference events. 
+
+Version 8.0.0 - This represents another major change to the unpacker (Sorry John but a I think it will be easier to follow all of it now).  This is a fidelity upgrade that was primarily  motivated by the need to unpack the analog and digital probes both acurrately and more efficiently to take full advantage of the raw data from the boards.  What has now been created is a new set of files for unpacking the Vx725/Vx730 digitizers.  unpack_vx725_vx730.h has function prototypes for unpacking the board header, channel aggregate header, and each member of the channel aggregate.  There are also a series of bit masks and structures to store the information defined in this file.  unpack_vx725_vx730 has the actual C/C++ code to unpack the data and store it in the structures.  The nice thing is that these files can be included into any framework now to quickly unpack raw digitizer data.   
+
+  

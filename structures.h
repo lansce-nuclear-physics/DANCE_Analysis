@@ -68,21 +68,26 @@ struct Sclr_t {
   uint32_t scaler[24];
 };
 
-//Digitizer Header (NOT USED YET)
-struct V1730_Header_t {
-  uint32_t dataword_1;
-  uint32_t dataword_2;
-  uint32_t dataword_3;
-  uint32_t dataword_4;
+
+//User data masks
+//FW VERSION WORD
+#define MAJREV_MASK                         0x000000FF  //bits 0 to 7 inclusive
+#define MINREV_MASK                         0x00003F00  //bits 8 to 13 inclusive
+#define MODTYPE_MASK                        0x03FFC000  //bits 14 to 25 inclusive
+#define BOARDID_MASK                        0xFC000000  //bits 26 to 31 inclusive
+
+struct User_Data_t {
+  //WORD 1 
+  uint8_t fw_majrev;
+  uint8_t fw_minrev;
+  uint16_t modtype;
+  uint8_t boardid;
+  //WORD 2
+  uint32_t user_extra;
 };
 
-//Channel Aggregate Header (NOT USED YET)
-struct V1730_ChAgg_Header_t {
-  uint32_t dataword_1;
-  uint32_t dataword_2;
-};
 
- 
+//CAEN 2015 
 typedef struct {
   uint64_t  position;
   uint32_t     extras;
@@ -99,7 +104,6 @@ typedef struct{
   short something[10000]; // this is actually supported channels / supported length of PXXX bank
 } test_struct_cevt;
 
-
 typedef struct {
   uint64_t timestamp;        // timestamp
   uint16_t Ns;               // number of samples in waveform
@@ -115,6 +119,7 @@ typedef struct {
 } DEVT_BANK;
 
 
+//Output of stage 0 bin
 typedef struct {
   uint16_t Ifast;            // short integral
   uint16_t Islow;            // long integral
@@ -140,7 +145,6 @@ typedef struct{
   double ESum;               //Total DANCE Event energy from sum of crystal ESlow in the event 
   uint16_t Valid;            //Valid event flag
 } DANCE_Event;
-
 
 // U235 Beam Monitor event
 typedef struct{

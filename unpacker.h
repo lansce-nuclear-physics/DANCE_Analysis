@@ -12,6 +12,7 @@
 #include <zlib.h>
 #include <string.h>
 #include <iostream>
+#include <stdint.h>
 
 //ROOT Includes
 #include "TFile.h"
@@ -26,6 +27,7 @@ int Make_Output_Diagnostics_File(int RunNumber);
 
 int Create_Unpacker_Histograms(bool read_binary);
 int Write_Unpacker_Histograms(TFile *fout, bool read_binary);
+double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_trace, uint16_t model);
 
 #endif
 

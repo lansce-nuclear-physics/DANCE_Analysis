@@ -57,6 +57,7 @@ TH2D *hCoinCAEN;  //coincidence matrix
 //Time Diagnostics
 TH1D *hEventLength;  //length in ns of the event (diagnostic)
 TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
+TH2D *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
 TH1D *hTimeBetweenDEvents;  //time between subsequent DANCE events (ns)
 TH3D *hTimeBetweenDEvents_ESum_Mcr; //DANCE ESum vs time between subsequent DANCE events for Mcr==1
 TH1D *hTimeBetweenT0s; //time between T0s (ns)
@@ -149,11 +150,13 @@ TH1D *hHe3_En;  //Neutron Energy for He3 Monitor
 TH1D *hHe3_En_Corr;  //Neutron Energy for He3 Monitor (From Corrected TOF)
 TH1D *hHe3_Time_Between_Events; //Time between U235 hits
 
-/* CUTS */
+
+//PI Cuts
 TCutG *Gamma_Gate;
 TCutG *Alpha_Gate;
+TCutG *Retrigger_Gate;
 
-//Dance Event
+//Events
 DANCE_Event devent;
 U235_Event u235event;
 He3_Event he3event;
@@ -170,6 +173,10 @@ double current_t0_timestamp;
 
 double last_devent_timestamp;       //This keeps track of the last DANCE event timestamp valid or not
 double last_valid_devent_timestamp; //This keeps track of the last DANCE event timestamp that was valid
+
+double last_energy[256];            //keep track of the last energy of this detector
+double current_energy[256];         //keep track of the current energy of this detector
+
 
 //TMatrix Things
 int reftoindex1[200];
@@ -431,10 +438,15 @@ int Read_PI_Gates() {
   char name[200];
   int Nalphacut=0;
   int Ngammacut=0;
+  int Nretriggercut=0;
+
   double x_alphacut[200];
   double y_alphacut[200];
   double x_gammacut[200];
   double y_gammacut[200];
+  double x_retriggercut[200];
+  double y_retriggercut[200];
+
 
   sprintf(name,"Gates/%s",ALPHAGATE);
   ifstream alphacutin(name);
@@ -471,11 +483,31 @@ int Read_PI_Gates() {
     cout<<RED<<"Analyzer [INFO]: Gamma PI cut "<<name<<" file NOT found." <<RESET<<endl;
   }
 
+
+  sprintf(name,"Gates/%s",RETRIGGERGATE);
+  ifstream retriggercutin(name);
+  if(retriggercutin.is_open()) {
+    cout<<"Analyzer [INFO]: Reading RetriggerCut " <<name<<endl;
+    while(!retriggercutin.eof()){
+      retriggercutin  >> x_retriggercut[Nretriggercut] >> y_retriggercut[Nretriggercut];
+      Nretriggercut++;
+      if(retriggercutin.eof()) break;
+    }
+    // cout<<Nretriggercut<<endl;
+    retriggercutin.close();
+    cout<<GREEN<<"Analyzer [INFO]: Retrigger PI cut loaded" <<RESET<<endl;
+  }
+  else {
+    cout<<RED<<"Analyzer [INFO]: Retrigger PI cut "<<name<<" file NOT found." <<RESET<<endl;
+  }
+
+
+
   Alpha_Gate=new TCutG("Alpha_Gate",Nalphacut,x_alphacut,y_alphacut);
   // Alpha_Gate->Print();	
   Gamma_Gate=new TCutG("Gamma_Gate",Ngammacut,x_gammacut,y_gammacut);
   //  Gamma_Gate->Print();
-  
+  Retrigger_Gate=new TCutG("Retrigger_Gate",Nretriggercut,x_retriggercut,y_retriggercut);
   return 0;
 }
 
@@ -568,6 +600,7 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   //Diagnostics
   hEventLength = new TH1D("EventLength","EventLength",10000,0,100);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
+  hTimeBetweenCrystals_EnergyRatio = new TH2D("TimeBetweenCrystals_EnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
   hTimeBetweenDEvents_ESum_Mcr = new TH3D("TimeBetweenDEvents_ESum_Mcr","TimeBetweenDEvents_ESum_Mcr",1000,0,10000,500,0,10,20,0,20);
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
@@ -706,6 +739,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
 
   hEventLength->Write();
   hTimeBetweenCrystals->Write();
+  hTimeBetweenCrystals_EnergyRatio->Write();
   hTimeBetweenDEvents->Write();
   hTimeBetweenDEvents_ESum_Mcr->Write();
   hTimeBetweenT0s->Write();
@@ -743,6 +777,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
 
   Alpha_Gate->Write();
   Gamma_Gate->Write();
+  Retrigger_Gate->Write();
 
   if(read_binary==1 || read_simulation == 1) {
     hTOF->Write();
@@ -815,6 +850,9 @@ int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulatio
     last_valid_timestamp[eye]=0;
     current_timestamp[eye]=0;
 
+    current_energy[eye]=0;
+    last_energy[eye]=0;
+
     last_t0_timestamp=0;
     current_t0_timestamp=0;
 
@@ -879,7 +917,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
     
     //Place the current time in the 
     current_timestamp[id_eye] = eventvector[eye].TOF;
-    
+
+
     //this is a dance crystal
     if(id_eye<162) {
 
@@ -895,6 +934,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 				      fast_offset[eventvector[eye].ID]);
       
       //  cout<<eventvector[eye].Eslow<<"  "<<temp_slow<<endl;
+
+      //update the current energy
+      current_energy[id_eye] = eventvector[eye].Eslow;
 
       if(HAVE_Threshold==1) {
 	if(eventvector[eye].Eslow < Energy_Threshold) {
@@ -956,9 +998,20 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       
       //Fill time between crystal hits
       hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
-      
+      if(current_energy[id_eye] < 16) {
+	hTimeBetweenCrystals_EnergyRatio->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),(current_energy[id_eye]/last_energy[id_eye]),1);
+      }
+      //   if((current_timestamp[id_eye]-last_timestamp[id_eye]) < 2500) {
+      //	cout<<current_timestamp[id_eye]-last_timestamp[id_eye]<<"      "<<current_energy[id_eye]/last_energy[id_eye]<<"      "<<current_energy[id_eye]<<"  "<<last_energy[id_eye]<<endl;
+      //  }
+
       //Blocking Time to avoid retrigger problems
       if((current_timestamp[id_eye]-last_valid_timestamp[id_eye]) < Crystal_Blocking_Time) {
+	eventvector[eye].Valid=0;
+      }
+
+      //PI Gate to avoid retrigger problems
+      if(Retrigger_Gate->IsInside((current_timestamp[id_eye]-last_timestamp[id_eye]),(current_energy[id_eye]/last_energy[id_eye]))) {
 	eventvector[eye].Valid=0;
       }
       
@@ -1097,7 +1150,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       last_valid_timestamp[id_eye] = current_timestamp[id_eye];
     }
     last_timestamp[id_eye] = current_timestamp[id_eye];
-
+    last_energy[id_eye] = current_energy[id_eye];
+    
     //Write to Binary
     if(write_binary==1 && outputbinfile.is_open()) {
       devt_out.Ifast = eventvector[eye].Ifast;

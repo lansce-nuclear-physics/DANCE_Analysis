@@ -50,6 +50,8 @@
 //PI Gates
 #define GAMMAGATE "Gamma.dat"
 #define ALPHAGATE "Alpha.dat"
+#define RETRIGGERGATE "Retrigger.dat"
+
 
 //Physics Stuff
 #define	DANCE_FlightPath 20.2572  // was 20.28437 meters and 20.2407
