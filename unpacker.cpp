@@ -59,8 +59,8 @@ using namespace std;
 //#define Diagnostic_Verbose
 
 //Diagnostics Histogramming
-#define Histogram_Waveforms 
-#define Histogram_Digital_Probes 
+//#define Histogram_Waveforms 
+//#define Histogram_Digital_Probes 
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -1156,7 +1156,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		    
 
 		    //*********** PHA ***********//
-		    if(user_data.fw_majrev == 139) {
+		    else if(user_data.fw_majrev == 139) {
 		      
 		      func_ret = unpack_vx725_vx730_pha_chagg_header(&v1730_chagg_header, &vx725_vx730_pha_data);
 		      
