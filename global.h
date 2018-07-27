@@ -52,7 +52,6 @@
 #define ALPHAGATE "Alpha.dat"
 #define RETRIGGERGATE "Retrigger.dat"
 
-
 //Physics Stuff
 #define	DANCE_FlightPath 20.2572  // was 20.28437 meters and 20.2407
 #define U235_FlightPath 22.8240  // was 22.8 meters and 22.8299
