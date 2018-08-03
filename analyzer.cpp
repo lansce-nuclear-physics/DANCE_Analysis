@@ -83,10 +83,14 @@ TH3D *ADC_raw_ID;    //3D Plot of 2D PSD plot (uncalibrated) vs DANCE Crystal ID
 TH3D *ADC_calib_ID;  //3D Plot of 2D PSD plot (calibrated) vs DANCE Crystal ID (z)
 
 //Physics Spectra
-TH1D *hEn; //Neutron Energy from dance events
-TH1D *hTOF; //TOF for dance events
-TH1D *hEn_Corr; //Neutron Energy from dance events
-TH1D *hTOF_Corr; //TOF for dance events
+TH1D *hEn;                   //Neutron Energy from dance events
+TH1D *hTOF;                  //TOF for dance events
+TH2D *hMcl_TOF;              //MCl vs TOF from dance events
+
+TH1D *hEn_Corr;              //Neutron Energy from dance events
+TH1D *hTOF_Corr;             //TOF for dance events
+TH2D *hMcl_TOF_Corr;         //MCl vs TOF for dance events
+
 
 //Alpha Spectra
 TH2D *hAlpha;
@@ -100,18 +104,7 @@ TH2D *hGammaCalib;
 
 //Flag to turn on the QGated spectra
 bool QGated_Spectra = true;
-
-//This sets the number of QGates
-//const int NQGates = 3;
-
-//This defines the Qgates for the En_Ecl_Mcl QGated spectra
-//double QGates[2*NQGates] = {6.5,7.0,   //QGate 1
-//			    6.5,7.5,   //QGate 2
-//			    6.5,6.7};  //QGate 3
-//
-
 TH3F *En_Ecl_Mcl_QGated[10]; //Max is 10 QGates. 
-
 
 //3D Histograms
 TH3F *En_Esum_Mcl;
@@ -607,13 +600,15 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   
   //RAW TOF
   hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
-  hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",600000,0,60000000);
-  hTOF = new TH1D("TOF","TOF",600000,0,60000000);
+  hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
+  hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
+  hMcl_TOF = new TH2D("Mcl_TOF","Mcl_TOF",6000000,0,60000000,8,0,8);
 
   //Corrected TOF
   hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",600000,0,60000000);
+  hMcl_TOF_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",6000000,0,60000000,8,0,8);
 
 #ifdef Histogram_DetectorLoad
   if(read_binary==0 && read_simulation==0) {
@@ -782,7 +777,8 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   if(read_binary==1 || read_simulation == 1) {
     hTOF->Write();
     hTOF_Corr->Write();
-
+    hMcl_TOF->Write();
+    hMcl_TOF_Corr->Write();
     hEn->Write();
     hEn_Corr->Write();
 
@@ -1304,6 +1300,10 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	};
       }  //Done checking mult > 1
             
+      //Mults vs TOF
+      hMcl_TOF->Fill(devent.tof[0],devent.Cluster_mult);
+      hMcl_TOF_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
+
       //Mults vs ESum vs En
       En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
       En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
