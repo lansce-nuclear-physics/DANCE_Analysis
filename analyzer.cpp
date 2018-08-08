@@ -134,15 +134,34 @@ TH1D *hLi6_PulseHeight;  //Energy for Li6 Monitor
 TH1D *hLi6_En;  //Neutron Energy for Li6 Monitor 
 TH1D *hLi6_En_Corr;  //Neutron Energy for Li6 Monitor (From Corrected TOF)
 TH2D *hLi6_PSD; 
-TH1D *hLi6_Time_Between_Events; //Time between U235 hits
+TH1D *hLi6_Time_Between_Events; //Time between Li6 hits
 
 TH1D *hHe3_TOF;  //Raw TOF for He3 Monitor
 TH1D *hHe3_TOF_Corr; //Corrected TOF for He3 Monitor
 TH1D *hHe3_PulseHeight;  //Energy for He3 Monitor
 TH1D *hHe3_En;  //Neutron Energy for He3 Monitor 
 TH1D *hHe3_En_Corr;  //Neutron Energy for He3 Monitor (From Corrected TOF)
-TH1D *hHe3_Time_Between_Events; //Time between U235 hits
+TH1D *hHe3_Time_Between_Events; //Time between He3 hits
 
+// JU Histograms
+TH1F *hU235_TOF_gated;
+TH1F *hU235_TOF_long_gated;
+TH1F *hLi6_TOF_gated;
+TH1F *hLi6_TOF_long_gated;
+TH1F *hHe3_TOF_gated;
+TH1F *hHe3_TOF_long_gated;
+TH1F *tof;
+TH1F *tof_gated_QM;
+TH1F *tof_gated_BM;
+TH1F *tof_gated_QM_long;
+TH1F *tof_gated_BM_long;
+TH2D *ADC_gamma;
+TH2D *ADC_alpha;
+TH1D *esum;	// These esum histos included for convenience
+TH1D *esum2;	// they are redundant - could project from 3D
+TH1D *esum3;
+TH1D *esum4;
+TH1D *esum5;
 
 //PI Cuts
 TCutG *Gamma_Gate;
@@ -156,7 +175,6 @@ He3_Event he3event;
 Li6_Event li6event;
 
 /* VARIABLES */
-
 double last_timestamp[256];        //This keeps track of the last timestamp valid or not
 double last_valid_timestamp[256];  //This keeps track of the last timestamp that was valid
 double current_timestamp[256];     //current timestamp 
@@ -627,6 +645,9 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   ADC_raw_ID=new TH3D("ADC_raw_ID","ADC_raw_ID",1800,0.,72000.,180,0.,7200,162,0,162);
   ADC_calib_ID=new TH3D("ADC_calib_ID","ADC_calib_ID",600,0.,24.,200,0.,8.0,162,0,162);
 
+  ADC_gamma=new TH2D("ADC_gamma","ADC_gamma",2400,0.,24.,800,0.,8.);	// JU
+  ADC_alpha=new TH2D("ADC_alpha","ADC_alpha",2400,0.,24.,800,0.,8.);	// JU
+  
 
   //Gamma Histograms
   hGamma = new TH2D("hGamma","hGamma",1500,0,30000,162,0,162);
@@ -659,6 +680,23 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
     //EtotBins[i]=i*16./128.;
     EtotBins[i]=GammaE_From+i*DEGamma;
   };
+
+// ------ JU physics histograms (tof) ----------------------------------------------- 
+  tof=new TH1F("tof","Time of flight [ns]",500000,-50000,49950000);
+  tof_gated_QM = new TH1F("tof_gated_QM","TOF gated",100000,0,1000000);
+	tof_gated_QM->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_BM = new TH1F("tof_gated_BM","TOF gated",100000,0,1000000);
+	tof_gated_BM->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_QM_long = new TH1F("tof_gated_QM_long","TOF gated",150000,0,30000000);
+	tof_gated_QM_long->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_BM_long = new TH1F("tof_gated_BM_long","TOF gated",150000,0,30000000);
+	tof_gated_BM_long->GetXaxis()->SetTitle("TOF (ns)");
+  esum  = new TH1D("Esum", "Esum", 400,0.0,20.0);
+  esum2 = new TH1D("Esum2","Esum2",400,0.0,20.0);
+  esum3 = new TH1D("Esum3","Esum3",400,0.0,20.0);
+  esum4 = new TH1D("Esum4","Esum4",400,0.0,20.0);
+  esum5 = new TH1D("Esum5","Esum5",400,0.0,20.0);
+// ----------------------------------------------------------------------------------
   
   //Beam Monitors
   hU235_TOF = new TH1D("U235_TOF","U235_TOF",600000,0,60000000);  //Raw TOF for U235 Monitor
@@ -688,7 +726,18 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
   hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",100000,0,10000000);
 
-  if(read_binary==1 || read_simulation==1) {
+ // --- JU monitor histogram definitions ----------------------
+//     (keeping same name as previous for use in flux programs) (Also keeping as TH1F for compatability)
+  hU235_TOF_gated = new TH1F("h_tof_U235_FF","U235 Gated",10000,0.0,1.0e6);	// gated TOF
+  hU235_TOF_long_gated = new TH1F("h_tof_long_U235_FF","U235 Long Gated",45000,0.0,4.5e7);
+  hLi6_TOF_gated = new TH1F("h_tof_Li6_Triton","Li6 Gated",10000,0.0,1.0e+6);	// gated TOF
+  hLi6_TOF_long_gated = new TH1F("h_tof_long_Li6_Triton","Li6 Long Gated",45000,0.0,4.5e7);
+  hHe3_TOF_gated  = new TH1F("h_tof_He3_All","He3 gated",10000,0.0,1.0e+6);	// gated TOF
+  hHe3_TOF_long_gated = new TH1F("h_tof_long_He3_All","He3 Long Gated",45000,0.0,4.5e7);
+// ------------------------------------------------------------
+
+
+ if(read_binary==1 || read_simulation==1) {
 
     hEn = new TH1D("En","En",NEbins,x); //Raw En
     hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
@@ -819,6 +868,26 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   hHe3_En->Write();  //Neutron Energy for He3 Monitor 
   hHe3_En_Corr->Write();  //Neutron Energy for He3 Monitor (From Corrected TOF)
   hHe3_Time_Between_Events->Write();
+
+  // JU histos ------
+  hU235_TOF_gated-> Write();
+  hU235_TOF_long_gated->Write();
+  hLi6_TOF_gated -> Write();
+  hLi6_TOF_long_gated->Write();
+  hHe3_TOF_gated -> Write();
+  hHe3_TOF_long_gated->Write();
+  tof_gated_QM -> Write();
+  tof_gated_BM -> Write();
+  tof_gated_QM_long -> Write();
+  tof_gated_BM_long -> Write();
+  
+  ADC_gamma -> Write();
+  ADC_alpha -> Write();
+  esum  -> Write();
+  esum2 -> Write();
+  esum3 -> Write();
+  esum4 -> Write();
+  esum5 -> Write();
 
   cout<<GREEN<<"Analyzer [INFO]: Wrote Histograms"<<RESET<<endl;
   return 0;
@@ -1024,6 +1093,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  //Fill some Calibration Spectra
 	  hAlpha->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	  hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+          ADC_alpha->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
 	}
 	
 	//If it is not in the alpha gate then check the gamma gate or whether its simulated data
@@ -1033,7 +1103,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	    //Fill some Calibration Spectra
 	    hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	    hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
-	    
+	    ADC_gamma->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
+
 	    //Make a DANCE Event
 	    devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
 	    devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
@@ -1312,6 +1383,13 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
       hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
       
+      // fill esum histos (for convenience, they are redundant to the 3d histo above --- JU -----)
+      esum -> Fill(devent.ESum);
+      if(devent.Cluster_mult==2)esum2->Fill(devent.ESum);
+      if(devent.Cluster_mult==3)esum3->Fill(devent.ESum);
+      if(devent.Cluster_mult==4)esum4->Fill(devent.ESum);
+      if(devent.Cluster_mult==5)esum5->Fill(devent.ESum);
+      
       //Loop over the cluster mult
       for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
 	for(int kay=0; kay<NQGates; kay++) {
@@ -1320,7 +1398,21 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  } //Done Checking QGates
 	} //Done Looping over QGates
       } //Done looping over cluster mult
-    }
+      	
+      // At this point in the code, we apparently have TOF, Esum, and Mcluster
+      // so fill the "gated TOF histograms" - these are higher resolution TOF spectra than hTOF_Esum_Mcl
+      if(devent.Cluster_mult>1 && devent.Cluster_mult<7) {	// Edit these limits for now
+	if(devent.ESum > QGates[0] && devent.ESum < QGates[1]) {	// " Q-value" gate    ---- JU -------
+	  tof_gated_QM -> Fill(devent.tof[0]);
+	  tof_gated_QM_long -> Fill(devent.tof[0]);
+	}
+	if(devent.ESum > QGates[4] && devent.ESum < QGates[5]) {	// "Background" Q gate
+	  tof_gated_BM -> Fill(devent.tof[0]);
+	  tof_gated_BM_long -> Fill(devent.tof[0]);
+	}
+      }
+
+    } //End of checking valid DANCE event
   } //Done checking for stage 1
   
   //U235 Beam Monitor Events
@@ -1342,6 +1434,16 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       hU235_TOF->Fill(u235event.tof);
       hU235_TOF_Corr->Fill(u235event.tof_corr);
       hU235_PH_TOF->Fill(u235event.tof,u235event.Islow);
+      
+      // JU Histograms ----
+      //if(u235event.Islow>5000.0 && u235event.Islow<35000.0)
+      if(u235event.Islow>2000.0 && u235event.Islow<20000.0)
+	{
+	hU235_TOF_gated -> Fill(u235event.tof);
+	hU235_TOF_long_gated -> Fill(u235event.tof);
+	}
+      //-------------------
+      
     } //end check over last t0 timestamp
     else {
       u235event.Valid=0;
@@ -1375,7 +1477,15 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //Fill TOF spectra
       hHe3_TOF->Fill(he3event.tof);
       hHe3_TOF_Corr->Fill(he3event.tof_corr);
-      
+
+        // JU Histograms ----
+      if(he3event.Islow>0.0 && he3event.Islow<35000.0)
+	{
+	hHe3_TOF_gated -> Fill(he3event.tof);
+	hHe3_TOF_long_gated -> Fill(he3event.tof);
+	}
+      //-------------------
+
     } //end check over last t0 timestamp
     else {
       he3event.Valid=0;
@@ -1395,7 +1505,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
   if(li6event.Valid == 1) {
     if(last_t0_timestamp > 0) {
       //Fill Pulse Height Spectrum
-      hLi6_PulseHeight->Fill(li6event.Islow-li6event.Ifast);
+      hLi6_PulseHeight->Fill(li6event.Islow);
       hLi6_PSD->Fill(li6event.Islow,li6event.Ifast);
       //Make TOF relative to last T0
       li6event.tof -= last_t0_timestamp;
@@ -1410,7 +1520,15 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //Fill TOF spectra
       hLi6_TOF->Fill(li6event.tof);
       hLi6_TOF_Corr->Fill(li6event.tof_corr);
-      
+
+      // JU Histograms ----
+      //if(li6event.Islow>17000.0 && li6event.Islow<24000.0)
+      if(li6event.Islow>17000.0 && li6event.Islow<24000.0)	// Runs 10194 - 
+	{
+	  hLi6_TOF_gated -> Fill(li6event.tof);
+	  hLi6_TOF_long_gated -> Fill(li6event.tof);
+	}
+      //-------------------
     } //end check over last t0 timestamp
     else {
       li6event.Valid=0;

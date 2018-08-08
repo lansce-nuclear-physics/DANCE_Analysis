@@ -68,4 +68,4 @@ Version 7.3.2 - Added a better way of rejecting the retrigger.  There is now a 2
 
 Version 8.0.0 - This represents another major change to the unpacker (Sorry John but a I think it will be easier to follow all of it now).  This is a fidelity upgrade that was primarily  motivated by the need to unpack the analog and digital probes both acurrately and more efficiently to take full advantage of the raw data from the boards.  What has now been created is a new set of files for unpacking the Vx725/Vx730 digitizers.  unpack_vx725_vx730.h has function prototypes for unpacking the board header, channel aggregate header, and each member of the channel aggregate.  There are also a series of bit masks and structures to store the information defined in this file.  unpack_vx725_vx730 has the actual C/C++ code to unpack the data and store it in the structures.  The nice thing is that these files can be included into any framework now to quickly unpack raw digitizer data.   
 
-  
+Version 8.1.0 - Added the histograms to the analyzer from John Ullmann's version of the code.
