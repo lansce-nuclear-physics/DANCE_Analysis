@@ -646,36 +646,40 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  double secmom=0.;	
 		  int NNN=10;
 		  // int id=db_arr[EVTS].ID;
-		
-		  if(db_arr[EVTS].ID<162) frac=0.04;
-		  else frac=0.1;
-		
-		  frac=0.2;
-		  
-		  for(int i=0;i<db_arr[EVTS].Ns;i++) {
-		    wf1[i]=evaggr->wavelets[evtnum][i]+8192;
 
-		    if(i<NNN) {
-		      base+=(1.*wf1[i]);
-		      secmom+=(1.*wf1[i]*1.*wf1[i]);
-		    }		  
-		    if((1.*wf1[i])<sigmin) {
-		      sigmin=1.*wf1[i];
-		      imin=i;
-		    }
-		  }
+		  double dT = 0;
 		  
-		  double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
-		  double dT=0;
-		  int iLD=0;
-		  for(int i=imin;i>1;i--){
-		    if((1.*wf1[i])<thr && (1.*wf1[i-1])>thr){
-		      double dSig=(1.*wf1[i-1]-1.*wf1[i]);
-		      if(dSig!=0) dT=(1.*wf1[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
-		      else dT=(i-1)*2.;
-		      iLD=i;
-		    }		
-		  }
+		  //Beam monitor waveforms for caen2015 data are ostensibly useless
+		  if(db_arr[EVTS].ID <= 200) { 
+		    if(db_arr[EVTS].ID<162) frac=0.04;
+		    else frac=0.1;
+		    
+		    frac=0.2;
+		    
+		    for(int i=0;i<db_arr[EVTS].Ns;i++) {
+		      wf1[i]=evaggr->wavelets[evtnum][i]+8192;
+		      
+		      if(i<NNN) {
+			base+=(1.*wf1[i]);
+			secmom+=(1.*wf1[i]*1.*wf1[i]);
+		      }		  
+		      if((1.*wf1[i])<sigmin) {
+			sigmin=1.*wf1[i];
+			imin=i;
+		      }
+		    }
+		    
+		    double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
+		    int iLD=0;
+		    for(int i=imin;i>1;i--){
+		      if((1.*wf1[i])<thr && (1.*wf1[i-1])>thr){
+			double dSig=(1.*wf1[i-1]-1.*wf1[i]);
+			if(dSig!=0) dT=(1.*wf1[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
+			else dT=(i-1)*2.;
+			iLD=i;
+		      }		
+		    }
+		  } //end loop over ID <= 200
 		  
 		  //Fill raw IDs
 		  hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
