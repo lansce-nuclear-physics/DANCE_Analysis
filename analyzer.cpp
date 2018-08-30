@@ -672,8 +672,9 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   double *Mbins=new double[21];
   
   for(int i=0;i<21;i++){
-    Mbins[i]=0.5+1.*i;
-  };
+    Mbins[i]=i;
+    //   Mbins[i]=0.5+1.*i;
+ };
   
   double DEGamma=(GammaE_To-GammaE_From)/GammaE_NoOfBins;
   for(int i=0;i<NoOfEnergyBins+1;i++){
@@ -743,13 +744,13 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
     hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
     hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",5100,0,51000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",5100,0,51000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
     En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcr gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     
     Esum_Eg_Mcl=new TH3F("Esum_Eg_Mcl","Esum_Eg_Mcl where Eg is Ecluster",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
     Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
