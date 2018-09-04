@@ -85,11 +85,11 @@ TH3D *ADC_calib_ID;  //3D Plot of 2D PSD plot (calibrated) vs DANCE Crystal ID (
 //Physics Spectra
 TH1D *hEn;                   //Neutron Energy from dance events
 TH1D *hTOF;                  //TOF for dance events
-TH2D *hMcl_TOF;              //MCl vs TOF from dance events
+TH2D *hTOF_Mcl;              //MCl vs TOF from dance events
 
 TH1D *hEn_Corr;              //Neutron Energy from dance events
 TH1D *hTOF_Corr;             //TOF for dance events
-TH2D *hMcl_TOF_Corr;         //MCl vs TOF for dance events
+TH2D *hTOF_Mcl_Corr;         //MCl vs TOF for dance events
 
 
 //Alpha Spectra
@@ -105,6 +105,7 @@ TH2D *hGammaCalib;
 //Flag to turn on the QGated spectra
 bool QGated_Spectra = true;
 TH3F *En_Ecl_Mcl_QGated[10]; //Max is 10 QGates. 
+TH2D *hTOF_Mcl_QGated[10];
 
 //3D Histograms
 TH3F *En_Esum_Mcl;
@@ -620,13 +621,15 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
   hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
-  hMcl_TOF = new TH2D("Mcl_TOF","Mcl_TOF",6000000,0,60000000,8,0,8);
+  //2D out to 1 ms
+  hTOF_Mcl = new TH2D("Mcl_TOF","Mcl_TOF",100000,0,1000000,8,0,8);
 
   //Corrected TOF
   hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
-  hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",600000,0,60000000);
-  hMcl_TOF_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",6000000,0,60000000,8,0,8);
+  hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",6000000,0,60000000);
+  //2D out to 1 ms
+  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,1000000,8,0,8);
 
 #ifdef Histogram_DetectorLoad
   if(read_binary==0 && read_simulation==0) {
@@ -674,7 +677,7 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   for(int i=0;i<21;i++){
     Mbins[i]=i;
     //   Mbins[i]=0.5+1.*i;
- };
+  };
   
   double DEGamma=(GammaE_To-GammaE_From)/GammaE_NoOfBins;
   for(int i=0;i<NoOfEnergyBins+1;i++){
@@ -763,6 +766,15 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
 					Form("En_Ecl_Mcl_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
 					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
       }
+      
+      //QGated Mcl_TOF out to 1 ms
+      for (int kay=0; kay<NQGates; kay++) {
+	hTOF_Mcl_QGated[kay] = new TH2D(Form("Mcl_TOF_ESum_Gated_%d",kay),
+					Form("Mcl_TOF_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					100000,0,1000000,8,0,8);
+      }
+
+      
     }
   }
 
@@ -827,8 +839,8 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   if(read_binary==1 || read_simulation == 1) {
     hTOF->Write();
     hTOF_Corr->Write();
-    hMcl_TOF->Write();
-    hMcl_TOF_Corr->Write();
+    hTOF_Mcl->Write();
+    hTOF_Mcl_Corr->Write();
     hEn->Write();
     hEn_Corr->Write();
 
@@ -842,6 +854,10 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
       for (int kay=0; kay<NQGates; kay++) {
 	En_Ecl_Mcl_QGated[kay]->Write();
       }
+      for (int kay=0; kay<NQGates; kay++) {
+	hTOF_Mcl_QGated[kay]->Write();
+      }
+      
     }
   } //End check for stage 1
 
@@ -1373,8 +1389,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       }  //Done checking mult > 1
             
       //Mults vs TOF
-      hMcl_TOF->Fill(devent.tof[0],devent.Cluster_mult);
-      hMcl_TOF_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
+      hTOF_Mcl->Fill(devent.tof[0],devent.Cluster_mult);
+      hTOF_Mcl_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
 
       //Mults vs ESum vs En
       En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
@@ -1396,6 +1412,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	for(int kay=0; kay<NQGates; kay++) {
 	  if(devent.ESum > QGates[kay*2] && devent.ESum < QGates[kay*2+1]) {
 	    En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
+	    hTOF_Mcl_QGated[kay]->Fill(devent.tof[0],devent.Cluster_mult);
 	  } //Done Checking QGates
 	} //Done Looping over QGates
       } //Done looping over cluster mult
