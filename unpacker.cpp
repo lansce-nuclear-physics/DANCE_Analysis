@@ -397,7 +397,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   int gzret=1;                  //number of bytes read by gzread
   
   double smallest_timestamp=400000000000000.0;  //This just needs to be a large number
-  
+  double largest_timestamp=0.0;  //This just needs to be 0
+
   //Some CAEN structures to optimize reads
   V1730_Header_t v1730_header;
   V1730_ChAgg_Header_t v1730_chagg_header;
@@ -734,6 +735,10 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		  //keep track of the smallest timestamp
 		  if(db_arr[EVTS].TOF<smallest_timestamp) {
 		    smallest_timestamp=db_arr[EVTS].TOF;
+		  }    
+		  //keep track of the largest timestamp
+		  if(db_arr[EVTS].TOF>largest_timestamp) {
+		    largest_timestamp=db_arr[EVTS].TOF;
 		  }    
 		
 		  //increment counters
@@ -1851,7 +1856,8 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 
   }  //end of while run
 
-  
+      cout<<"Unpacker [INFO]: Run Length: "<<largest_timestamp/1000000000.0<<" seconds"<<endl;
+
   //Now that we are done sorting we need to empty the buffer
   cout<<GREEN<<"Unpacker [INFO]: Finsihed Unpacking Data"<<RESET<<endl;
   
@@ -2071,6 +2077,9 @@ if(read_binary==1 || read_simulation==1) {
   cout<<"Unpacker [INFO]: Time Sorting"<<endl;
   heapSort(db_arr, TOTAL_EVTS);
   cout<<GREEN<<"Unpacker [INFO]: Time Sort Complete"<<RESET<<endl;
+
+  cout<<"Unpacker [INFO]: Run Length: "<<db_arr[TOTAL_EVTS-1].TOF/1000000000.0<<" seconds"<<endl;
+
 
   cout<<"Unpacker [INFO]: Starting Analysis"<<endl;
 

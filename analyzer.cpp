@@ -25,7 +25,7 @@
 
 using namespace std;
 
-//#define Histogram_DetectorLoad
+//#define HistogramDetectorLoad
 
 //Analyzer stats
 uint32_t events_analyzed;
@@ -105,6 +105,8 @@ TH2D *hGammaCalib;
 //Flag to turn on the QGated spectra
 bool QGated_Spectra = true;
 TH3F *En_Ecl_Mcl_QGated[10]; //Max is 10 QGates. 
+TH3F *En_Ecr_Mcr_QGated[10]; //Max is 10 QGates. 
+TH3F *ID_Ecr_Mcr_QGated[10]; //Max is 10 QGates. 
 TH2D *hTOF_Mcl_QGated[10];
 
 //3D Histograms
@@ -766,6 +768,18 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
 					Form("En_Ecl_Mcl_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
 					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
       }
+
+      for (int kay=0; kay<NQGates; kay++) {
+	En_Ecr_Mcr_QGated[kay]=new TH3F(Form("En_Ecr_Mcr_ESum_Gated_%d",kay),
+					Form("En_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+      }
+      
+      for (int kay=0; kay<NQGates; kay++) {
+	ID_Ecr_Mcr_QGated[kay]=new TH3F(Form("ID_Ecr_Mcr_ESum_Gated_%d",kay),
+					Form("ID_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+      }
       
       //QGated Mcl_TOF out to 1 ms
       for (int kay=0; kay<NQGates; kay++) {
@@ -854,7 +868,13 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
       for (int kay=0; kay<NQGates; kay++) {
 	En_Ecl_Mcl_QGated[kay]->Write();
       }
-      for (int kay=0; kay<NQGates; kay++) {
+       for (int kay=0; kay<NQGates; kay++) {
+	En_Ecr_Mcr_QGated[kay]->Write();
+      }
+       for (int kay=0; kay<NQGates; kay++) {
+	 ID_Ecr_Mcr_QGated[kay]->Write();
+       }
+       for (int kay=0; kay<NQGates; kay++) {
 	hTOF_Mcl_QGated[kay]->Write();
       }
       
@@ -1416,7 +1436,18 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  } //Done Checking QGates
 	} //Done Looping over QGates
       } //Done looping over cluster mult
-      	
+      
+      //Loop over the crystal mult
+      for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
+	for(int kay=0; kay<NQGates; kay++) {
+	  if(devent.ESum > QGates[kay*2] && devent.ESum < QGates[kay*2+1]) {
+	    En_Ecr_Mcr_QGated[kay]-> Fill(devent.En, devent.Ecrystal[jay], devent.Crystal_mult );
+	    ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
+	  } //Done Checking QGates
+	} //Done Looping over QGates
+      } //Done looping over crystal mult
+
+      
       // At this point in the code, we apparently have TOF, Esum, and Mcluster
       // so fill the "gated TOF histograms" - these are higher resolution TOF spectra than hTOF_Esum_Mcl
       if(devent.Cluster_mult>1 && devent.Cluster_mult<7) {	// Edit these limits for now

@@ -73,3 +73,5 @@ Version 8.1.0 - Added the histograms to the analyzer from John Ullmann's version
 Version 8.2.0 - Turned off the calculation of the fine time stamp for IDs above 200 for the caen2015 unpacker.  The waveforms were completely useless (ended before the rise of the signal) from those detectors and calculating a fine time from them would likely cause problems. 
 
 Version 8.2.1 - Added a hTOF_Mcl_QGated spectra out to 1ms in time of flight.
+
+Version 8.2.2 - Added some more 3D histograms gated on Q-Value
