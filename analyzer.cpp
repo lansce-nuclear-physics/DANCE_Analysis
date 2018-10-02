@@ -25,7 +25,7 @@
 
 using namespace std;
 
-//#define HistogramDetectorLoad
+//#define Histogram_DetectorLoad
 
 //Analyzer stats
 uint32_t events_analyzed;
@@ -56,6 +56,7 @@ TH2D *hCoinCAEN;  //coincidence matrix
 
 //Time Diagnostics
 TH1D *hEventLength;  //length in ns of the event (diagnostic)
+TH2D *hEventLength_Etot; //ESum vs Event Legnth
 TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
 TH2D *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
 TH1D *hTimeBetweenDEvents;  //time between subsequent DANCE events (ns)
@@ -99,6 +100,8 @@ TH2D *hAlphaCalib;
 //Gamma Spectra
 TH2D *hGamma;
 TH2D *hGammaCalib;
+TH2D *hGamma_Mcr1;
+TH2D *hGammaCalib_Mcr1;
 
 //QGated 3D Histograms;
 
@@ -215,6 +218,7 @@ double slow_slope[200];
 double slow_quad[200];
 double fast_slope[200];
 double fast_offset[200];
+double fast_quad[200];
 
 //Diagnostics
 uint32_t T0_Counter=0;
@@ -362,7 +366,7 @@ int Make_Output_Binfile(int RunNumber, bool read_binary) {
 int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulation) {
   
   int id=0;
-  double temp[5] = {0,0,0,0,0};
+  double temp[6] = {0,0,0,0,0,0};
 
   for(int eye=0; eye<200; eye++) {
     slow_offset[eye]=0;
@@ -370,6 +374,7 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
     slow_quad[eye]=0;
     fast_offset[eye]=0;
     fast_slope[eye]=1;  
+    fast_quad[eye]=0;  
   }
 
   cout<<"Analyzer [INFO]: Reading Energy Calibrations"<<endl;
@@ -389,13 +394,15 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
     if(read_binary==1) {
       if(encal.is_open()) {
 	while(!encal.eof()) {
+	  //encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4]>>temp[5];
 	  encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
 	  slow_offset[id]=temp[0];
 	  slow_slope[id]=temp[1];
 	  slow_quad[id]=temp[2];
 	  fast_offset[id]=temp[3];
 	  fast_slope[id]=temp[4];
-	
+	  //fast_quad[id]=temp[5];
+
 	  if(encal.eof()) {
 	    break;
 	  }
@@ -421,12 +428,14 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
   
     if(idealcal.is_open()) {
       while(!idealcal.eof()) {
+	//	idealcal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4]>>temp[5];
 	idealcal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4];
 	slow_offset[id]=temp[0];
 	slow_slope[id]=temp[1];
 	slow_quad[id]=temp[2];
 	fast_offset[id]=temp[3];
 	fast_slope[id]=temp[4];
+	//	fast_quad[id]=temp[5];
 
 	  cout<<id<<"  "<<slow_slope[id]<<"  "<<fast_slope[id]<<endl;
       
@@ -613,6 +622,7 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
 
   //Diagnostics
   hEventLength = new TH1D("EventLength","EventLength",10000,0,100);
+  hEventLength_Etot = new TH2D("EventLength_Etot","EventLength_Etot",1000,0,10,400,0,20);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
   hTimeBetweenCrystals_EnergyRatio = new TH2D("TimeBetweenCrystals_EnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
@@ -634,7 +644,7 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,1000000,8,0,8);
 
 #ifdef Histogram_DetectorLoad
-  if(read_binary==0 && read_simulation==0) {
+  if(read_simulation==0) {
     hDetectorLoad = new TH1D("DetectorLoad","DetectorLoad",10000000,0,10000000);
   }
 #endif
@@ -655,8 +665,12 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   
 
   //Gamma Histograms
-  hGamma = new TH2D("hGamma","hGamma",1500,0,30000,162,0,162);
+  hGamma = new TH2D("hGamma","hGamma",3000,0,60000,162,0,162);
   hGammaCalib = new TH2D("hGammaCalib","hGammaCalib",2000,0.0,20.0,162,0,162);
+
+  //Gamma gated on Crystal Mult 1
+  hGamma_Mcr1 = new TH2D("hGamma_Mcr1","hGamma_Mcr1",3000,0,60000,162,0,162);
+  hGammaCalib_Mcr1 = new TH2D("hGammaCalib_Mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
 
   //Alpha Histograms
   hAlpha = new TH2D("hAlpha","hAlpha",1500,0,30000,162,0,162);
@@ -809,6 +823,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   hTimeDev->Write();
 
   hEventLength->Write();
+  hEventLength_Etot->Write();
   hTimeBetweenCrystals->Write();
   hTimeBetweenCrystals_EnergyRatio->Write();
   hTimeBetweenDEvents->Write();
@@ -824,7 +839,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
 
 
 #ifdef Histogram_DetectorLoad
-  if(read_binary==0 && read_simulation==0) { 
+  if(read_simulation==0) { 
     for(int eye=0; eye<10000000; eye++) {
       hDetectorLoad->SetBinContent(eye+1,Detector_Load[eye]/(160.0*T0_Counter));
     }
@@ -845,6 +860,8 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
 
   hGamma->Write();
   hGammaCalib->Write();
+  hGamma_Mcr1->Write();
+  hGammaCalib_Mcr1->Write();
 
   Alpha_Gate->Write();
   Gamma_Gate->Write();
@@ -1032,7 +1049,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 				      temp_slow*slow_slope[eventvector[eye].ID] +
 				      slow_offset[eventvector[eye].ID]);
       
-      eventvector[eye].Efast = 0.001*(temp_fast*fast_slope[eventvector[eye].ID] +
+      eventvector[eye].Efast = 0.001*(temp_fast*temp_fast*fast_quad[eventvector[eye].ID] +
+				      temp_fast*fast_slope[eventvector[eye].ID] +
 				      fast_offset[eventvector[eye].ID]);
       
       //  cout<<eventvector[eye].Eslow<<"  "<<temp_slow<<endl;
@@ -1163,23 +1181,23 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	ADC_calib_Invalid->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
       } //end of not valid else
       
-      if(read_binary==0 && read_simulation==0) {
-
 #ifdef Histogram_DetectorLoad
+
+      if(read_simulation==0) {
+
 	//Fill detecotor load
 	if(last_t0_timestamp > 0) {
 	  uint32_t temptof = (uint32_t)(eventvector[eye].TOF-last_t0_timestamp);
 	  if(temptof>0) {
-	    for(int el=(int)temptof; el<((int)(temptof+1000)); el++) {
+	    for(int el=(int)temptof; el<((int)(temptof+1000+Crystal_Blocking_Time)); el++) {
 	      if(el >=0 && el < 100000000) {
 		Detector_Load[el]+=1.0;
 	      }
 	    }
 	  }
 	}
-#endif
-
       }
+#endif
     }
       
     
@@ -1436,6 +1454,12 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  } //Done Checking QGates
 	} //Done Looping over QGates
       } //Done looping over cluster mult
+
+      //Crystal mult 1
+      if(devent.Crystal_mult == 1) {
+	hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
+	hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+      }
       
       //Loop over the crystal mult
       for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
@@ -1460,6 +1484,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  tof_gated_BM_long -> Fill(devent.tof[0]);
 	}
       }
+
+      hEventLength_Etot->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF,devent.ESum);
+
 
     } //End of checking valid DANCE event
   } //Done checking for stage 1
