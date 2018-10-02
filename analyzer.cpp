@@ -778,7 +778,7 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
       for (int kay=0; kay<NQGates; kay++) {
 	ID_Ecr_Mcr_QGated[kay]=new TH3F(Form("ID_Ecr_Mcr_ESum_Gated_%d",kay),
 					Form("ID_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
-					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+					162,0,162,400,0,20,20,0,20);
       }
       
       //QGated Mcl_TOF out to 1 ms

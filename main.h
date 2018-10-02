@@ -13,6 +13,7 @@
 #include <stdlib.h>     /* atoi */
 #include <iomanip>
 #include <zlib.h>
+#include <bzlib.h>
 #include <sys/time.h>
 #include <iostream>
 #include <fstream>

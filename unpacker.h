@@ -10,6 +10,7 @@
 
 //C/C++ includes
 #include <zlib.h>
+#include <bzlib.h>
 #include <string.h>
 #include <iostream>
 #include <stdint.h>

@@ -22,7 +22,7 @@ INCLUDES:= analyzer.h main.h sort_functions.h structures.h unpacker.h unpack_vx7
 
 OBJECTS:= analyzer.o main.o sort_functions.o unpacker.o unpack_vx725_vx730.o
 
-LIBS  = -lm $(ROOTGLIBS) -lz
+LIBS  = -lm $(ROOTGLIBS) -lz -lbz2
 
 SRCS:= analyzer.cpp main.cpp sort_functions.cpp unpacker.cpp unpack_vx725_vx730.cpp	
 
