@@ -22,10 +22,11 @@
 #include "TH3.h"
 #include "TCutG.h"
 #include "TGraph.h"
+#include "TMath.h"
 
 using namespace std;
 
-//#define Histogram_DetectorLoad
+#define Histogram_DetectorLoad
 
 //Analyzer stats
 uint32_t events_analyzed;
@@ -67,6 +68,9 @@ TH1D *hCrystalTOF; //TOF for all crytals
 TH2D *hCrystalIDvsTOF_Corr; //TOF for each crystal 
 TH1D *hCrystalTOF_Corr; //TOF for all crytals
 TH1D *hDetectorLoad; //Average detector load vs TOF
+TH1D *hDetectorLoad_perT0; //Average detector load vs TOF
+TH1D *hDetectorLoad_En; //Average detector load vs TOF
+TH1D *hDetectorLoad_En_perT0; //Average detector load vs TOF
 
 TH1D *hDANCE_Entries_per_T0;
 TH1D *hDANCE_Events_per_T0;
@@ -92,7 +96,6 @@ TH1D *hEn_Corr;              //Neutron Energy from dance events
 TH1D *hTOF_Corr;             //TOF for dance events
 TH2D *hTOF_Mcl_Corr;         //MCl vs TOF for dance events
 
-
 //Alpha Spectra
 TH2D *hAlpha;
 TH2D *hAlphaCalib;
@@ -103,14 +106,18 @@ TH2D *hGammaCalib;
 TH2D *hGamma_Mcr1;
 TH2D *hGammaCalib_Mcr1;
 
-//QGated 3D Histograms;
-
-//Flag to turn on the QGated spectra
-bool QGated_Spectra = true;
+// QGated spectra
 TH3F *En_Ecl_Mcl_QGated[10]; //Max is 10 QGates. 
 TH3F *En_Ecr_Mcr_QGated[10]; //Max is 10 QGates. 
 TH3F *ID_Ecr_Mcr_QGated[10]; //Max is 10 QGates. 
 TH2D *hTOF_Mcl_QGated[10];
+
+//Isomer spectra
+TH1D *hIsomer_Prompt[10];   //Prompt singles TOF spectrum
+TH1D *hIsomer_Delayed[10];  //Delayed singles TOF spectrum
+TH1D *hIsomer_TDiff[10];    //Delayed - Prompt spectrum
+vector<double> Isomer_Prompt[10]; //Storage for Prompt TOFs
+vector<double> Isomer_Delayed[10]; //Storage for Delayed TOFs
 
 //3D Histograms
 TH3F *En_Esum_Mcl;
@@ -118,6 +125,9 @@ TH3F *En_Esum_Mcr;
 
 TH3F *hTOF_Esum_Mcl;
 TH3F *hTOF_Esum_Mcr;
+
+TH3F *hTOF_Esum_Mcr_Removed[20];
+TH3F *hEn_Esum_Mcr_Removed[20];
 
 TH3F *En_Eg_Mcl; // this should have a Qgate on it
 TH3F *En_Eg_Mcr; // this should have a Qgate on it
@@ -176,6 +186,7 @@ TCutG *Retrigger_Gate;
 
 //Events
 DANCE_Event devent;
+DANCE_Event devent2;
 U235_Event u235event;
 He3_Event he3event;
 Li6_Event li6event;
@@ -334,22 +345,22 @@ int Read_Moderation_Time_Graphs() {
 
 
 //This function makes the output binary file for stage 0 or 1 filled with time-ordered devt_bank structures
-int Make_Output_Binfile(int RunNumber, bool read_binary) {
+int Make_Output_Binfile(Input_Parameters input_params ) {
   
   stringstream outfilename;
   outfilename.str();
   
   //stage0 
-  if(read_binary==0) {
+  if(input_params.Read_Binary==0) {
     outfilename << STAGE0_BIN; 
     outfilename <<"/stage0_run_";
   }
   //stage1
-  if(read_binary==1) {
+  if(input_params.Read_Binary==1) {
     outfilename << STAGE1_BIN;
     outfilename <<"/stage0_run_";
   }
-  outfilename << RunNumber << ".bin";
+  outfilename << input_params.RunNumber << ".bin";
   
   outputbinfile.open(outfilename.str().c_str(), ios::out | ios::binary);
   
@@ -363,7 +374,7 @@ int Make_Output_Binfile(int RunNumber, bool read_binary) {
   }
 }
 
-int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulation) {
+int Read_Energy_Calibrations(Input_Parameters input_params) {
   
   int id=0;
   double temp[6] = {0,0,0,0,0,0};
@@ -379,19 +390,19 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
 
   cout<<"Analyzer [INFO]: Reading Energy Calibrations"<<endl;
 
-  if(read_simulation == 0) {
+  if(input_params.Read_Simulation == 0) {
 
 
     stringstream cal_name;
     cal_name.str();
-    cal_name << CALIB_DIR << "/param_out_" << RunNumber << ".txt";
+    cal_name << CALIB_DIR << "/param_out_" << input_params.RunNumber << ".txt";
     
     ifstream encal;
     encal.open(cal_name.str().c_str());
   
     bool encalfail=false;
   
-    if(read_binary==1) {
+    if(input_params.Read_Binary==1) {
       if(encal.is_open()) {
 	while(!encal.eof()) {
 	  //encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4]>>temp[5];
@@ -416,7 +427,7 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
 	encalfail=true;
       }
     }
-    if(read_binary==0 || encalfail==true)
+    if(input_params.Read_Binary==0 || encalfail==true)
       cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
   
     stringstream idealcal_name;
@@ -437,7 +448,7 @@ int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulati
 	fast_slope[id]=temp[4];
 	//	fast_quad[id]=temp[5];
 
-	  cout<<id<<"  "<<slow_slope[id]<<"  "<<fast_slope[id]<<endl;
+	cout<<id<<"  "<<slow_slope[id]<<"  "<<fast_slope[id]<<endl;
       
 	if(idealcal.eof()) {
 	  break;
@@ -608,7 +619,7 @@ int Read_TMatrix() {
 }
 
 
-int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGates, double QGates[]) {
+int Create_Analyzer_Histograms(Input_Parameters input_params) {
   
   cout<<"Analyzer [INFO]: Creating Histograms"<<endl;
 
@@ -642,12 +653,6 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",6000000,0,60000000);
   //2D out to 1 ms
   hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,1000000,8,0,8);
-
-#ifdef Histogram_DetectorLoad
-  if(read_simulation==0) {
-    hDetectorLoad = new TH1D("DetectorLoad","DetectorLoad",10000000,0,10000000);
-  }
-#endif
 
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
@@ -701,22 +706,33 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
     EtotBins[i]=GammaE_From+i*DEGamma;
   };
 
-// ------ JU physics histograms (tof) ----------------------------------------------- 
+#ifdef Histogram_DetectorLoad
+  if(input_params.Read_Simulation==0) {
+    hDetectorLoad = new TH1D("DetectorLoad","DetectorLoad",10000000,0,10000000);
+    hDetectorLoad_perT0 = new TH1D("DetectorLoad_perT0","DetectorLoad_perT0",10000000,0,10000000);
+    hDetectorLoad_En = new TH1D("DetectorLoad_En","DetectorLoad_En",NEbins,x);
+    hDetectorLoad_En_perT0 = new TH1D("DetectorLoad_En_perT0","DetectorLoad_En_perT0",NEbins,x);
+  }
+#endif
+
+
+
+  // ------ JU physics histograms (tof) ----------------------------------------------- 
   tof=new TH1F("tof","Time of flight [ns]",500000,-50000,49950000);
   tof_gated_QM = new TH1F("tof_gated_QM","TOF gated",100000,0,1000000);
-	tof_gated_QM->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_QM->GetXaxis()->SetTitle("TOF (ns)");
   tof_gated_BM = new TH1F("tof_gated_BM","TOF gated",100000,0,1000000);
-	tof_gated_BM->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_BM->GetXaxis()->SetTitle("TOF (ns)");
   tof_gated_QM_long = new TH1F("tof_gated_QM_long","TOF gated",150000,0,30000000);
-	tof_gated_QM_long->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_QM_long->GetXaxis()->SetTitle("TOF (ns)");
   tof_gated_BM_long = new TH1F("tof_gated_BM_long","TOF gated",150000,0,30000000);
-	tof_gated_BM_long->GetXaxis()->SetTitle("TOF (ns)");
+  tof_gated_BM_long->GetXaxis()->SetTitle("TOF (ns)");
   esum  = new TH1D("Esum", "Esum", 400,0.0,20.0);
   esum2 = new TH1D("Esum2","Esum2",400,0.0,20.0);
   esum3 = new TH1D("Esum3","Esum3",400,0.0,20.0);
   esum4 = new TH1D("Esum4","Esum4",400,0.0,20.0);
   esum5 = new TH1D("Esum5","Esum5",400,0.0,20.0);
-// ----------------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------------
   
   //Beam Monitors
   hU235_TOF = new TH1D("U235_TOF","U235_TOF",600000,0,60000000);  //Raw TOF for U235 Monitor
@@ -746,18 +762,18 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
   hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
   hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",100000,0,10000000);
 
- // --- JU monitor histogram definitions ----------------------
-//     (keeping same name as previous for use in flux programs) (Also keeping as TH1F for compatability)
+  // --- JU monitor histogram definitions ----------------------
+  //     (keeping same name as previous for use in flux programs) (Also keeping as TH1F for compatability)
   hU235_TOF_gated = new TH1F("h_tof_U235_FF","U235 Gated",10000,0.0,1.0e6);	// gated TOF
   hU235_TOF_long_gated = new TH1F("h_tof_long_U235_FF","U235 Long Gated",45000,0.0,4.5e7);
   hLi6_TOF_gated = new TH1F("h_tof_Li6_Triton","Li6 Gated",10000,0.0,1.0e+6);	// gated TOF
   hLi6_TOF_long_gated = new TH1F("h_tof_long_Li6_Triton","Li6 Long Gated",45000,0.0,4.5e7);
   hHe3_TOF_gated  = new TH1F("h_tof_He3_All","He3 gated",10000,0.0,1.0e+6);	// gated TOF
   hHe3_TOF_long_gated = new TH1F("h_tof_long_He3_All","He3 Long Gated",45000,0.0,4.5e7);
-// ------------------------------------------------------------
+  // ------------------------------------------------------------
 
 
- if(read_binary==1 || read_simulation==1) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
 
     hEn = new TH1D("En","En",NEbins,x); //Raw En
     hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
@@ -765,9 +781,15 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
-    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",5100,0,51000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",5100,0,51000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
+    for(int kay=0; kay<20; kay++) {
+      //Same spectra but with one gamma ray at random thrown away
+      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+      hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%d_Removed",kay),Form("En_Etot_Mcr_%d_Removed",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    }
+
     En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcr gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     
@@ -775,44 +797,74 @@ int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGat
     Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
 
 
-    if(QGated_Spectra) {
+    if(input_params.QGatedSpectra) {
       
-      for (int kay=0; kay<NQGates; kay++) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	En_Ecl_Mcl_QGated[kay]=new TH3F(Form("En_Ecl_Mcl_ESum_Gated_%d",kay),
-					Form("En_Ecl_Mcl_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					Form("En_Ecl_Mcl_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
       }
 
-      for (int kay=0; kay<NQGates; kay++) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	En_Ecr_Mcr_QGated[kay]=new TH3F(Form("En_Ecr_Mcr_ESum_Gated_%d",kay),
-					Form("En_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					Form("En_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
       }
       
-      for (int kay=0; kay<NQGates; kay++) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	ID_Ecr_Mcr_QGated[kay]=new TH3F(Form("ID_Ecr_Mcr_ESum_Gated_%d",kay),
-					Form("ID_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					Form("ID_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					162,0,162,400,0,20,20,0,20);
       }
       
       //QGated Mcl_TOF out to 1 ms
-      for (int kay=0; kay<NQGates; kay++) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	hTOF_Mcl_QGated[kay] = new TH2D(Form("Mcl_TOF_ESum_Gated_%d",kay),
-					Form("Mcl_TOF_ESum_Gated_%2.2f_%2.2f",QGates[2*kay],QGates[2*kay+1]),
+					Form("Mcl_TOF_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					100000,0,1000000,8,0,8);
       }
-
-      
     }
-  }
 
+
+    if(input_params.IsomerSpectra) {
+      
+      for(int isom=0; isom<input_params.NIsomers; isom++) {
+	hIsomer_Prompt[isom] = new TH1D(Form("Isomer_Prompt_%d",isom),
+					Form("Isomer_Prompt_QGated_%2.2f_%2.2f_MclGated_%d_%d_TOFGated_%2.2f_%2.2f",
+					     input_params.IsomerPromptQGates[isom*2],input_params.IsomerPromptQGates[isom*2+1],
+					     input_params.IsomerPromptMclGates[isom*2],input_params.IsomerPromptMclGates[isom*2+1],
+					     input_params.IsomerPromptTOFGates[isom*2],input_params.IsomerPromptTOFGates[isom*2+1]),
+					input_params.IsomerPromptTOFGates[isom*2+1] - input_params.IsomerPromptTOFGates[isom*2],
+					input_params.IsomerPromptTOFGates[isom*2],
+					input_params.IsomerPromptTOFGates[isom*2+1]);
+	  
+	  
+	hIsomer_Delayed[isom] = new TH1D(Form("Isomer_Delayed_%d",isom),
+					 Form("Isomer_Delayed_QGated_%2.2f_%2.2f_MclGated_%d_%d_TOFGated_%2.2f_%2.2f",
+					      input_params.IsomerDelayedQGates[isom*2],input_params.IsomerDelayedQGates[isom*2+1],
+					      input_params.IsomerDelayedMclGates[isom*2],input_params.IsomerDelayedMclGates[isom*2+1],
+					      input_params.IsomerDelayedTOFGates[isom*2],input_params.IsomerDelayedTOFGates[isom*2+1]),
+					 input_params.IsomerDelayedTOFGates[isom*2+1] - input_params.IsomerDelayedTOFGates[isom*2],
+					 input_params.IsomerDelayedTOFGates[isom*2],
+					 input_params.IsomerDelayedTOFGates[isom*2+1]);
+	  
+	hIsomer_TDiff[isom] = new TH1D(Form("Isomer_TDiff_%d",isom),
+				       Form("Isomer_TDiff_Delayed_%d_minus_Prompt_%d",isom,isom),
+				       (input_params.IsomerDelayedTOFGates[isom*2+1] - input_params.IsomerPromptTOFGates[isom*2+1])-(input_params.IsomerDelayedTOFGates[isom*2] - input_params.IsomerPromptTOFGates[isom*2]),
+				       input_params.IsomerDelayedTOFGates[isom*2] - input_params.IsomerPromptTOFGates[isom*2],
+				       input_params.IsomerDelayedTOFGates[isom*2+1] - input_params.IsomerPromptTOFGates[isom*2+1]);
+	  
+      } //End loop over number of isomers
+    } //Check on isomers 
+    
+  }
   cout<<GREEN<<"Analyzer [INFO]: Created Histograms"<<RESET<<endl;
   return 0;
-
+  
 }
 
 
-int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulation, int NQGates, double QGates[]) {
+int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   
   cout<<"Analyzer [INFO]: Writing Histograms"<<endl;
   
@@ -837,13 +889,26 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   hDANCE_Entries_per_T0->Write();
   hDANCE_Events_per_T0->Write();
 
-
 #ifdef Histogram_DetectorLoad
-  if(read_simulation==0) { 
+  if(input_params.Read_Simulation==0) { 
     for(int eye=0; eye<10000000; eye++) {
-      hDetectorLoad->SetBinContent(eye+1,Detector_Load[eye]/(160.0*T0_Counter));
+      hDetectorLoad_perT0->SetBinContent(eye+1,Detector_Load[eye]/(160.0*T0_Counter));
+      hDetectorLoad->SetBinContent(eye+1,Detector_Load[eye]/(160.0));
     }
+    //make the deadtime relative to En
+    for(int eye=0; eye< hDetectorLoad_En->GetNbinsX(); eye++) {
+      double temptof = 1.0e9*DANCE_FlightPath / TMath::Sqrt(2*(hDetectorLoad_En->GetXaxis()->GetBinCenter(eye+1))*2.997924589e8*2.997924589e8/(939.565379e6));
+      //                        meters                          eV                                                m/s        m/s                 eV/c^2
+      
+      hDetectorLoad_En->SetBinContent( eye+1, hDetectorLoad->GetBinContent((int)temptof));
+      hDetectorLoad_En_perT0->SetBinContent( eye+1, hDetectorLoad_perT0->GetBinContent((int)temptof));
+      //   cout<<hDetectorLoad_En->GetXaxis()->GetBinCenter(eye+1)<<"  "<<temptof<<endl;
+    }
+    
+    hDetectorLoad_perT0->Write();
     hDetectorLoad->Write();
+    hDetectorLoad_En_perT0->Write();
+    hDetectorLoad_En->Write();
   }
 #endif
 
@@ -867,7 +932,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
   Gamma_Gate->Write();
   Retrigger_Gate->Write();
 
-  if(read_binary==1 || read_simulation == 1) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation == 1) {
     hTOF->Write();
     hTOF_Corr->Write();
     hTOF_Mcl->Write();
@@ -881,21 +946,34 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
 
-    if(QGated_Spectra) {
-      for (int kay=0; kay<NQGates; kay++) {
+    for(int kay=0; kay<20; kay++) {
+      hTOF_Esum_Mcr_Removed[kay]->Write();
+      hEn_Esum_Mcr_Removed[kay]->Write();
+    }
+    
+    if(input_params.QGatedSpectra) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	En_Ecl_Mcl_QGated[kay]->Write();
       }
-       for (int kay=0; kay<NQGates; kay++) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	En_Ecr_Mcr_QGated[kay]->Write();
       }
-       for (int kay=0; kay<NQGates; kay++) {
-	 ID_Ecr_Mcr_QGated[kay]->Write();
-       }
-       for (int kay=0; kay<NQGates; kay++) {
+      for (int kay=0; kay<input_params.NQGates; kay++) {
+	ID_Ecr_Mcr_QGated[kay]->Write();
+      }
+      for (int kay=0; kay<input_params.NQGates; kay++) {
 	hTOF_Mcl_QGated[kay]->Write();
       }
-      
     }
+
+    if(input_params.IsomerSpectra) {
+      for (int kay=0; kay<input_params.NIsomers; kay++) {
+	hIsomer_Prompt[kay]->Write();
+  	hIsomer_Delayed[kay]->Write();
+   	hIsomer_TDiff[kay]->Write();
+      }
+    }
+  
   } //End check for stage 1
 
 
@@ -948,7 +1026,7 @@ int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulatio
 }
 
 
-int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulation, int NQGates, double QGates[]) {
+int Initialize_Analyzer(Input_Parameters input_params) {
 
   cout<<BLUE<<"Analyzer [INIT]: Initializing Analyzer"<<RESET<<endl;
   
@@ -962,7 +1040,7 @@ int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulatio
   Read_PI_Gates();
   totalindex = Read_TMatrix();
   Read_DMatrix();
-  Create_Analyzer_Histograms(read_binary,read_simulation,NQGates,QGates);
+  Create_Analyzer_Histograms(input_params);
   
   for(int eye=0; eye<162; eye++) {
     last_timestamp[eye]=0;
@@ -996,8 +1074,398 @@ int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulatio
 }
 
 
-int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, bool read_simulation, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, int NQGates, double QGates[]) {
+int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_params, TH1D *hDetLoad) {
 
+  hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
+
+  //Loop over event 
+  for(uint32_t eye=0; eye<eventvector.size(); eye++) {
+
+    //Fill ID histogram
+    hID->Fill(eventvector[eye].ID);
+    int id_eye=eventvector[eye].ID;
+    
+    //Place the current time in the 
+    current_timestamp[id_eye] = eventvector[eye].TOF;
+    
+    //this is a dance crystal
+    if(id_eye<162) {
+      
+      //Apply Energy Calibration
+      double temp_slow = eventvector[eye].Islow + gRandom->Uniform(0,1);
+      double temp_fast = eventvector[eye].Ifast + gRandom->Uniform(0,1);
+      
+      eventvector[eye].Eslow = 0.001*(temp_slow*temp_slow*slow_quad[eventvector[eye].ID] +
+				      temp_slow*slow_slope[eventvector[eye].ID] +
+				      slow_offset[eventvector[eye].ID]);
+      
+      eventvector[eye].Efast = 0.001*(temp_fast*temp_fast*fast_quad[eventvector[eye].ID] +
+				      temp_fast*fast_slope[eventvector[eye].ID] +
+				      fast_offset[eventvector[eye].ID]);
+      
+      //  cout<<eventvector[eye].Eslow<<"  "<<temp_slow<<endl;
+
+      //update the current energy
+      current_energy[id_eye] = eventvector[eye].Eslow;
+
+      if(input_params.HAVE_Threshold==1) {
+	if(eventvector[eye].Eslow < input_params.Energy_Threshold) {
+	  eventvector[eye].Valid=0;
+	}
+      }
+      
+      //Coincidences
+      if(eventvector.size() > 1 && eye < (eventvector.size()-1)) {
+	
+	//start with the next one
+	for(uint32_t jay=eye+1; jay<eventvector.size(); jay++) {
+	  
+	  int id_jay = eventvector[jay].ID;
+	  
+	  if(id_jay<162) {
+
+	    //time difference between crystal jay and eye
+	    double ddT = eventvector[jay].TOF - eventvector[eye].TOF;
+	    
+	    //Fill the coincidence matrix
+	    hCoinCAEN->Fill(id_eye,id_jay,1);
+	    hCoinCAEN->Fill(id_jay,id_eye,1);
+	    
+	    //Look at time deviations
+	    //Check relative to 0 first
+	    if(id_eye==0) { 
+	      hTimeDev_Rel0->Fill(-ddT,id_jay,1);
+	    } 
+	    if(id_jay==0) {
+	      hTimeDev_Rel0->Fill(ddT,id_eye,1);
+	    }
+	    
+	    //id11 is the index of where this crystal is in TMatrix if it is the first one listed
+	    int id11=reftoindex1[eventvector[eye].ID];
+	    //same but for if it is the second one listed
+	    int id12=reftoindex2[eventvector[eye].ID];
+	    
+	    //same references to the crystals in the tmatrix as before but for the second crystal 
+	    int id21=reftoindex1[eventvector[jay].ID];
+	    //same but for if it is the second one listed
+	    int id22=reftoindex2[eventvector[jay].ID];
+	    
+	    //if the leftmost crystal referernce is >=0 
+	    //if the left and right are neighbors (reftocrystals are equal) 
+	    //eye on left and jay on right
+	    if(id11>=0 && id11==id22){
+	      hTimeDev->Fill(-ddT,index1[id11]);
+	    }
+	    //if the leftmost crystal referernce is >=0 
+	    //if the left and right are neighbors (reftocrystals are equal)
+	    //eye on right and jay on left 
+	    if(id12>=0 && id12==id21){
+	      hTimeDev->Fill(ddT,index1[id21]);
+	    }	  
+	  }
+	}
+      }  //Done with coincidences 
+      
+      //Fill time between crystal hits
+      hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
+      if(current_energy[id_eye] < 16) {
+	hTimeBetweenCrystals_EnergyRatio->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),(current_energy[id_eye]/last_energy[id_eye]),1);
+      }
+ 
+      //Blocking Time to avoid retrigger problems
+      if((current_timestamp[id_eye]-last_valid_timestamp[id_eye]) < input_params.Crystal_Blocking_Time) {
+	eventvector[eye].Valid=0;
+      }
+ 
+      if(eventvector[eye].Valid==1) {
+	
+	//Fill some Calibration Spectra
+	hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
+	hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
+	ADC_gamma->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
+      }
+      
+    }
+    
+  }
+  
+  //Progress indicator
+  if( entries_analyzed > analyzer_counter*ProgressInterval) {
+    cout<< events_analyzed<<" Events Comprised of "<<entries_analyzed<<" Entries Analyzed. "<<
+      "Average Mult: "<<1.0*entries_analyzed/(1.0*events_analyzed)<<endl;
+    analyzer_counter++;
+  }
+  cout<<events_analyzed<<endl;
+
+  // for(int tofbin=1; tofbin<hDetLoad->GetNbinsX(); tofbin++) {
+    for(int tofbin=1; tofbin<1001; tofbin++) {
+// for(int tofbin=100; tofbin<200; tofbin++) {
+
+    //Set the artificial TOF
+
+    input_params.Artificial_TOF = hDetLoad->GetBinCenter(tofbin);
+    //  cout<<tofbin<<"  "<<input_params.Artificial_TOF<<endl;
+
+    int Crystal_Mult=0;
+    int Crystal_Mult2=0;
+
+    //Initialize DANCE Event
+    devent.Crystal_mult=0;
+    devent.ESum=0;
+
+    //No Physics events are valid until created
+    devent.Valid=0;
+   
+  
+    double random_double=0;
+  
+    //Loop over event 
+    for(uint32_t eye=0; eye<eventvector.size(); eye++) {
+
+      random_double = gRandom->Uniform(0,1);
+      // cout<<"random_double: "<<random_double<<"  "<<hDetLoad->GetBinContent(tofbin)<<endl;
+
+      if(random_double > hDetLoad->GetBinContent(tofbin)) { 
+	
+	//	cout<<Crystal_Mult<<"  "<<eventvector[eye].ID<<endl;
+	//Make a DANCE Event
+	devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
+	devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
+	devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
+	devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
+	devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
+	devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
+	devent.ESum += eventvector[eye].Eslow; //ESum 
+	devent.Crystal_mult++;
+	devent.Valid=1;  //event is now valid
+	Crystal_Mult++;	
+	// }
+      }           
+    }
+    
+     
+    //Make sure the first one is valid
+    if(devent.Valid == 1) {
+     
+      //make the removed spectra
+      for(int kay=1; kay<20; kay++) {
+	
+	//Initialize Second DANCE Event
+	devent2.Crystal_mult=0;
+	devent2.ESum=0;
+	
+	//No Physics events are valid until created
+	devent2.Valid=0;
+	Crystal_Mult2=0;
+
+	//If it is greater than kay do stuff  
+	if(devent.Crystal_mult>kay) {
+	  
+	  //Throw away last crystal
+	  //Loop over event 
+	  for(int eye=0; eye < devent.Crystal_mult-kay; eye++) {
+	    //Make a DANCE Event 2
+	    devent2.Crystal_ID[Crystal_Mult2] = devent.Crystal_ID[eye];  //Crystal ID
+	    devent2.Cluster_ID[Crystal_Mult2] = devent.Cluster_ID[eye];  //??????
+	    devent2.Ecrystal[Crystal_Mult2] = devent.Ecrystal[eye];   //Energy if calibrated 
+	    devent2.ESum += devent.Ecrystal[eye];
+	    devent2.tof[Crystal_Mult2] = input_params.Artificial_TOF;
+	    devent2.tof_corr[Crystal_Mult2] = devent2.tof[Crystal_Mult2];
+	    devent2.En = devent.En;
+            devent2.En_corr = devent.En_corr;
+	    devent2.Valid=1;  //event is now valid
+	    Crystal_Mult2++;	
+	  }      
+	} //end check on original dance crystal mult
+	
+	if(devent2.Valid == 1 ) {
+	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
+	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr,devent2.ESum,devent2.Crystal_mult);
+	}
+      }     
+    } //end check on valid original dance event
+    
+    //DANCE Events
+    if(devent.Valid == 1) {
+
+      //DANCE Event Diagnostics
+      DANCE_Events_per_T0++;
+      
+      last_valid_devent_timestamp=devent.tof[0];
+      
+      //Set Last devent timestamp to current one
+      last_devent_timestamp=devent.tof[0];
+      
+      //TOF now set to artificial value
+      for(int kay=0; kay<devent.Crystal_mult; kay++) {
+	
+	//Make TOF relative to last T0
+	devent.tof[kay] = input_params.Artificial_TOF;
+		  devent.tof_corr[kay] = devent.tof[kay];
+
+	
+	//Fill the 2D spectrum of TOF vs Crystal
+	hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
+	hCrystalTOF->Fill(devent.tof[kay],1);
+	
+	//Fill the 2D spectrum of Corrected TOF vs Crystal
+	hCrystalIDvsTOF_Corr->Fill(devent.tof_corr[kay],devent.Crystal_ID[kay],1);
+	hCrystalTOF_Corr->Fill(devent.tof_corr[kay],1);
+	
+      } //end loop over devent crystals
+      
+      //   cout<<devent.tof[0]<<endl;
+      
+      //Calculate the neutron energy    
+      devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0])/1e9)/((devent.tof[0])/1e9)/(2.997924589e8*2.997924589e8); 
+      //Calculate corrrected nuetron energy
+      devent.En_corr = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[0])/1e9)/((devent.tof_corr[0])/1e9)/(2.997924589e8*2.997924589e8); 
+    
+      //Fill TOF and En
+      hEn->Fill(devent.En,1);
+      hEn_Corr->Fill(devent.En_corr,1);
+      hTOF->Fill(devent.tof[0]);
+      hTOF_Corr->Fill(devent.tof_corr[0]);
+    
+
+      /* First DANCE Event */
+
+      //Only one crystal...
+      if(devent.Crystal_mult==1) {
+	devent.Cluster_mult=1;
+	devent.Ecluster[0]=devent.Ecrystal[0];
+      }
+    
+      //Multiple Crystals... Clusterize
+      if(devent.Crystal_mult > 1) {
+      
+	// Here we will clusterize. Result will be in Cluster_ID[i] where i runs through all the crystals. The minimum of Cluster_ID is 1 so don't forget to lower it by 1. It is somewhat different then Jan Wouters routine but should lead to same results. Label value (after this routine) is the cluster multiplicity
+      
+	int jj=0;
+	int Label=0;
+	int intcounter;
+	int Hits;
+	int Internal_ID[163];
+      
+	for(int loop=0; loop<devent.Crystal_mult; loop++){
+	  devent.Ecluster[loop]=0.;
+	
+	  if(loop==0 || devent.Cluster_ID[loop]>Label){
+	  
+	    Label++;
+	    intcounter=0;
+	    Hits=1;
+	    Internal_ID[0]=devent.Crystal_ID[loop];
+	  
+	    for(int l=0;l<Hits;l++) {
+	      for(jj=0;jj<devent.Crystal_mult;jj++) {
+		if(Internal_ID[l]!=devent.Crystal_ID[jj]) { // no need to check the same crystals
+		
+		  bool IsNeighbor=false;
+		
+		  if(DetMat1[Internal_ID[l]]==DetMat2[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat3[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat4[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat5[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat6[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		  else if(DetMat1[Internal_ID[l]]==DetMat7[devent.Crystal_ID[jj]]) IsNeighbor=true;
+		
+		  if(IsNeighbor) {	
+		    // if neighbor is found label it and add it to internal list (Internal_ID[]) for checking further in l loop (Hits is incremented by one)
+		    // this way a new participant of the cluster is being chacked agains the other crystals
+		  
+		    if((1.*devent.Cluster_ID[jj])>=0 && (1.*devent.Cluster_ID[jj])>(1.*Label)) {
+		      // here if the crystal is already labeled we skip so that we do not have to repeat already labeled crystals more speed to it
+		    
+		      devent.Cluster_ID[jj]=Label; // this one is important- Adding the crystals to the cluster
+		    
+		      Hits++;
+		      intcounter++;
+		      Internal_ID[intcounter]=devent.Crystal_ID[jj];	
+		    }
+		  }
+		}
+	      }
+	    }
+	    if(Hits==1) devent.Cluster_ID[loop]=Label;
+	  }
+	}
+      
+	devent.Cluster_mult=Label;
+      
+	// Fill the cluster energy. Labels go through 1,2,3 ... CrystalMult
+	for(int ii=0;ii<devent.Crystal_mult;ii++){
+	  devent.Ecluster[devent.Cluster_ID[ii]-1]+=devent.Ecrystal[ii];
+	};
+      }  //Done checking mult > 1
+    
+      //Mults vs TOF
+      hTOF_Mcl->Fill(devent.tof[0],devent.Cluster_mult);
+      hTOF_Mcl_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
+    
+      //Mults vs ESum vs En
+      En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
+      En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
+      // cout<<devent.tof[0]<<"  "<<devent.Valid<<endl;
+
+      //Mults vs ESum vs TOF
+      hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
+      hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
+    
+      // fill esum histos (for convenience, they are redundant to the 3d histo above --- JU -----)
+      esum -> Fill(devent.ESum);
+      if(devent.Cluster_mult==2)esum2->Fill(devent.ESum);
+      if(devent.Cluster_mult==3)esum3->Fill(devent.ESum);
+      if(devent.Cluster_mult==4)esum4->Fill(devent.ESum);
+      if(devent.Cluster_mult==5)esum5->Fill(devent.ESum);
+    
+      if(input_params.QGatedSpectra) {
+      
+	//Loop over the cluster mult
+	for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
+	  for(int kay=0; kay<input_params.NQGates; kay++) {
+	    if(devent.ESum > input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
+	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
+	      hTOF_Mcl_QGated[kay]->Fill(devent.tof_corr[0],devent.Cluster_mult);
+	    } //Done Checking QGates
+	  } //Done Looping over QGates
+	} //Done looping over cluster mult
+      
+	//Crystal mult 1
+	if(devent.Crystal_mult == 1) {
+	  hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
+	  hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+	}
+      
+	//Loop over the crystal mult
+	for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
+	  for(int kay=0; kay<input_params.NQGates; kay++) {
+	    if(devent.ESum >input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
+	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En, devent.Ecrystal[jay], devent.Crystal_mult );
+	      ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
+	    } //Done Checking QGates
+	  } //Done Looping over QGates
+	} //Done looping over crystal mult
+      }
+    
+      hEventLength_Etot->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF,devent.ESum);
+    
+    
+    } //End of checking valid DANCE event    
+
+  } //End loop on TOF Bins
+
+  //Done with Event Processing
+  //increment counter
+  events_analyzed++;
+  
+  return 0;
+  
+} //End of analyze efficiency 
+
+
+
+int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_params) {
 
   //Progress indicator
   if( entries_analyzed > analyzer_counter*ProgressInterval) {
@@ -1005,7 +1473,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       "Average Mult: "<<1.0*entries_analyzed/(1.0*events_analyzed)<<endl;
     analyzer_counter++;
   }
+
   int Crystal_Mult=0;
+  int Crystal_Mult2=0;
 
   //Initialize DANCE Event
   devent.Crystal_mult=0;
@@ -1058,8 +1528,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //update the current energy
       current_energy[id_eye] = eventvector[eye].Eslow;
 
-      if(HAVE_Threshold==1) {
-	if(eventvector[eye].Eslow < Energy_Threshold) {
+      if(input_params.HAVE_Threshold==1) {
+	if(eventvector[eye].Eslow < input_params.Energy_Threshold) {
 	  eventvector[eye].Valid=0;
 	}
       }
@@ -1126,7 +1596,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //  }
 
       //Blocking Time to avoid retrigger problems
-      if((current_timestamp[id_eye]-last_valid_timestamp[id_eye]) < Crystal_Blocking_Time) {
+      if((current_timestamp[id_eye]-last_valid_timestamp[id_eye]) < input_params.Crystal_Blocking_Time) {
 	eventvector[eye].Valid=0;
       }
 
@@ -1148,18 +1618,18 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	  //Fill some Calibration Spectra
 	  hAlpha->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	  hAlphaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
-          ADC_alpha->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
+	  ADC_alpha->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
 	}
 	
 	//If it is not in the alpha gate then check the gamma gate or whether its simulated data
 	else {
-	  if((Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || read_simulation) {
-	  
+	  if((Gamma_Gate->IsInside(eventvector[eye].Eslow, eventvector[eye].Efast)) || input_params.Read_Simulation) {
+	  	      
 	    //Fill some Calibration Spectra
 	    hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
 	    hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
 	    ADC_gamma->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
-
+	    
 	    //Make a DANCE Event
 	    devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
 	    devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
@@ -1183,13 +1653,13 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       
 #ifdef Histogram_DetectorLoad
 
-      if(read_simulation==0) {
+      if(input_params.Read_Simulation==0) {
 
 	//Fill detecotor load
 	if(last_t0_timestamp > 0) {
-	  uint32_t temptof = (uint32_t)(eventvector[eye].TOF-last_t0_timestamp);
+	  uint32_t temptof = (uint32_t) gr_DANCE_TOF_Corr->Eval((eventvector[eye].TOF-last_t0_timestamp));
 	  if(temptof>0) {
-	    for(int el=(int)temptof; el<((int)(temptof+1000+Crystal_Blocking_Time)); el++) {
+	    for(int el=(int)temptof; el<((int)(temptof+1000+input_params.Crystal_Blocking_Time)); el++) {
 	      if(el >=0 && el < 100000000) {
 		Detector_Load[el]+=1.0;
 	      }
@@ -1203,6 +1673,24 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
     
     //this is t0
     if(id_eye==200) {
+
+      
+      if(input_params.IsomerSpectra) {
+	for(int isom=0; isom<input_params.NIsomers; isom++) {
+	  
+	  for(int xx=0; xx<(int)Isomer_Prompt[isom].size(); xx++) {
+	    for(int yy=0; yy<(int)Isomer_Delayed[isom].size(); yy++) {
+	      
+	      hIsomer_TDiff[isom]->Fill(Isomer_Delayed[isom][yy]-Isomer_Prompt[isom][xx]);	  
+	      
+	    } //end loop over delayed
+	  } //end loop over prompt
+	  
+	  Isomer_Delayed[isom].clear();
+	  Isomer_Prompt[isom].clear();
+	  
+	} //end loop over isomers
+      } //end check on isomers
       
       current_t0_timestamp = eventvector[eye].TOF;
       //Do some T0 diagnostics
@@ -1225,8 +1713,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 	//Set the old timestamp value once done
 	last_t0_timestamp=current_t0_timestamp;
 	
-      }  
-      
+      }       
     }
    
     //beam monitors
@@ -1275,7 +1762,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
     last_energy[id_eye] = current_energy[id_eye];
     
     //Write to Binary
-    if(write_binary==1 && outputbinfile.is_open()) {
+    if(input_params.Write_Binary==1 && outputbinfile.is_open()) {
       devt_out.Ifast = eventvector[eye].Ifast;
       devt_out.Islow = eventvector[eye].Islow;
       devt_out.TOF = eventvector[eye].TOF;
@@ -1285,8 +1772,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
 
     entries_analyzed++;
   } //end of eventvector loop
-  
-  
+
+
   //Handle various events and do some physics
   
   //DANCE Events
@@ -1297,7 +1784,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       DANCE_Events_per_T0++;
 
       //DEvent Blocking Time
-      if((devent.tof[0]-last_valid_devent_timestamp) < DEvent_Blocking_Time) {
+      if((devent.tof[0]-last_valid_devent_timestamp) < input_params.DEvent_Blocking_Time) {
 	devent.Valid=0;
       }
       else {
@@ -1341,7 +1828,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
     }
   } //end check of devent.Valid
   
-  if(read_binary==1 || read_simulation ==1 ) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation ==1 ) {
     
     //Handle various events and do some physics
     if(devent.Valid==1) {
@@ -1437,58 +1924,143 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //Mults vs ESum vs TOF
       hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
       hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
-      
+
+      //Do Isomer Stuff
+      if(input_params.IsomerSpectra) {
+	//Loop over number of isomers
+	for(int isom=0; isom<input_params.NIsomers; isom++) {
+	  
+	  //prompt
+	  if(devent.tof_corr[0] >= input_params.IsomerPromptTOFGates[isom*2] && devent.tof_corr[0] < input_params.IsomerPromptTOFGates[isom*2+1]) {
+	    if(devent.Cluster_mult >= input_params.IsomerPromptMclGates[isom*2] && devent.Cluster_mult < input_params.IsomerPromptMclGates[isom*2+1]) {
+	      if(devent.ESum >= input_params.IsomerPromptQGates[isom*2] && devent.ESum < input_params.IsomerPromptQGates[isom*2+1]) {
+		
+		//Push time onto vector
+		Isomer_Prompt[isom].push_back(devent.tof_corr[0]);
+		//Fill Singles Histogram
+		hIsomer_Prompt[isom]->Fill(devent.tof_corr[0]);
+		
+	      } //End check on TOF
+	    } //End check on Mcl
+	  } //End check on ESum
+
+	  //prompt
+	  if(devent.tof_corr[0] >= input_params.IsomerDelayedTOFGates[isom*2] && devent.tof_corr[0] < input_params.IsomerDelayedTOFGates[isom*2+1]) {
+	    if(devent.Cluster_mult >= input_params.IsomerDelayedMclGates[isom*2] && devent.Cluster_mult < input_params.IsomerDelayedMclGates[isom*2+1]) {
+	      if(devent.ESum >= input_params.IsomerDelayedQGates[isom*2] && devent.ESum < input_params.IsomerDelayedQGates[isom*2+1]) {
+		
+		//Push time onto vector
+		Isomer_Delayed[isom].push_back(devent.tof_corr[0]);
+		//Fill Singles Histogram
+		hIsomer_Delayed[isom]->Fill(devent.tof_corr[0]);
+		
+	      } //End check on TOF
+	    } //End check on Mcl
+	  } //End check on ESum
+	} //End loop over Isomers
+      } //End check on isomer spectra
+
       // fill esum histos (for convenience, they are redundant to the 3d histo above --- JU -----)
       esum -> Fill(devent.ESum);
       if(devent.Cluster_mult==2)esum2->Fill(devent.ESum);
       if(devent.Cluster_mult==3)esum3->Fill(devent.ESum);
       if(devent.Cluster_mult==4)esum4->Fill(devent.ESum);
       if(devent.Cluster_mult==5)esum5->Fill(devent.ESum);
-      
-      //Loop over the cluster mult
-      for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
-	for(int kay=0; kay<NQGates; kay++) {
-	  if(devent.ESum > QGates[kay*2] && devent.ESum < QGates[kay*2+1]) {
-	    En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
-	    hTOF_Mcl_QGated[kay]->Fill(devent.tof[0],devent.Cluster_mult);
-	  } //Done Checking QGates
-	} //Done Looping over QGates
-      } //Done looping over cluster mult
 
-      //Crystal mult 1
-      if(devent.Crystal_mult == 1) {
-	hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
-	hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+      if(input_params.QGatedSpectra) {
+	
+	//Loop over the cluster mult
+	for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
+	  for(int kay=0; kay<input_params.NQGates; kay++) {
+	    if(devent.ESum > input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
+	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
+	      hTOF_Mcl_QGated[kay]->Fill(devent.tof_corr[0],devent.Cluster_mult);
+	    } //Done Checking QGates
+	  } //Done Looping over QGates
+	} //Done looping over cluster mult
+	
+	//Crystal mult 1
+	if(devent.Crystal_mult == 1) {
+	  hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
+	  hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+	}
+	
+	//Loop over the crystal mult
+	for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
+	  for(int kay=0; kay<input_params.NQGates; kay++) {
+	    if(devent.ESum >input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
+	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En, devent.Ecrystal[jay], devent.Crystal_mult );
+	      ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
+	    } //Done Checking QGates
+	  } //Done Looping over QGates
+	} //Done looping over crystal mult
       }
-      
-      //Loop over the crystal mult
-      for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
-	for(int kay=0; kay<NQGates; kay++) {
-	  if(devent.ESum > QGates[kay*2] && devent.ESum < QGates[kay*2+1]) {
-	    En_Ecr_Mcr_QGated[kay]-> Fill(devent.En, devent.Ecrystal[jay], devent.Crystal_mult );
-	    ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
-	  } //Done Checking QGates
-	} //Done Looping over QGates
-      } //Done looping over crystal mult
+
+      /*
 
       
       // At this point in the code, we apparently have TOF, Esum, and Mcluster
       // so fill the "gated TOF histograms" - these are higher resolution TOF spectra than hTOF_Esum_Mcl
       if(devent.Cluster_mult>1 && devent.Cluster_mult<7) {	// Edit these limits for now
-	if(devent.ESum > QGates[0] && devent.ESum < QGates[1]) {	// " Q-value" gate    ---- JU -------
-	  tof_gated_QM -> Fill(devent.tof[0]);
-	  tof_gated_QM_long -> Fill(devent.tof[0]);
-	}
-	if(devent.ESum > QGates[4] && devent.ESum < QGates[5]) {	// "Background" Q gate
-	  tof_gated_BM -> Fill(devent.tof[0]);
-	  tof_gated_BM_long -> Fill(devent.tof[0]);
-	}
+      if(devent.ESum > QGates[0] && devent.ESum < QGates[1]) {	// " Q-value" gate    ---- JU -------
+      tof_gated_QM -> Fill(devent.tof_corr[0]);
+      tof_gated_QM_long -> Fill(devent.tof_corr[0]);
       }
+      if(devent.ESum > QGates[4] && devent.ESum < QGates[5]) {	// "Background" Q gate
+      tof_gated_BM -> Fill(devent.tof_corr[0]);
+      tof_gated_BM_long -> Fill(devent.tof_corr[0]);
+      }
+      }
+      */
 
       hEventLength_Etot->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF,devent.ESum);
 
 
+  
+      //Make the gamma removed 3D TOF_Mcr_ spectra
+      
+      //make the removed spectra
+      for(int kay=1; kay<20; kay++) {
+	
+	//Initialize Second DANCE Event
+	devent2.Crystal_mult=0;
+	devent2.ESum=0;
+	
+	//No Physics events are valid until created
+	devent2.Valid=0;
+	Crystal_Mult2=0;
+	
+	//If it is greater than kay do stuff  
+	if(devent.Crystal_mult>kay) {
+	  
+	  //Throw away last crystal
+	  //Loop over event 
+	  for(int eye=0; eye < devent.Crystal_mult-kay; eye++) {
+	    //Make a DANCE Event 2
+	    devent2.Crystal_ID[Crystal_Mult2] = devent.Crystal_ID[eye];  //Crystal ID
+	    devent2.Cluster_ID[Crystal_Mult2] = devent.Cluster_ID[eye];  //??????
+	    devent2.Ecrystal[Crystal_Mult2] = devent.Ecrystal[eye];   //Energy if calibrated 
+	    devent2.ESum += devent.Ecrystal[eye];
+	    devent2.tof[Crystal_Mult2] = devent.tof[Crystal_Mult];
+	    devent2.tof_corr[Crystal_Mult2] = devent.tof_corr[Crystal_Mult];
+	    devent2.En = devent.En;
+	    devent2.En_corr = devent.En_corr;   
+	    devent2.Crystal_mult++;
+	    devent2.Valid=1;  //event is now valid
+	    Crystal_Mult2++;	
+	  }      
+	} //end check on original dance crystal mult
+	
+	if(devent2.Valid == 1 ) {
+	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
+	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr,devent2.ESum,devent2.Crystal_mult);
+	}
+      }     
+           
     } //End of checking valid DANCE event
+
+
+
   } //Done checking for stage 1
   
   //U235 Beam Monitor Events
@@ -1515,8 +2087,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       //if(u235event.Islow>5000.0 && u235event.Islow<35000.0)
       if(u235event.Islow>2000.0 && u235event.Islow<20000.0)
 	{
-	hU235_TOF_gated -> Fill(u235event.tof);
-	hU235_TOF_long_gated -> Fill(u235event.tof);
+	  hU235_TOF_gated -> Fill(u235event.tof);
+	  hU235_TOF_long_gated -> Fill(u235event.tof);
 	}
       //-------------------
       
@@ -1554,11 +2126,11 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
       hHe3_TOF->Fill(he3event.tof);
       hHe3_TOF_Corr->Fill(he3event.tof_corr);
 
-        // JU Histograms ----
+      // JU Histograms ----
       if(he3event.Islow>0.0 && he3event.Islow<35000.0)
 	{
-	hHe3_TOF_gated -> Fill(he3event.tof);
-	hHe3_TOF_long_gated -> Fill(he3event.tof);
+	  hHe3_TOF_gated -> Fill(he3event.tof);
+	  hHe3_TOF_long_gated -> Fill(he3event.tof);
 	}
       //-------------------
 
@@ -1625,4 +2197,5 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool writ
   events_analyzed++;
 
   return 0;
+
 }

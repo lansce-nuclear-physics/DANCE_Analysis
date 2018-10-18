@@ -2,7 +2,12 @@
 #set -x
 
 #where the data are
-input=./hygelac21_caen2018/
+#input=./hygelac14/
+#input=./stage0_bin_automated
+#input=./dancedaq2/
+input=./stage0_bin
+
+#input=./dancedaq7/
 
 #Get the start and end run from the command line args
 startrun=$1;
@@ -38,7 +43,11 @@ do
     currentstop=$(expr $startrun + $(expr $counter \* $nrunsperxterm))
    # echo $currentstart"  "$currentstop
 
-    xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+    #xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+     ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+
+
+    sleep 1
 done
 
 #the last one gets the remainder
@@ -46,6 +55,7 @@ currentstart=$(( $startrun + $(expr $counter \* $nrunsperxterm ) ))
 currentstop=$(( $endrun + 1 ))
 # echo $currentstart"  "$currentstop
 
-xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+#xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+./RunAnalysis_Slave.sh $input $currentstart $currentstop &
 
 exit 0

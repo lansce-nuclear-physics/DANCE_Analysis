@@ -119,8 +119,8 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 
   bool force = false;
 
-  int Coincidence_Window = 10;
-  int Crystal_Blocking_Time = 2000;
+  int Coincidence_Window = 5;
+  int Crystal_Blocking_Time = 0;
   int DEvent_Blocking_Time = 0;
   
   int nruns = End-Start+1;
@@ -197,8 +197,9 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
       outfilenames[eye] << "../stage1_root/Sum_Stage1_Histograms_"<<Isotope<<"_"<<first_run[eye]<<"_"<<last_run[eye]<<"_"<<Coincidence_Window<<"ns_CW_"<<Crystal_Blocking_Time<<"ns_CBT_"<<DEvent_Blocking_Time<<"ns_DEBT_Excluded.root ";
       
       // command_text[eye].str();
-      command_text[eye] << " xterm -e hadd ";
-      // command_text[add_counter] << "/usr/bin/xterm -e -hold echo ";
+      //   command_text[eye] << " xterm -e hadd ";
+         command_text[eye] << "hadd -f ";
+   // command_text[add_counter] << "/usr/bin/xterm -e -hold echo ";
       //  command_text[add_counter] << " echo ";
       //  command_text[eye] << " hadd ";
 
@@ -215,7 +216,7 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
       for(int jay=first_run[eye]; jay<last_run[eye]+1; jay++) {
 	bool exclude_this = false;
 	for(int kay=0; kay<(int)Exclude_Run.size(); kay++) {
-	  if(jay==Exclude_Run[eye]) {
+	  if(jay==Exclude_Run[kay]) {
 	    exclude_this = true;
 	  }
 	}
@@ -286,8 +287,9 @@ int Merge_hadd(string Isotope, int Start, int End, int N) {
 	
 	command_text[add_counter].str();
 	//	command_text[add_counter] << "echo ";
-       	command_text[add_counter] << "xterm -e hadd ";
-       	//command_text[add_counter] << "echo ";
+	//	command_text[add_counter] << "xterm -e hadd ";
+             	command_text[add_counter] << "hadd -f ";
+ 	//command_text[add_counter] << "echo ";
 	command_text[add_counter] << outfilenames[add_counter].str()<<" ";
 
 	
@@ -414,12 +416,23 @@ void Launch_Merge_hadd() {
   // Merge_hadd("Pb208",64834,64987,4);
   // Merge_hadd("Pb208",68040,68103,4);
 
+  //   Merge_hadd("Pb208",103913,103995,3);  //15 ms
+  //   Merge_hadd("Pb208",104551,104745,4);  //15 ms
+  //   Merge_hadd("Pb208",104805,104847,3);  //15 ms
+  //   Merge_hadd("Pb208",104848,104880,3);  //2.5 ms
+
   //Au197
-  Merge_hadd("Au197",60409,60451,2);
+  // Merge_hadd("Au197",60409,60451,2);
   // Merge_hadd("Au197",60572,60584,2);
   // Merge_hadd("Au197",63590,63649,2);
   // Merge_hadd("Au197",68104,68126,2);
 
+  
+  // Merge_hadd("Au197",103810,103890,3);  //1.5 ms
+  // Merge_hadd("Au197",103733,103765,2);  //1.5 ms
+  // Merge_hadd("Au197",103996,104015,2);  //1.5 ms
+
+  
   //Cu65
   // Merge_hadd("Cu65",60834,61251,4);
   // Merge_hadd("Cu65",63015,63589,4);
@@ -428,4 +441,20 @@ void Launch_Merge_hadd() {
 
   //Cu63
   // Merge_hadd("Cu63",64693,64833,3);
+
+  //Pt194
+//   Merge_hadd("Pt194",104881,104939,2);  //2.5 ms 51.1 mg
+//   Merge_hadd("Pt194",104940,104952,2);  //15 ms 51.1 mg
+   Merge_hadd("Pt194",105220,105580,5);  //2.5 ms 51.1 mg
+
+  //Pt195
+   //   Merge_hadd("Pt195",104958,104962,1);  //15 ms 10.6 mg
+   //   Merge_hadd("Pt195",105088,105137,3);  //15 ms 49.7 mg
+   //   Merge_hadd("Pt195",105138,105217,3);  //2.5 ms 49.7 mg
+
+  //Pt196
+   //   Merge_hadd("Pt196",104963,105028,3);  //15 ms 50.7 mg
+   //   Merge_hadd("Pt196",105029,105087,3);  //2.5 ms 50.7 mg
+
+
 }

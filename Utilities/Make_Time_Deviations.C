@@ -61,6 +61,9 @@ int Read_TMatrix() {
 
 
 void Make_Time_Deviations(int start_run, int end_run) {
+  
+  //Make a histogram
+  TH2D *hTimeDeviations = new TH2D("TimeDeviations","TimeDeviations",end_run-start_run+1,start_run, end_run+1, 162,0,162);
 
   totalindex = Read_TMatrix();
 
@@ -145,6 +148,8 @@ void Make_Time_Deviations(int start_run, int end_run) {
 	//	cout<<hTimeDev[counter]->GetMean()<<"  "<<time_deviation<<endl;
 	time_deviation += hTimeDev[counter]->GetMean();
 	td_out <<index2[jay]<<"   \t"<<time_deviation<<"\n";
+
+	hTimeDeviations->Fill(eye, index2[jay], time_deviation);
       }
     
       cout<<"Made Time Deviations for Run: "<<eye<<endl;
@@ -152,4 +157,7 @@ void Make_Time_Deviations(int start_run, int end_run) {
       counter++;
     }
   }
+  
+  hTimeDeviations->Draw("colz");
+  
 }

@@ -87,12 +87,12 @@ TH1I *hScalers;
 //TH2S *hWaveform_T0;
 
 //Histograms for Unpacker Things
-int Create_Unpacker_Histograms(bool read_binary) {
+int Create_Unpacker_Histograms(Input_Parameters input_params) {
   
   cout<<"Unpacker [INFO]: Creating Histograms"<<endl;
   
   //Make a histogram for waveforms
-  if(read_binary==0) {
+  if(input_params.Read_Binary==0) {
 #ifdef Histogram_Waveforms 
     hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,162,0,162);
     hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",200,0,200,2000,0,20000);
@@ -115,13 +115,13 @@ int Create_Unpacker_Histograms(bool read_binary) {
   
 }
 
-int Write_Unpacker_Histograms(TFile *fout, bool read_binary) {
+int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
   
   cout<<"Unpacker [INFO]: Writing Histograms"<<endl;
   
   fout->cd();
 
-  if(read_binary==0) {
+  if(input_params.Read_Binary==0) {
 #ifdef Histogram_Waveforms
     hWaveform_ID->Write();
     hWaveform_T0->Write();
@@ -191,7 +191,7 @@ int Make_Output_Diagnostics_File(int RunNumber) {
   }
 }
 
-int Read_TimeDeviations(int runnum, bool FitTimeDev, bool read_simulations) {
+int Read_TimeDeviations(Input_Parameters input_params) {
   cout << "Unpacker [INFO]: Reading Time Deviations" << endl;
   
   for(int eye=0; eye<200; eye++) {
@@ -199,16 +199,16 @@ int Read_TimeDeviations(int runnum, bool FitTimeDev, bool read_simulations) {
   }  
   
   //If we want to fit the time deviations then set all of them to zero
-  if(FitTimeDev) {
+  if(input_params.FitTimeDev) {
     cout<<GREEN<<"Unpacker [INFO]: Set all time deviations to 0 "<<RESET<<endl;
   }
   
   //if we have time deviations then obtain them from the files
-  else if(read_simulations==0) {
+  else if(input_params.Read_Simulation==0) {
     stringstream fname;
     fname.str();
     
-    fname<<TIMEDEV_DIR"/TimeDeviations_Run_" << std::setfill('0') << std::setw(5) << runnum << ".txt";
+    fname<<TIMEDEV_DIR"/TimeDeviations_Run_" << input_params.RunNumber << ".txt";
     cout<<"Unpacker [INFO]: Looking for TimeDeviations File: "<<fname.str()<<endl;
     
     ifstream fdata;
@@ -308,9 +308,35 @@ double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_
   return dT;
 }
 
+TH1D *hDetLoad;
+int Read_DetectorLoad_Histogram(Input_Parameters input_params){
+
+  //Open the file
+  TFile *fDetLoad = new TFile(Form("%s.root",input_params.DetectorLoad_FileName.c_str()));
+  if(fDetLoad) {
+    cout<<GREEN<<"Unpacker [INFO]: Opened Detector Load File: "<<input_params.DetectorLoad_FileName<<RESET<<endl;
+  }
+  else {
+    cout<<RED<<"Unpacker [FAIL]: Failed to open Detector Load File: "<<input_params.DetectorLoad_FileName<<RESET<<endl;
+    return -1;
+  }
+  //Get the histogram
+  hDetLoad = (TH1D*)fDetLoad->Get(Form("%s",input_params.DetectorLoad_HistName.c_str()));
+  
+  if(hDetLoad) {
+    cout<<GREEN<<"Unpacker [INFO]: Opened Detector Load Histogram: "<<input_params.DetectorLoad_HistName<<RESET<<endl;
+    hDetLoad->Rebin(10);
+    hDetLoad->Scale(0.1);
+    return 0;
+  }
+  else {
+    cout<<RED<<"Unpacker [FAIL]: Failed to open Detector Load Histogram: "<<input_params.DetectorLoad_HistName<<RESET<<endl;
+    return -1;
+  }
+}
 
 
-int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, bool read_simulation, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat, int NQGates, double QGates[]) {
+int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 
   ofstream faillog;
   faillog.open("Readout_Status_Failures.txt", ios::app);
@@ -318,38 +344,42 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl<<endl;
 
   cout<<"Buffer Depth: "<<BufferDepth<<" seconds"<<endl;
-  cout<<"Coincidence Window: "<<CoincidenceWindow<<" ns"<<endl;
-  cout<<"Crystal Blocking Time: "<<Crystal_Blocking_Time<<" ns"<<endl;
-  cout<<"DANCE Event Blocking Time: "<<DEvent_Blocking_Time<<" ns"<<endl;
+  cout<<"Coincidence Window: "<<input_params.Coincidence_Window<<" ns"<<endl;
+  cout<<"Crystal Blocking Time: "<<input_params.Crystal_Blocking_Time<<" ns"<<endl;
+  cout<<"DANCE Event Blocking Time: "<<input_params.DEvent_Blocking_Time<<" ns"<<endl;
   
-  if(HAVE_Threshold) {
-    cout<<"Energy Thresholds are ON and set to: "<<Energy_Threshold<<" MeV"<<endl;
+  if(input_params.HAVE_Threshold) {
+    cout<<"Energy Thresholds are ON and set to: "<<input_params.Energy_Threshold<<" MeV"<<endl;
   }
   else {
     cout<<"Energy Thresholds are OFF"<<endl;
   }
-  if(FitTimeDev) {
+  if(input_params.FitTimeDev) {
     cout<<"Time Deviations will be determined following analysis"<<endl;
   }
   cout<<endl;
 
+ if(input_params.Evaluate_DeadTime) {
+   Read_DetectorLoad_Histogram(input_params);
+ }
+ 
   //initialize histograms
-  Create_Unpacker_Histograms(read_binary);
+  Create_Unpacker_Histograms(input_params);
   
   //initialize DANCE Map
   Make_DANCE_Map();
 
   //initiliaze the time deviations
-  Read_TimeDeviations(runnum,FitTimeDev,read_simulation);
+  Read_TimeDeviations(input_params);
 
   //Make the ouput diagnostics file
-  if(read_binary == 0 && (strcmp(DataFormat.c_str(),"caen2018") == 0) && read_simulation==0) {
-    Make_Output_Diagnostics_File(runnum);
+  if(input_params.Read_Binary == 0 && (strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) && input_params.Read_Simulation==0) {
+    Make_Output_Diagnostics_File(input_params.RunNumber);
   }
   
   //Make the output binary file
-  if(write_binary == 1) {
-    Make_Output_Binfile(runnum, read_binary);
+  if(input_params.Write_Binary == 1) {
+    Make_Output_Binfile(input_params);
   }
   
   //keep track of timestamps
@@ -444,9 +474,9 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
   cout<<GREEN<<"Unpacker [INFO]: Started Unpacking: "<<RESET<<endl;
     
   //Stage 0 unpacking
-  if(read_binary==0 && read_simulation==0) {
+  if(input_params.Read_Binary==0 && input_params.Read_Simulation==0) {
 
-    cout<<"Unpacker [INFO]: Data Format: "<<DataFormat<<endl;
+    cout<<"Unpacker [INFO]: Data Format: "<<input_params.DataFormat<<endl;
 
     while(run) {
      
@@ -457,7 +487,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
       //Progess indicator
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
-	cout<<"Processing Run Number: "<<runnum<<endl;
+	cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
 	if(timesort && datadeque.size()>0) {
 	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
 	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
@@ -479,7 +509,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
     
 
       //This is the unpacker for the caen2015 data format
-      if(strcmp(DataFormat.c_str(),"caen2015") == 0) {
+      if(strcmp(input_params.DataFormat.c_str(),"caen2015") == 0) {
 
 	//Read in the event header
 	gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
@@ -863,7 +893,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	}  //checking to see if gzret > 0
       }
 
-      else if(strcmp(DataFormat.c_str(),"caen2018") == 0) {
+      else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
 
 	//variables
 	bool readextra = false;
@@ -1435,7 +1465,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 		gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
 
 		if(Failure_Status[eye] != 0) {
-		  faillog<<"Run: "<<runnum<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
+		  faillog<<"Run: "<<input_params.RunNumber<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
 		}
 #ifdef Diagnostic_Verbose
 		cout<<eye<<"  "<<Failure_Status[eye]<<endl;
@@ -1693,7 +1723,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
       }  //End of EventHeader gzret > 0	
     } //End of caen2018 format check
     else {
-      cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<DataFormat<<RESET<<endl;
+      cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<input_params.DataFormat<<RESET<<endl;
       return -1;
     }
 
@@ -1723,7 +1753,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      cout<<"Exiting"<<endl;
 	      ofstream failfile;
 	      failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-	      failfile << "Run: "<<runnum<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+	      failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
 	      failfile.close();
 	      return -1;
 	    }   
@@ -1812,7 +1842,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	    bool event_build =true;  //bool to do eventbuilding
 		    
 	    while(event_build) {
-	      if(datadeque[0].TOF < (first_entry_time + CoincidenceWindow)) {
+	      if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
 		eventvector.push_back(datadeque[0]); //put the first event in the events vector
 		datadeque.pop_front();  //remove the first entry in the deque     
 		Events_Sent++;
@@ -1829,7 +1859,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	      cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
 	      //Send it to the analyzer
-	      Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
+	      Analyze_Data(eventvector, input_params);
 	    }
 	  }
 	  else {
@@ -1883,7 +1913,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 	  cout<<RED<<"Exiting"<<RESET<<endl;
 	  ofstream failfile;
 	  failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-	  failfile << "Run: "<<runnum<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+	  failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
 	  failfile.close();
 	  return -1;
 	}   
@@ -1951,7 +1981,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
       bool event_build =true;  //initilize bool to do eventbuilding
     
       while(event_build && datadeque.size()>0) {
-	if(datadeque[0].TOF < (first_entry_time + CoincidenceWindow)) {
+	if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
 	  eventvector.push_back(datadeque[0]); //put the first event in the events vector
 	  datadeque.pop_front();  //remove the first entry in the deque     
 	  Events_Sent++;
@@ -1969,7 +1999,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
       }
     
       if(eventvector.size()>0) {
-	Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold,Energy_Threshold,NQGates,QGates);
+	Analyze_Data(eventvector, input_params);
       }
     
       if(datadeque.size()==0) {
@@ -1983,7 +2013,7 @@ int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool 
 
 
   //Stage 1 unpacker
-if(read_binary==1 || read_simulation==1) {
+if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
 
   while(run) {
       
@@ -1995,8 +2025,8 @@ if(read_binary==1 || read_simulation==1) {
     //Progress indicator
     if(TOTAL_EVTS > progresscounter*ProgressInterval) {
       progresscounter++;
-      if(read_simulation == 0) {
-	cout<<"Processing Run Number: "<<runnum<<endl;
+      if(input_params.Read_Simulation == 0) {
+	cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
       }
       else {
 	cout<<"Processing Simulated Data"<<endl;
@@ -2096,7 +2126,7 @@ if(read_binary==1 || read_simulation==1) {
     bool add_to_current_event = true; 
       
     while(add_to_current_event && stage1_counter<=TOTAL_EVTS) {
-      if(db_arr[stage1_counter].TOF < (first_entry_time + CoincidenceWindow)) {
+      if(db_arr[stage1_counter].TOF < (first_entry_time + input_params.Coincidence_Window)) {
 	eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
 	Events_Sent++;
 	stage1_counter++;
@@ -2107,7 +2137,12 @@ if(read_binary==1 || read_simulation==1) {
 	  
 	//Send the current event to analyzer
 	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, read_binary, write_binary, read_simulation, Crystal_Blocking_Time,DEvent_Blocking_Time, HAVE_Threshold, Energy_Threshold,NQGates,QGates);
+	  if(input_params.Evaluate_DeadTime) {
+	    Analyze_DeadTime(eventvector, input_params, hDetLoad);
+	  }
+	  else {
+	    Analyze_Data(eventvector, input_params);
+	  }
 	  eventvector.clear();
 	}
 	  
@@ -2124,8 +2159,8 @@ if(read_binary==1 || read_simulation==1) {
  } //end of if(read_binary==1)
 
 //Make the time deviations if needed (Likely only a stage 0 thing)
-if(FitTimeDev) {
-  Make_Time_Deviations(runnum);
+if(input_params.FitTimeDev) {
+  Make_Time_Deviations(input_params.RunNumber);
  }
   
 //Unpacking is finished.  Return the total number of events unpacked and analyzed

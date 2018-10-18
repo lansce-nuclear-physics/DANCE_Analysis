@@ -18,16 +18,21 @@
 //ROOT Includes
 #include "TFile.h"
 
+
+//File Includes
+#include "structures.h"
+
 using namespace std;
 
 //Function prototypes
-int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, bool read_simulation, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev,string DataFormat,int NQGates, double QGates[]);
+int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params);
 int Make_DANCE_Map();
-int Read_TimeDeviations(int runnum, bool FitTimeDev, bool read_simulation);
+int Read_TimeDeviations(Input_Parameters input_params);
 int Make_Output_Diagnostics_File(int RunNumber);
+int Read_DetectorLoad_Histogram(Input_Parameters input_params);
 
-int Create_Unpacker_Histograms(bool read_binary);
-int Write_Unpacker_Histograms(TFile *fout, bool read_binary);
+int Create_Unpacker_Histograms(Input_Parameters input_params);
+int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params);
 double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_trace, uint16_t model);
 
 #endif

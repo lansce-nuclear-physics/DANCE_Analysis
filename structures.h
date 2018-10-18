@@ -13,6 +13,7 @@
 
 // C/C++ includes 
 #include <stdint.h>  //uint16_t, uint32_t, uint64_t
+#include <string>
 
 /*size of the CEVT_BANK P Array*/
 #define MaxHitsPerT0 500000  
@@ -178,6 +179,47 @@ typedef struct{
   uint16_t Islow;            //Uncalibrated slow integral 
   uint16_t Valid;            //Valid event flag
 } Li6_Event;
+
+
+
+//Input parameters 
+typedef struct{
+  double Crystal_Blocking_Time;
+  double DEvent_Blocking_Time;
+  double Coincidence_Window;
+  double Energy_Threshold; //MeV
+  //Bools
+  bool Read_Binary;
+  bool Write_Binary;
+  bool Read_Simulation;
+  bool HAVE_Threshold;
+  bool FitTimeDev;
+  //Strings
+  std::string DataFormat;
+  std::string Simulation_File_Name;
+  //QGated
+  bool QGatedSpectra;
+  int NQGates;
+  double QGates[20];  //This gives 10 pairs
+  //Isomers
+  bool IsomerSpectra;
+  int NIsomers;
+  double IsomerPromptQGates[20];     //10 pairs
+  int IsomerPromptMclGates[20];   //10 pairs
+  double IsomerPromptTOFGates[20];   //10 pairs
+  double IsomerDelayedQGates[20];    //10 pairs
+  int IsomerDelayedMclGates[20]; //10 pairs
+  double IsomerDelayedTOFGates[20];  //10 pairs
+  bool JMOD_Background;
+  int RunNumber;
+  //Ways to evaluate efficiency from TOF
+  bool Evaluate_DeadTime;
+  double Artificial_TOF;
+  std::string DetectorLoad_FileName;
+  std::string DetectorLoad_HistName;
+
+} Input_Parameters;
+
 
 
 #endif
