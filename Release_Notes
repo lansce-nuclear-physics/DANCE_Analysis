@@ -77,3 +77,5 @@ Version 8.2.1 - Added a hTOF_Mcl_QGated spectra out to 1ms in time of flight.
 Version 8.2.2 - Added some more 3D histograms gated on Q-Value
 
 Version 9.0.0 - Added a struct for parameters from .cfg file and added the histograms needed for deadtime analysis.
+
+Version 9.1.0 - Added the Long Gate to the input struct. Changed the time deviations algorithm.  Fixed a coding error in the unpacker for the read_binary option that wasn't updated to the struct.
