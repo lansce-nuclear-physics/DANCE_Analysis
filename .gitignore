@@ -1,4 +1,8 @@
-./stage0_bin
-./stage0_root
-./stage1_bin
-./stage1_root
+stage0_bin
+stage0_root
+stage1_bin
+stage1_root
+*~
+*.o
+*.bak
+.*.sw?
