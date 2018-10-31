@@ -218,6 +218,7 @@ typedef struct{
   std::string DetectorLoad_FileName;
   std::string DetectorLoad_HistName;
   int Long_Gate;
+  bool Use_Firmware_FineTime;  
 
 } Input_Parameters;
 

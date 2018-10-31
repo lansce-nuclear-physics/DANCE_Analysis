@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
   input_params.Evaluate_DeadTime=false;
   input_params.Artificial_TOF=0;
   input_params.Long_Gate=1000;
+  input_params.Use_Firmware_FineTime=false;
 
   //Control things
   int RunNum=0;
@@ -165,6 +166,9 @@ int main(int argc, char *argv[]) {
       }   
       if(item.compare("Long_Gate") == 0) {
 	cfgf>>input_params.Long_Gate;
+      }  
+      if(item.compare("Use_Firmware_FineTime") == 0) {
+	cfgf>>input_params.Use_Firmware_FineTime;
       }  
     }
 

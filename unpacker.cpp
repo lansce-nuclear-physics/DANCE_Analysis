@@ -1084,11 +1084,16 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 			double dT=0;
 			
-			dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                   //Function that calculates the fine time stamp
-						       db_arr[EVTS].Ns, 
-						       vx725_vx730_psd_data.dual_trace, 
-						       user_data.modtype);
-			
+                        if ( ! input_params.Use_Firmware_FineTime ) {
+			  dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                 //Function that calculates the fine time stamp
+			  			         db_arr[EVTS].Ns, 
+						         vx725_vx730_psd_data.dual_trace, 
+						         user_data.modtype);
+                        }
+                        else {
+                          dT = 2.* vx725_vx730_psd_data.fine_time_stamp/1024.;
+                        }
+			 
 			//Set the timestamps
 			db_arr[EVTS].timestamp = vx725_vx730_psd_data.trigger_time_tag;                      //31-bit time in clock ticks
 			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_psd_data.extended_time_stamp;       //16-bit extended time in clock ticks
@@ -1240,10 +1245,15 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			}
 			
 			double dT=0;
-				dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
-						       db_arr[EVTS].Ns, 
-						       vx725_vx730_pha_data.dual_trace, 
-						       user_data.modtype);
+                        if ( ! input_params.Use_Firmware_FineTime ) {
+			  	  dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
+				  		                 db_arr[EVTS].Ns, 
+						                 vx725_vx730_pha_data.dual_trace, 
+						                 user_data.modtype);
+                        }
+                        else {
+                          dT = 2.*vx725_vx730_pha_data.fine_time_stamp/65356.;
+                        }
 						  
 			db_arr[EVTS].timestamp = vx725_vx730_pha_data.trigger_time_tag;                       //31-bit time in clock ticks
 			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_pha_data.extended_time_stamp;        //16-bit extended time in clock ticks
