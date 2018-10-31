@@ -217,6 +217,7 @@ typedef struct{
   double Artificial_TOF;
   std::string DetectorLoad_FileName;
   std::string DetectorLoad_HistName;
+  int Long_Gate;
 
 } Input_Parameters;
 

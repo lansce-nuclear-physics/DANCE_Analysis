@@ -46,7 +46,7 @@ using namespace std;
 
 /*Time depth (in seconds) of the buffer.  While you cant know if you 
   will fail the program will tell you if you did... */
-#define BufferDepth 10000  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
+#define BufferDepth 30  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
 
 #define Max_ChAgg_Size 65535  //This is the maximum number of words the channel aggregate can be for the read to work properly
 
@@ -718,7 +718,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 #ifdef Histogram_Waveforms
 
 		  //Fill waveform histogram
-		  if(read_binary==0) {
+		  if(input_params.Read_Binary==0) {
 		    if(db_arr[EVTS].ID<162) {
 		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
 			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
@@ -1083,11 +1083,12 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			}
 			
 			double dT=0;
+			
 			dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                   //Function that calculates the fine time stamp
 						       db_arr[EVTS].Ns, 
 						       vx725_vx730_psd_data.dual_trace, 
 						       user_data.modtype);
-			  
+			
 			//Set the timestamps
 			db_arr[EVTS].timestamp = vx725_vx730_psd_data.trigger_time_tag;                      //31-bit time in clock ticks
 			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_psd_data.extended_time_stamp;       //16-bit extended time in clock ticks
@@ -1130,7 +1131,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 						
 #ifdef Histogram_Digital_Probes
 			//Fill probe histograms
-			if(read_binary==0) {
+			if(input_params.Read_Binary==0) {
 			  if(db_arr[EVTS].ID<256) {
 			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
 			      //digital probes
@@ -1143,7 +1144,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 #ifdef Histogram_Waveforms
 			//Fill waveform histograms
-			if(read_binary==0) {
+			if(input_params.Read_Binary==0) {
 			  if(db_arr[EVTS].ID<162) {
 			    for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
 			      hWaveform_ID->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
@@ -1239,11 +1240,11 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			}
 			
 			double dT=0;
-			dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
+				dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
 						       db_arr[EVTS].Ns, 
 						       vx725_vx730_pha_data.dual_trace, 
 						       user_data.modtype);
-			  
+						  
 			db_arr[EVTS].timestamp = vx725_vx730_pha_data.trigger_time_tag;                       //31-bit time in clock ticks
 			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_pha_data.extended_time_stamp;        //16-bit extended time in clock ticks
 			
@@ -1284,7 +1285,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 						
 #ifdef Histogram_Digital_Probes
 			//Fill probe histograms
-			if(read_binary==0) {
+			if(input_params.Read_Binary==0) {
 			  if(db_arr[EVTS].ID<256) {
 			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
 			      //digital probes
@@ -1297,7 +1298,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 #ifdef Histogram_Waveforms
 			//Fill waveform histograms
-			if(read_binary==0) {
+			if(input_params.Read_Binary==0) {
 			  if(db_arr[EVTS].ID<162) {
 			    for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
 			      hWaveform_ID->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay],db_arr[EVTS].ID);
@@ -1755,7 +1756,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	      failfile.open("Failed_Analysis.txt", ios::out | ios::app);
 	      failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
 	      failfile.close();
-	      return -1;
+	      // return -1;
 	    }   
 	  }
 		  
@@ -1915,7 +1916,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	  failfile.open("Failed_Analysis.txt", ios::out | ios::app);
 	  failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
 	  failfile.close();
-	  return -1;
+	  //  return -1;
 	}   
       }
       
@@ -2156,7 +2157,7 @@ if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
       break;
     } //end of if(stage1_counter == TOTAL_EVENTS + 1)
   } //end of while(event_build)
- } //end of if(read_binary==1)
+ } //end of if(input_params.Read_Binary==1)
 
 //Make the time deviations if needed (Likely only a stage 0 thing)
 if(input_params.FitTimeDev) {

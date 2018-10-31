@@ -72,7 +72,8 @@ void Make_Time_Deviations(int start_run, int end_run) {
   //Location of stage0 rootfiles
   stringstream fpath;
   fpath.str();
-  fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root/";
+  // fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root/";
+  fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root_automated/";
 
   //stage0
   int CW = 500;
@@ -137,17 +138,26 @@ void Make_Time_Deviations(int start_run, int end_run) {
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(-500,500);
       
 	//Iteratively Close in on the proper range 
-	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-100.0, hTimeDev[counter]->GetMean()+100.0);
-	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-50.0, hTimeDev[counter]->GetMean()+50.0);
+	for(int kay=3; kay<103; kay++) {
+	  hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-(103.0-kay), hTimeDev[counter]->GetMean()+(103.0-kay));
+	  if(index2[jay]==16) {
+	    cout<<"counter: "<<counter<<"  kay: "<<kay<<" TDev: "<< hTimeDev[counter]->GetMean()<<endl;
+	  }
+	}
+	/*
+	  hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-50.0, hTimeDev[counter]->GetMean()+50.0);
+	  
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-10.0, hTimeDev[counter]->GetMean()+10.0);
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-5.0, hTimeDev[counter]->GetMean()+5.0);
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-5.0, hTimeDev[counter]->GetMean()+5.0);
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-5.0, hTimeDev[counter]->GetMean()+5.0);
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-4.0, hTimeDev[counter]->GetMean()+4.0);
 	hTimeDev[counter]->GetXaxis()->SetRangeUser(hTimeDev[counter]->GetMean()-4.0, hTimeDev[counter]->GetMean()+4.0);
+*/
 	//	cout<<hTimeDev[counter]->GetMean()<<"  "<<time_deviation<<endl;
 	time_deviation += hTimeDev[counter]->GetMean();
 	td_out <<index2[jay]<<"   \t"<<time_deviation<<"\n";
+	cout<<index2[jay]<<"  "<< time_deviation<<endl;
 
 	hTimeDeviations->Fill(eye, index2[jay], time_deviation);
       }

@@ -268,15 +268,9 @@ int Make_Time_Deviations(int RunNumber) {
     hTimeDev->GetXaxis()->SetRangeUser(-500,500);
 
     //Iteratively Close in on the proper range 
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-100.0, hTimeDev->GetMean()+100.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-50.0, hTimeDev->GetMean()+50.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-10.0, hTimeDev->GetMean()+10.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
-    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
-    // cout<<hTimeDev->GetMean()<<"  "<<time_deviation<<endl;
+    for(int kay=3; kay<103; kay++) {
+      hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-(103.0-kay), hTimeDev->GetMean()+(103.0-kay));
+    }
     time_deviation += hTimeDev->GetMean();
     td_out <<index2[eye]<<"   \t"<<time_deviation<<"\n";
   }
@@ -641,18 +635,18 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   
   //RAW TOF
-  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
+  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,10000000,162,0,162); //TOF for each crystal 
   hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
   hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
   //2D out to 1 ms
   hTOF_Mcl = new TH2D("Mcl_TOF","Mcl_TOF",100000,0,1000000,8,0,8);
 
   //Corrected TOF
-  hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,1000000,162,0,162); //TOF for each crystal 
+  hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,10000000,162,0,162); //TOF for each crystal 
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",6000000,0,60000000);
   //2D out to 1 ms
-  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,1000000,8,0,8);
+  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,10000000,8,0,8);
 
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
@@ -781,12 +775,12 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
-    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
     for(int kay=0; kay<20; kay++) {
       //Same spectra but with one gamma ray at random thrown away
-      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
       hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%d_Removed",kay),Form("En_Etot_Mcr_%d_Removed",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     }
 
@@ -1659,7 +1653,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	if(last_t0_timestamp > 0) {
 	  uint32_t temptof = (uint32_t) gr_DANCE_TOF_Corr->Eval((eventvector[eye].TOF-last_t0_timestamp));
 	  if(temptof>0) {
-	    for(int el=(int)temptof; el<((int)(temptof+1000+input_params.Crystal_Blocking_Time)); el++) {
+	    for(int el=(int)temptof; el<((int)(temptof+input_params.Long_Gate+input_params.Crystal_Blocking_Time)); el++) {
 	      if(el >=0 && el < 100000000) {
 		Detector_Load[el]+=1.0;
 	      }

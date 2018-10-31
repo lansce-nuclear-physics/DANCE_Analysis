@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
   input_params.NIsomers=0;
   input_params.Evaluate_DeadTime=false;
   input_params.Artificial_TOF=0;
+  input_params.Long_Gate=1000;
 
   //Control things
   int RunNum=0;
@@ -162,7 +163,9 @@ int main(int argc, char *argv[]) {
       if(item.compare("DetectorLoad_HistName") == 0) {
 	cfgf>>input_params.DetectorLoad_HistName;
       }   
-      
+      if(item.compare("Long_Gate") == 0) {
+	cfgf>>input_params.Long_Gate;
+      }  
     }
 
     //Set the bool for QGates
