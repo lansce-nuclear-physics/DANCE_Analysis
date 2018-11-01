@@ -1071,7 +1071,20 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 
 			//unpack the channel agregate
 			func_ret = unpack_vx725_vx730_psd_chagg(v1730_chagg_data, &vx725_vx730_psd_data);
+
+			//Set the remaining analysis variables
+			db_arr[EVTS].Valid = 1;                                                             //Everything starts valid
+			db_arr[EVTS].board = user_data.boardid;                                             //Board ID
+			db_arr[EVTS].channel = vx725_vx730_psd_data.channel + channels[chaggcounter];       //Channel ID
+			db_arr[EVTS].Ifast =  vx725_vx730_psd_data.qshort;                                  //Fast Integral
+			db_arr[EVTS].Islow =  vx725_vx730_psd_data.qlong - vx725_vx730_psd_data.qshort;     //Slow Integral (minus the fast)
 			
+			//Fill Raw IDs
+			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+			
+			//Map it
+			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];  
+
 			//	cout<<func_ret<<"  "<<chagg_data_size<<endl;
 			
 			//Do waveform analysis and calculate times
@@ -1084,7 +1097,8 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 			double dT=0;
 			
-                        if ( ! input_params.Use_Firmware_FineTime ) {
+			//If the detector is not a DANCE crystal or the use fine time is off
+                        if ( ! input_params.Use_Firmware_FineTime || db_arr[EVTS].ID >= 162) {
 			  dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                 //Function that calculates the fine time stamp
 			  			         db_arr[EVTS].Ns, 
 						         vx725_vx730_psd_data.dual_trace, 
@@ -1110,12 +1124,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			  smallest_timestamp=db_arr[EVTS].TOF;
 			}    
 
-			//Set the remaining analysis variables
-			db_arr[EVTS].Valid = 1;                                                             //Everything starts valid
-			db_arr[EVTS].board = user_data.boardid;                                             //Board ID
-			db_arr[EVTS].channel = vx725_vx730_psd_data.channel + channels[chaggcounter];       //Channel ID
-			db_arr[EVTS].Ifast =  vx725_vx730_psd_data.qshort;                                  //Fast Integral
-			db_arr[EVTS].Islow =  vx725_vx730_psd_data.qlong - vx725_vx730_psd_data.qshort;     //Slow Integral (minus the fast)
+		
 			
 #ifdef Unpacker_Verbose
 			cout<<"Valid: "<<(int)db_arr[EVTS].Valid<<"  ";
@@ -1128,11 +1137,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			cout<<"ISlow: "<<db_arr[EVTS].Islow<<endl;
 #endif
 
-			//Fill Raw IDs
-			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
-			
-			//Map it
-			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];  
+		
 						
 #ifdef Histogram_Digital_Probes
 			//Fill probe histograms
@@ -1234,6 +1239,19 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			//unpack the channel agregate
 			func_ret = unpack_vx725_vx730_pha_chagg(v1730_chagg_data, &vx725_vx730_pha_data);
 			
+			//Set the remaining analysis variables
+			db_arr[EVTS].Valid = 1;
+			db_arr[EVTS].board = user_data.boardid;
+			db_arr[EVTS].channel = vx725_vx730_pha_data.channel + channels[chaggcounter];
+			db_arr[EVTS].Ifast =  vx725_vx730_pha_data.energy;
+			db_arr[EVTS].Islow =  vx725_vx730_pha_data.energy;
+
+			//Fill Raw IDs
+			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
+
+			//Map it
+			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board]; 
+
 			//	cout<<func_ret<<"  "<<chagg_data_size<<endl;
 			
 			//Do waveform analysis and calculate times
@@ -1269,12 +1287,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			  smallest_timestamp=db_arr[EVTS].TOF;
 			}    
 
-			//Set the remaining analysis variables
-			db_arr[EVTS].Valid = 1;
-			db_arr[EVTS].board = user_data.boardid;
-			db_arr[EVTS].channel = vx725_vx730_pha_data.channel + channels[chaggcounter];
-			db_arr[EVTS].Ifast =  vx725_vx730_pha_data.energy;
-			db_arr[EVTS].Islow =  vx725_vx730_pha_data.energy;
+		
 			
 #ifdef Unpacker_Verbose
 			cout<<"Valid: "<<(int)db_arr[EVTS].Valid<<"  ";
@@ -1287,12 +1300,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			cout<<"ISlow: "<<db_arr[EVTS].Islow<<endl;
 #endif
 			
-			//Fill Raw IDs
-			hID_Raw->Fill(db_arr[EVTS].channel+(db_arr[EVTS].board*16));  //Channel + (Board *16)
-
-			//Map it
-			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board]; 
-						
+			
 #ifdef Histogram_Digital_Probes
 			//Fill probe histograms
 			if(input_params.Read_Binary==0) {
