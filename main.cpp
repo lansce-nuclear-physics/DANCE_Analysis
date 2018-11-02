@@ -220,7 +220,10 @@ int main(int argc, char *argv[]) {
       cout<<"  Mcl from: "<<input_params.IsomerDelayedMclGates[2*eye]<<" to "<<input_params.IsomerDelayedMclGates[2*eye+1];
       cout<<"  TOF from: "<<input_params.IsomerDelayedTOFGates[2*eye]<<" to "<<input_params.IsomerDelayedTOFGates[2*eye+1]<<" ns"<<endl;	 
     }
+    cout<<"Long Gate (\"Minimum Time Between Crystal Hits\"): "<< input_params.Long_Gate<<endl;
+    cout<<"Use Firmware Fine Time: "<<input_params.Use_Firmware_FineTime<<endl;
   }
+  
   else {
     cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
     return -1;
@@ -384,7 +387,7 @@ int main(int argc, char *argv[]) {
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
   int events_analyzed=  Unpack_Data(gz_in, begin, input_params);
-  cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Events"<<RESET<<endl;
+  cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Entries"<<RESET<<endl;
   
   //Make the file
   fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),

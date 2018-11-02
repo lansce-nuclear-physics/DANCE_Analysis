@@ -46,7 +46,7 @@ using namespace std;
 
 /*Time depth (in seconds) of the buffer.  While you cant know if you 
   will fail the program will tell you if you did... */
-#define BufferDepth 30  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
+#define BufferDepth 10  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
 
 #define Max_ChAgg_Size 65535  //This is the maximum number of words the channel aggregate can be for the read to work properly
 
@@ -359,9 +359,9 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
   }
   cout<<endl;
 
- if(input_params.Evaluate_DeadTime) {
-   Read_DetectorLoad_Histogram(input_params);
- }
+  if(input_params.Evaluate_DeadTime) {
+    Read_DetectorLoad_Histogram(input_params);
+  }
  
   //initialize histograms
   Create_Unpacker_Histograms(input_params);
@@ -492,13 +492,13 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
 	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
 	}	
-	cout<<TOTAL_EVTS<<" Events Unpacked "<<endl;
-	cout<<Events_Sent<<" Events Analyzed"<<endl;
-	cout<<datadeque.size()<<" Events in the Buffer"<<endl;
+	cout<<TOTAL_EVTS<<" Entries Unpacked "<<endl;
+	cout<<Events_Sent<<" Entries Analyzed"<<endl;
+	cout<<datadeque.size()<<" Entries in the Buffer"<<endl;
 	gettimeofday(&tv,NULL); 
 	time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
       
-	cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_elapsed-unpack_begin)<<" Events per second "<<endl;
+	cout << "Average Entry Processing Rate: "<<(double)TOTAL_EVTS/(time_elapsed-unpack_begin)<<" Entries per second "<<endl;
 	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
 	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
 	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
@@ -1007,7 +1007,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 		  //Make sure the board header ID is 10 before proceeding
 		  if(vx725_vx730_board_data.header != 10) {
 		    cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<RESET<<endl;
-		    cout<<RED<<"Events: "<<EVTS<<" Total Events: "<<TOTAL_EVTS<<RESET<<endl;
+		    cout<<RED<<"Entries: "<<EVTS<<" Total Entries: "<<TOTAL_EVTS<<RESET<<endl;
 		    cout<<RED<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
 		    run = false;
 		    return -1;
@@ -1123,7 +1123,10 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			if(db_arr[EVTS].TOF<smallest_timestamp) {
 			  smallest_timestamp=db_arr[EVTS].TOF;
 			}    
-
+			//keep track of the largest timestamp
+			if(db_arr[EVTS].TOF>largest_timestamp) {
+			  largest_timestamp=db_arr[EVTS].TOF;
+			}   
 		
 			
 #ifdef Unpacker_Verbose
@@ -1264,10 +1267,10 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 			double dT=0;
                         if ( ! input_params.Use_Firmware_FineTime ) {
-			  	  dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
-				  		                 db_arr[EVTS].Ns, 
-						                 vx725_vx730_pha_data.dual_trace, 
-						                 user_data.modtype);
+			  dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
+							 db_arr[EVTS].Ns, 
+							 vx725_vx730_pha_data.dual_trace, 
+							 user_data.modtype);
                         }
                         else {
                           dT = 2.*vx725_vx730_pha_data.fine_time_stamp/65356.;
@@ -1286,7 +1289,10 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			if(db_arr[EVTS].TOF<smallest_timestamp) {
 			  smallest_timestamp=db_arr[EVTS].TOF;
 			}    
-
+			//keep track of the largest timestamp
+			if(db_arr[EVTS].TOF>largest_timestamp) {
+			  largest_timestamp=db_arr[EVTS].TOF;
+			}  
 		
 			
 #ifdef Unpacker_Verbose
@@ -1386,806 +1392,1142 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 		TotalBankSize -= sizeof(extra);
 	      } //End of read extra
 	    } //End of check  on total bank size
-	}  //Endf of EventID 1 (Data)
+	  }  //Endf of EventID 1 (Data)
 
-	else if(head.fEventId==8){
+	  else if(head.fEventId==8){
 	    
-	  // this is scaler data
-	  gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));	
+	    // this is scaler data
+	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));	
 	    
 #ifdef Diagnostic_Verbose
-	  cout << "SCALER " << endl;
-	  cout << "Bank_HEADER " << endl;
-	  cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	  cout << dec << bhead.fFlags << endl;
+	    cout << "SCALER " << endl;
+	    cout << "Bank_HEADER " << endl;
+	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+	    cout << dec << bhead.fFlags << endl;
 #endif    
 	  
-	  TotalBankSize = bhead.fDataSize;
+	    TotalBankSize = bhead.fDataSize;
 
-	  //This is the numbef of active boards
-	  int nactiveboards = 0;
+	    //This is the numbef of active boards
+	    int nactiveboards = 0;
 	    
-	  while(TotalBankSize > 0) {
+	    while(TotalBankSize > 0) {
 
-	    gzret=gzread(gz_in,&bank,sizeof(BankHeader_t));	
-	    TotalBankSize-=sizeof(Bank_t);
+	      gzret=gzread(gz_in,&bank,sizeof(BankHeader_t));	
+	      TotalBankSize-=sizeof(Bank_t);
 	      
 #ifdef Diagnostic_Verbose
-	    cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
-	    cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
-	    cout << dec << bank.fType << endl;
-	    cout << dec << bank.fDataSize << endl;
+	      cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
+	      cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
+	      cout << dec << bank.fType << endl;
+	      cout << dec << bank.fDataSize << endl;
 #endif
-	    //see if data is on an 8-byte boundary
-	    bool readextra = false;
-	    if(bank.fDataSize%8 !=0) {
-	      readextra = true; 
-	    }
+	      //see if data is on an 8-byte boundary
+	      bool readextra = false;
+	      if(bank.fDataSize%8 !=0) {
+		readextra = true; 
+	      }
 	      
-	    //This is the time struct
-	    if (bank.fName[0]=='T' && bank.fName[1]=='I' && bank.fName[2]== 'M' && bank.fName[3]=='E') {
-	      outputdiagnosticsfile << "TIME\n";
+	      //This is the time struct
+	      if (bank.fName[0]=='T' && bank.fName[1]=='I' && bank.fName[2]== 'M' && bank.fName[3]=='E') {
+		outputdiagnosticsfile << "TIME\n";
 #ifdef Diagnostic_Verbose
-	      cout<<endl<<"Time"<<endl;
+		cout<<endl<<"Time"<<endl;
 #endif
-	      gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
-	      TotalBankSize-=sizeof(timevalue);
+		gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
+		TotalBankSize-=sizeof(timevalue);
 
-	      outputdiagnosticsfile << timevalue.tv_sec<<"  "<<timevalue.tv_usec<<"\n";
-	    }
+		outputdiagnosticsfile << timevalue.tv_sec<<"  "<<timevalue.tv_usec<<"\n";
+	      }
 	      
-	    //These are the Digitizer Rates
-	    if (bank.fName[0]=='S' && bank.fName[1]=='C' && bank.fName[2]== 'L' && bank.fName[3]=='R') {
+	      //These are the Digitizer Rates
+	      if (bank.fName[0]=='S' && bank.fName[1]=='C' && bank.fName[2]== 'L' && bank.fName[3]=='R') {
 		
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "SCLR  "<<nactiveboards<<"\n";
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "SCLR  "<<nactiveboards<<"\n";
 
 #ifdef Diagnostic_Verbose
-	      cout<<endl<<"Digitizer Rates"<<endl;
+		cout<<endl<<"Digitizer Rates"<<endl;
 #endif
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		gzret=gzread(gz_in,&Digitizer_Rates[eye],sizeof(uint32_t));
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Digitizer_Rates[eye],sizeof(uint32_t));
 #ifdef Diagnostic_Verbose
-		cout<<eye<<"  "<<Digitizer_Rates[eye]<<endl;
+		  cout<<eye<<"  "<<Digitizer_Rates[eye]<<endl;
 #endif
-		TotalBankSize-=sizeof(uint32_t);
-		outputdiagnosticsfile << Digitizer_Rates[eye]<<"\n";
-	      }
-	    }
-
-	    //These are the Acquisition Status
-	    if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-	      cout<<endl<<"Acquisition Status"<<endl;
-#endif
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		gzret=gzread(gz_in,&Acquisition_Status[eye],sizeof(uint32_t));
-#ifdef Diagnostic_Verbose
-		cout<<eye<<"  "<<Acquisition_Status[eye]<<endl;
-#endif
-		TotalBankSize-=sizeof(uint32_t);
-		outputdiagnosticsfile << Acquisition_Status[eye]<<"\n";
-	      }
-	    }
-
-	    //These are the Failure Status
-	    if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-	      cout<<endl<<"Failure Status"<<endl;
-#endif
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
-
-		if(Failure_Status[eye] != 0) {
-		  faillog<<"Run: "<<input_params.RunNumber<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
-		}
-#ifdef Diagnostic_Verbose
-		cout<<eye<<"  "<<Failure_Status[eye]<<endl;
-#endif
-		TotalBankSize-=sizeof(uint32_t);
-		outputdiagnosticsfile << Failure_Status[eye]<<"\n";
-	      }
-	    }
-
-	    //These are the Readout Status
-	    if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-	      cout<<endl<<"Readout Status"<<endl;
-#endif
-	      nactiveboards = bank.fDataSize/sizeof(uint32_t);
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		gzret=gzread(gz_in,&Readout_Status[eye],sizeof(uint32_t));
-#ifdef Diagnostic_Verbose
-		cout<<eye<<"  "<<Readout_Status[eye]<<endl;
-#endif
-		TotalBankSize-=sizeof(uint32_t);
-		outputdiagnosticsfile << Readout_Status[eye]<<"\n";
-	      }
-	    }
-
-	    //These are the 8500 + 4n register values
-	    if (bank.fName[0]=='D' && bank.fName[1]=='I' && bank.fName[2]== 'A' && bank.fName[3]=='G') {
-	      outputdiagnosticsfile << "DIAG  "<<nactiveboards<<"\n";
-
-#ifdef Diagnostic_Verbose
-	      cout<<endl<<"0x8500 + 4n Diagnostics"<<endl;
-#endif
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		for(int jay=0; jay<8; jay++) {
-		  gzret=gzread(gz_in,&Register_0x8504n[eye][jay],sizeof(uint32_t));
 		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Register_0x8504n[eye][jay]<<"  ";
+		  outputdiagnosticsfile << Digitizer_Rates[eye]<<"\n";
 		}
-		outputdiagnosticsfile <<"\n";
+	      }
 
-	      }
-	      
+	      //These are the Acquisition Status
+	      if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
 #ifdef Diagnostic_Verbose
-	      for(int eye=0; eye<8; eye++) {
-		for(int jay=0; jay<nactiveboards; jay++) {
-		  cout<<Register_0x8504n[jay][eye]<<"  ";
-		}
-		cout<<endl;
-	      }
+		cout<<endl<<"Acquisition Status"<<endl;
 #endif
-	    }
-
-	    //These are the ADC Temps
-	    if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
-	      outputdiagnosticsfile << "TEMP  "<<nactiveboards<<"\n";
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Acquisition_Status[eye],sizeof(uint32_t));
 #ifdef Diagnostic_Verbose
-	      cout<<endl<<"ADC Temps"<<endl;
+		  cout<<eye<<"  "<<Acquisition_Status[eye]<<endl;
 #endif
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		for(int jay=0; jay<16; jay++) {
-		  gzret=gzread(gz_in,&ADC_Temp[eye][jay],sizeof(uint16_t));
-		  TotalBankSize-=sizeof(uint16_t);
-		  outputdiagnosticsfile << ADC_Temp[eye][jay]<<"  ";
-		}
-		outputdiagnosticsfile <<"\n";
-	      }
-	      
-#ifdef Diagnostic_Verbose
-	      for(int eye=0; eye<16; eye++) {
-		for(int jay=0; jay<nactiveboards; jay++) {
-		  cout<<ADC_Temp[jay][eye]<<"  ";
-		}
-		cout<<endl;
-	      }
-#endif
-	    }
-
-	    //These are the 0x1n2C values
-	    if (bank.fName[0]=='1' && bank.fName[1]=='n' && bank.fName[2]== '2' && bank.fName[3]=='C') {
-	      outputdiagnosticsfile << "1n2C  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-	      cout<<endl<<"Register 0x1n2C"<<endl;
-#endif
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		for(int jay=0; jay<16; jay++) {
-		  gzret=gzread(gz_in,&Register_0x1n2C[eye][jay],sizeof(uint32_t));
 		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Register_0x1n2C[eye][jay]<<"  ";
+		  outputdiagnosticsfile << Acquisition_Status[eye]<<"\n";
 		}
-		outputdiagnosticsfile <<"\n";
 	      }
-	      
+
+	      //These are the Failure Status
+	      if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
 #ifdef Diagnostic_Verbose
-	      for(int eye=0; eye<16; eye++) {
-		for(int jay=0; jay<nactiveboards; jay++) {
-		  cout<<Register_0x1n2C[jay][eye]<<"  ";
-		}
-		cout<<endl;
-	      }
+		cout<<endl<<"Failure Status"<<endl;
 #endif
-	    }
-	      
-	    //These are the Channel Status
-	    if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
-	      outputdiagnosticsfile << "CHST  "<<nactiveboards<<"\n";
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
+
+		  if(Failure_Status[eye] != 0) {
+		    faillog<<"Run: "<<input_params.RunNumber<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
+		  }
 #ifdef Diagnostic_Verbose
-	      cout<<endl<<"Channel Status"<<endl;
+		  cout<<eye<<"  "<<Failure_Status[eye]<<endl;
 #endif
-	      for(int eye=0; eye<nactiveboards; eye++) {
-		for(int jay=0; jay<16; jay++) {
-		  gzret=gzread(gz_in,&Channel_Status[eye][jay],sizeof(uint32_t));
 		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Channel_Status[eye][jay]<<"  ";
+		  outputdiagnosticsfile << Failure_Status[eye]<<"\n";
 		}
-		outputdiagnosticsfile <<"\n";
 	      }
+
+	      //These are the Readout Status
+	      if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+		cout<<endl<<"Readout Status"<<endl;
+#endif
+		nactiveboards = bank.fDataSize/sizeof(uint32_t);
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  gzret=gzread(gz_in,&Readout_Status[eye],sizeof(uint32_t));
+#ifdef Diagnostic_Verbose
+		  cout<<eye<<"  "<<Readout_Status[eye]<<endl;
+#endif
+		  TotalBankSize-=sizeof(uint32_t);
+		  outputdiagnosticsfile << Readout_Status[eye]<<"\n";
+		}
+	      }
+
+	      //These are the 8500 + 4n register values
+	      if (bank.fName[0]=='D' && bank.fName[1]=='I' && bank.fName[2]== 'A' && bank.fName[3]=='G') {
+		outputdiagnosticsfile << "DIAG  "<<nactiveboards<<"\n";
+
+#ifdef Diagnostic_Verbose
+		cout<<endl<<"0x8500 + 4n Diagnostics"<<endl;
+#endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<8; jay++) {
+		    gzret=gzread(gz_in,&Register_0x8504n[eye][jay],sizeof(uint32_t));
+		    TotalBankSize-=sizeof(uint32_t);
+		    outputdiagnosticsfile << Register_0x8504n[eye][jay]<<"  ";
+		  }
+		  outputdiagnosticsfile <<"\n";
+
+		}
 	      
 #ifdef Diagnostic_Verbose
-	      for(int eye=0; eye<16; eye++) {
-		for(int jay=0; jay<nactiveboards; jay++) {
-		  cout<<Channel_Status[jay][eye]<<"  ";
+		for(int eye=0; eye<8; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<Register_0x8504n[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
 		}
-		cout<<endl;
-	      }
 #endif
-	    }
-	      
-	    if(readextra) {
-	      uint32_t extra = 0;
-	      gzret=gzread(gz_in,&extra,sizeof(extra));
-	      TotalBankSize -= sizeof(extra);
-	    }	      
-	  }
+	      }
+
+	      //These are the ADC Temps
+	      if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
+		outputdiagnosticsfile << "TEMP  "<<nactiveboards<<"\n";
 #ifdef Diagnostic_Verbose
-	  cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
+		cout<<endl<<"ADC Temps"<<endl;
 #endif
-	}  //End of Event ID 8 (Diagnostics)
-
-
-	//Scalers
-	else if(head.fEventId==2) {
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<16; jay++) {
+		    gzret=gzread(gz_in,&ADC_Temp[eye][jay],sizeof(uint16_t));
+		    TotalBankSize-=sizeof(uint16_t);
+		    outputdiagnosticsfile << ADC_Temp[eye][jay]<<"  ";
+		  }
+		  outputdiagnosticsfile <<"\n";
+		}
 	      
-	  TotalBankSize  = head.fDataSize;
-
-#ifdef Scaler_Verbose
-	  cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
-#endif
-	  gzread(gz_in,&bhead,sizeof(BankHeader_t));
-	  TotalBankSize -= sizeof( BankHeader_t );
-	    
-#ifdef Scaler_Verbose
-	  cout << "Bank_HEADER " << endl;
-	  cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	  cout << dec << bhead.fFlags << endl;
-#endif
-	  while (TotalBankSize > 0) {
-
-	    //MLTM
-	    gzread( gz_in, &bank32, sizeof( Bank32_t ) );
-	    TotalBankSize -= sizeof( Bank32_t );
-
-#ifdef Scaler_Verbose
-	    cout << "BANK " << endl;
-	    cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
-	    cout << dec << bank32.fType << endl;
-	    cout << "Size: "<<dec << bank32.fDataSize << endl;
-#endif
-	    //see if data is on an 8-byte boundary
-	    bool readextra = false;
-	    if(bank32.fDataSize%8 !=0) {
-	      readextra = true; 
-	    }
-	      
-	    if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
-		
-	      uint32_t time_seconds;
-	      gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
-	      TotalBankSize-=sizeof(time_seconds);
-
-#ifdef Scaler_Verbose
-	      cout << time_seconds<<"\n";
-#endif
-	    }
-	    if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
-
-	      gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
-	      TotalBankSize-=sizeof(sclr_totals);
-	
-	      for(int kay=0; kay<N_SCLR; kay++) {
-		hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
-#ifdef Scaler_Verbose
-		cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
+#ifdef Diagnostic_Verbose
+		for(int eye=0; eye<16; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<ADC_Temp[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
 #endif
 	      }
-	    }
-	      
-	    if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
-	       
-	      gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
-	      TotalBankSize-=sizeof(sclr_rates);
 
-#ifdef Scaler_Verbose
-	      for(int kay=0; kay<N_SCLR; kay++) {
-		cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
-	      }
+	      //These are the 0x1n2C values
+	      if (bank.fName[0]=='1' && bank.fName[1]=='n' && bank.fName[2]== '2' && bank.fName[3]=='C') {
+		outputdiagnosticsfile << "1n2C  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+		cout<<endl<<"Register 0x1n2C"<<endl;
 #endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<16; jay++) {
+		    gzret=gzread(gz_in,&Register_0x1n2C[eye][jay],sizeof(uint32_t));
+		    TotalBankSize-=sizeof(uint32_t);
+		    outputdiagnosticsfile << Register_0x1n2C[eye][jay]<<"  ";
+		  }
+		  outputdiagnosticsfile <<"\n";
+		}
+	      
+#ifdef Diagnostic_Verbose
+		for(int eye=0; eye<16; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<Register_0x1n2C[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
+#endif
+	      }
+	      
+	      //These are the Channel Status
+	      if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
+		outputdiagnosticsfile << "CHST  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+		cout<<endl<<"Channel Status"<<endl;
+#endif
+		for(int eye=0; eye<nactiveboards; eye++) {
+		  for(int jay=0; jay<16; jay++) {
+		    gzret=gzread(gz_in,&Channel_Status[eye][jay],sizeof(uint32_t));
+		    TotalBankSize-=sizeof(uint32_t);
+		    outputdiagnosticsfile << Channel_Status[eye][jay]<<"  ";
+		  }
+		  outputdiagnosticsfile <<"\n";
+		}
+	      
+#ifdef Diagnostic_Verbose
+		for(int eye=0; eye<16; eye++) {
+		  for(int jay=0; jay<nactiveboards; jay++) {
+		    cout<<Channel_Status[jay][eye]<<"  ";
+		  }
+		  cout<<endl;
+		}
+#endif
+	      }
+	      
+	      if(readextra) {
+		uint32_t extra = 0;
+		gzret=gzread(gz_in,&extra,sizeof(extra));
+		TotalBankSize -= sizeof(extra);
+	      }	      
 	    }
+#ifdef Diagnostic_Verbose
+	    cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
+#endif
+	  }  //End of Event ID 8 (Diagnostics)
+
+
+	  //Scalers
+	  else if(head.fEventId==2) {
 	      
-	    if(readextra) {
-	      uint32_t extra = 0;
-	      gzret=gzread(gz_in,&extra,sizeof(extra));
-	      TotalBankSize -= sizeof(extra);
-	    }	
-	      
+	    TotalBankSize  = head.fDataSize;
+
 #ifdef Scaler_Verbose
 	    cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
 #endif
+	    gzread(gz_in,&bhead,sizeof(BankHeader_t));
+	    TotalBankSize -= sizeof( BankHeader_t );
+	    
+#ifdef Scaler_Verbose
+	    cout << "Bank_HEADER " << endl;
+	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+	    cout << dec << bhead.fFlags << endl;
+#endif
+	    while (TotalBankSize > 0) {
 
-	  } //End of while(TotalBankSize > 0)
+	      //MLTM
+	      gzread( gz_in, &bank32, sizeof( Bank32_t ) );
+	      TotalBankSize -= sizeof( Bank32_t );
+
+#ifdef Scaler_Verbose
+	      cout << "BANK " << endl;
+	      cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+	      cout << dec << bank32.fType << endl;
+	      cout << "Size: "<<dec << bank32.fDataSize << endl;
+#endif
+	      //see if data is on an 8-byte boundary
+	      bool readextra = false;
+	      if(bank32.fDataSize%8 !=0) {
+		readextra = true; 
+	      }
+	      
+	      if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
+		
+		uint32_t time_seconds;
+		gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
+		TotalBankSize-=sizeof(time_seconds);
+
+#ifdef Scaler_Verbose
+		cout << time_seconds<<"\n";
+#endif
+	      }
+	      if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
+
+		gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
+		TotalBankSize-=sizeof(sclr_totals);
+	
+		for(int kay=0; kay<N_SCLR; kay++) {
+		  hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
+#ifdef Scaler_Verbose
+		  cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
+#endif
+		}
+	      }
+	      
+	      if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
+	       
+		gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
+		TotalBankSize-=sizeof(sclr_rates);
+
+#ifdef Scaler_Verbose
+		for(int kay=0; kay<N_SCLR; kay++) {
+		  cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
+		}
+#endif
+	      }
+	      
+	      if(readextra) {
+		uint32_t extra = 0;
+		gzret=gzread(gz_in,&extra,sizeof(extra));
+		TotalBankSize -= sizeof(extra);
+	      }	
+	      
+#ifdef Scaler_Verbose
+	      cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+
+	    } //End of while(TotalBankSize > 0)
 	  
-	} // End of Event ID 2 (Scalers)
+	  } // End of Event ID 2 (Scalers)
 
 	  // 0x8000 is a begin of run
 	  // 0x8001 is an end of run
 	  // 0x8002 is an ASCII message created by the logger 
 	
-	else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ) {
-	  //see if its the end of run
-	  if(head.fEventId==0x8001) {
-	    run=false;
-	    break;
-	  }
-	    
-	  char *fData;
-	  fData=(char*)malloc(head.fDataSize);
-	  gzret=gzread(gz_in,fData,head.fDataSize);
-	  free (fData);	
-	}
-		  
-	else {
-	  // cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
-
-	  TotalBankSize=TotalDataSize;
-	    
-	  uint32_t garbage;
-	  while(TotalBankSize > 0) {
-	    gzret = gzread(gz_in,&garbage, sizeof(garbage));
-	    TotalBankSize -= sizeof(garbage);
-	    //cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
-	  }	    
-
-	}  //End of catchall   
-      }  //End of EventHeader gzret > 0	
-    } //End of caen2018 format check
-    else {
-      cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<input_params.DataFormat<<RESET<<endl;
-      return -1;
-    }
-
-    //Do the time sorting
-    if(timesort) {
-
-      //At this point we need to start ordering and eventbuilding
-      if(EVTS >= BlockBufferSize) {
-		
-#ifdef Unpacker_Verbose
-	cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
-#endif
-	int EVT_SORT=EVTS;
-	int this_send=0;
-	int deque_size=datadeque.size();
-		
-	//the first time through we want to sort and push everything from the first "block" onto the buffer
-	if(!first_sort) {
-		  
-	  //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
-	  if(event_building_active) {
-	    if(smallest_timestamp < datadeque[0].TOF) {
-	      cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
-	      cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
-	      cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
-	      cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
-	      cout<<"Exiting"<<endl;
-	      ofstream failfile;
-	      failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-	      failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
-	      failfile.close();
-	      // return -1;
-	    }   
-	  }
-		  
-	  //location where the smallest timestamp sits in the sorted data
-	  int first_index=0;
-		  
-	  //find where the smallest time stamp sits in the already time sorted data
-	  for(int k=datadeque.size()-1; k>=0; k--) {
-	    if(smallest_timestamp >= datadeque[k].TOF) {
-	      first_index=k-1;
+	  else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ) {
+	    //see if its the end of run
+	    if(head.fEventId==0x8001) {
+	      run=false;
 	      break;
 	    }
+	    
+	    char *fData;
+	    fData=(char*)malloc(head.fDataSize);
+	    gzret=gzread(gz_in,fData,head.fDataSize);
+	    free (fData);	
 	  }
-#ifdef Unpacker_Verbose
-	  cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
-#endif
-
-	  //place everything after that onto the unsorted array
-	  for(uint k=first_index; k<datadeque.size(); k++) {
-#ifdef Unpacker_Verbose
-	    cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
-#endif
-	    db_arr[EVT_SORT]=datadeque[k];
-	    EVT_SORT++;
-	  }
-		      
-	  //remove the ones put onto the array so we dont double things
-	  for(int k=0; k<(deque_size-first_index); k++) {
-	    datadeque.pop_back();
-	  }
-		    
-#ifdef Unpacker_Verbose
-	  cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
-#endif
-	} //end loop over !first_sort
-		
-	  //the first sort is over
-	first_sort=false;
-		
-	//sort the unsorted data
-	heapSort(db_arr, EVT_SORT);
-
-	//push the now sorted data onto the sorted buffer
-	for(int j=0; j<EVT_SORT; j++) {
-	  //Update and push it onto the deque if valid
-	  last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
-	  datadeque.push_back(db_arr[j]);
-	}
-		    
-#ifdef CheckTheDeque
-	cout<<"Checking deque"<<endl;
-	for(int k=0; k<datadeque.size()-1; k++) {
-	  if(datadeque[k+1].TOF < datadeque[k].TOF) {
-	    cout<<"problem with entry "<<k<<endl;
-	  }
-#ifdef Unpacker_Verbose
-	  cout<<k<<"  "<<datadeque[k].TOF<<endl;
-#endif
-	}
-#endif
-		
-#ifdef Eventbuilder_Verbose
-	cout<<"About to event build deque size: "<<datadeque.size()<<endl;
-#endif
-	//Eventbuild
-	while(true) {
 		  
-	  //check to see if the buffer is longer than the length specificed in global.h
-	  if((datadeque[datadeque.size()-1].TOF - datadeque[0].TOF) > buffer_length) {
-		    
-	    //we have started to build
-	    event_building_active=true;
-		    
-	    //clear the event vector
-	    eventvector.clear();
-		    
-	    //first timestamp in the deque
-	    double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	    datadeque.pop_front();  //remove the first entry in the deque
-	    Events_Sent++;
-	    this_send++;
-		    
-	    bool event_build =true;  //bool to do eventbuilding
-		    
-	    while(event_build) {
-	      if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-		eventvector.push_back(datadeque[0]); //put the first event in the events vector
-		datadeque.pop_front();  //remove the first entry in the deque     
-		Events_Sent++;
-		this_send++;
-	      }
-	      else {
-		event_build = false;
+	  else {
+	    // cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
+
+	    TotalBankSize=TotalDataSize;
+	    
+	    uint32_t garbage;
+	    while(TotalBankSize > 0) {
+	      gzret = gzread(gz_in,&garbage, sizeof(garbage));
+	      TotalBankSize -= sizeof(garbage);
+	      //cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
+	    }	    
+
+	  }  //End of catchall   
+	}  //End of EventHeader gzret > 0	
+      } //End of caen2018 format check
+      else {
+	cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<input_params.DataFormat<<RESET<<endl;
+	return -1;
+      }
+
+      //Do the time sorting
+      if(timesort) {
+
+	//At this point we need to start ordering and eventbuilding
+	if(EVTS >= BlockBufferSize) {
+		
+#ifdef Unpacker_Verbose
+	  cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
+#endif
+	  int EVT_SORT=EVTS;
+	  int this_send=0;
+	  int deque_size=datadeque.size();
+		
+	  //the first time through we want to sort and push everything from the first "block" onto the buffer
+	  if(!first_sort) {
+		  
+	    //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
+	    if(event_building_active) {
+	      if(smallest_timestamp < datadeque[0].TOF) {
+		cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
+		cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
+		cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
+		cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
+		cout<<"Exiting"<<endl;
+		ofstream failfile;
+		failfile.open("Failed_Analysis.txt", ios::out | ios::app);
+		failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+		failfile.close();
+		// return -1;
+	      }   
+	    }
+		  
+	    //location where the smallest timestamp sits in the sorted data
+	    int first_index=0;
+		  
+	    //find where the smallest time stamp sits in the already time sorted data
+	    for(int k=datadeque.size()-1; k>=0; k--) {
+	      if(smallest_timestamp >= datadeque[k].TOF) {
+		first_index=k-1;
 		break;
 	      }
 	    }
-			
-	    if(eventvector.size()>0) {
-#ifdef Eventbuilder_Verbose
-	      cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
+#ifdef Unpacker_Verbose
+	    cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
 #endif
-	      //Send it to the analyzer
-	      Analyze_Data(eventvector, input_params);
+
+	    //place everything after that onto the unsorted array
+	    for(uint k=first_index; k<datadeque.size(); k++) {
+#ifdef Unpacker_Verbose
+	      cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
+#endif
+	      db_arr[EVT_SORT]=datadeque[k];
+	      EVT_SORT++;
+	    }
+		      
+	    //remove the ones put onto the array so we dont double things
+	    for(int k=0; k<(deque_size-first_index); k++) {
+	      datadeque.pop_back();
+	    }
+		    
+#ifdef Unpacker_Verbose
+	    cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
+#endif
+	  } //end loop over !first_sort
+		
+	  //the first sort is over
+	  first_sort=false;
+		
+	  //sort the unsorted data
+	  heapSort(db_arr, EVT_SORT);
+
+	  //push the now sorted data onto the sorted buffer
+	  for(int j=0; j<EVT_SORT; j++) {
+	    //Update and push it onto the deque if valid
+	    last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
+	    datadeque.push_back(db_arr[j]);
+	  }
+		    
+#ifdef CheckTheDeque
+	  cout<<"Checking deque"<<endl;
+	  for(int k=0; k<datadeque.size()-1; k++) {
+	    if(datadeque[k+1].TOF < datadeque[k].TOF) {
+	      cout<<"problem with entry "<<k<<endl;
+	    }
+#ifdef Unpacker_Verbose
+	    cout<<k<<"  "<<datadeque[k].TOF<<endl;
+#endif
+	  }
+#endif
+		
+#ifdef Eventbuilder_Verbose
+	  cout<<"About to event build deque size: "<<datadeque.size()<<endl;
+#endif
+	  //Eventbuild
+	  while(true) {
+		  
+	    //check to see if the buffer is longer than the length specificed in global.h
+	    if((datadeque[datadeque.size()-1].TOF - datadeque[0].TOF) > buffer_length) {
+		    
+	      //we have started to build
+	      event_building_active=true;
+		    
+	      //clear the event vector
+	      eventvector.clear();
+		    
+	      //first timestamp in the deque
+	      double first_entry_time = datadeque[0].TOF;  //start of the event in time
+	      eventvector.push_back(datadeque[0]); //put the first event in the events vector
+	      datadeque.pop_front();  //remove the first entry in the deque
+	      Events_Sent++;
+	      this_send++;
+		    
+	      bool event_build =true;  //bool to do eventbuilding
+		    
+	      while(event_build) {
+		if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
+		  eventvector.push_back(datadeque[0]); //put the first event in the events vector
+		  datadeque.pop_front();  //remove the first entry in the deque     
+		  Events_Sent++;
+		  this_send++;
+		}
+		else {
+		  event_build = false;
+		  break;
+		}
+	      }
+			
+	      if(eventvector.size()>0) {
+#ifdef Eventbuilder_Verbose
+		cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
+#endif
+		//Send it to the analyzer
+		Analyze_Data(eventvector, input_params);
+	      }
+	    }
+	    else {
+#ifdef Eventbuilder_Verbose
+	      cout<<"event build complete: "<<datadeque.size()<<endl;
+#endif
+	      break;
 	    }
 	  }
-	  else {
-#ifdef Eventbuilder_Verbose
-	    cout<<"event build complete: "<<datadeque.size()<<endl;
+		
+	  //Reset the event counter and smallest timestamp
+	  EVTS=0;
+	  smallest_timestamp=400000000000000.0;
+		
+#ifdef Unpacker_Verbose
+	  cout<<"total entries at end: "<<datadeque.size()+this_send<<"  Total Sent: "<<Events_Sent<<endl;
 #endif
+	}	
+      } //end of loop on if timesort
+      else {
+	EVTS=0;
+      } //end else
+
+
+    }  //end of while run
+
+    cout<<"Unpacker [INFO]: Run Length: "<<largest_timestamp/1000000000.0<<" seconds"<<endl;
+
+    //Now that we are done sorting we need to empty the buffer
+    cout<<GREEN<<"Unpacker [INFO]: Finsihed Unpacking Data"<<RESET<<endl;
+  
+    //see if anything is left in the unsorted part
+    if(EVTS>0) {
+      cout<<GREEN<<"Unpacker [INFO]: There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer" RESET<<endl;
+   
+#ifdef Eventbuilder_Verbose
+      cout<<"Sorting remaing data"<<first_sort<<" "<<EVTS<<endl;
+      cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
+#endif
+      int EVT_SORT=EVTS;
+      int deque_size=datadeque.size();
+    
+      //the first time through we want to sort and push everything from the first "block" onto the buffer
+      if(!first_sort) {
+      
+	//check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
+	if(event_building_active) {
+	  if(smallest_timestamp < datadeque[0].TOF) {
+	    cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
+	    cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
+	    cout<<RED<<"Exiting"<<RESET<<endl;
+	    ofstream failfile;
+	    failfile.open("Failed_Analysis.txt", ios::out | ios::app);
+	    failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+	    failfile.close();
+	    //  return -1;
+	  }   
+	}
+      
+	//location where the smallest timestamp sits in the sorted data
+	int first_index=0;
+      
+	//find where the smallest time stamp sits in the already time sorted data
+	for(int k=datadeque.size()-1; k>=0; k--) {
+	  if(smallest_timestamp >= datadeque[k].TOF) {
+	    first_index=k-1;
 	    break;
 	  }
 	}
-		
-	//Reset the event counter and smallest timestamp
-	EVTS=0;
-	smallest_timestamp=400000000000000.0;
-		
-#ifdef Unpacker_Verbose
-	cout<<"total events at end: "<<datadeque.size()+this_send<<"  Total Sent: "<<Events_Sent<<endl;
-#endif
-      }	
-    } //end of loop on if timesort
-    else {
-      EVTS=0;
-    } //end else
-
-
-  }  //end of while run
-
-      cout<<"Unpacker [INFO]: Run Length: "<<largest_timestamp/1000000000.0<<" seconds"<<endl;
-
-  //Now that we are done sorting we need to empty the buffer
-  cout<<GREEN<<"Unpacker [INFO]: Finsihed Unpacking Data"<<RESET<<endl;
-  
-  //see if anything is left in the unsorted part
-  if(EVTS>0) {
-    cout<<GREEN<<"Unpacker [INFO]: There are "<<EVTS<<" Events left to sort and "<<datadeque.size()<<" Events left in the Buffer" RESET<<endl;
-   
 #ifdef Eventbuilder_Verbose
-    cout<<"Sorting remaing data"<<first_sort<<" "<<EVTS<<endl;
-    cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
+	cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
 #endif
-    int EVT_SORT=EVTS;
-    int deque_size=datadeque.size();
-    
-    //the first time through we want to sort and push everything from the first "block" onto the buffer
-    if(!first_sort) {
-      
-      //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
-      if(event_building_active) {
-	if(smallest_timestamp < datadeque[0].TOF) {
-	  cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
-	  cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
-	  cout<<RED<<"Exiting"<<RESET<<endl;
-	  ofstream failfile;
-	  failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-	  failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
-	  failfile.close();
-	  //  return -1;
-	}   
-      }
-      
-      //location where the smallest timestamp sits in the sorted data
-      int first_index=0;
-      
-      //find where the smallest time stamp sits in the already time sorted data
-      for(int k=datadeque.size()-1; k>=0; k--) {
-	if(smallest_timestamp >= datadeque[k].TOF) {
-	  first_index=k-1;
-	  break;
+	//place everything after that onto the unsorted array
+	for(uint k=first_index; k<datadeque.size(); k++) {
+#ifdef Eventbuilder_Verbose
+	  cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
+#endif
+	  db_arr[EVT_SORT]=datadeque[k];
+	  EVT_SORT++;
 	}
-      }
-#ifdef Eventbuilder_Verbose
-      cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
-#endif
-      //place everything after that onto the unsorted array
-      for(uint k=first_index; k<datadeque.size(); k++) {
-#ifdef Eventbuilder_Verbose
-	cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
-#endif
-	db_arr[EVT_SORT]=datadeque[k];
-	EVT_SORT++;
-      }
       
-      //remove the ones put onto the array so we dont double things
-      for(int k=0; k<(deque_size-first_index); k++) {
-	datadeque.pop_back();
-      }
+	//remove the ones put onto the array so we dont double things
+	for(int k=0; k<(deque_size-first_index); k++) {
+	  datadeque.pop_back();
+	}
 #ifdef Eventbuilder_Verbose
-      cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
+	cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
 #endif
-    } //end loop over !first_sort
+      } //end loop over !first_sort
     
       //the first sort is over
-    first_sort=false;
+      first_sort=false;
     
-    //sort the unsorted data
-    heapSort(db_arr, EVT_SORT);
+      //sort the unsorted data
+      heapSort(db_arr, EVT_SORT);
       
-    //push the now sorted data onto the sorted buffer
-    for(int j=0; j<EVT_SORT; j++) {
-      //Update and push it onto the deque if valid
-      last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
-      datadeque.push_back(db_arr[j]);
+      //push the now sorted data onto the sorted buffer
+      for(int j=0; j<EVT_SORT; j++) {
+	//Update and push it onto the deque if valid
+	last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
+	datadeque.push_back(db_arr[j]);
+      }
+#ifdef Eventbuilder_Verbose
+      cout<<"About to event build deque size: "<<datadeque.size()<<endl;
+#endif
+      EVTS=0;
     }
-#ifdef Eventbuilder_Verbose
-    cout<<"About to event build deque size: "<<datadeque.size()<<endl;
-#endif
-    EVTS=0;
-  }
   
-  if(timesort && datadeque.size()>0) {
-    // uint64_t entry_counter=0;
+    if(timesort && datadeque.size()>0) {
+      // uint64_t entry_counter=0;
 
-    while(emptythedeque) {
-      eventvector.clear();
-      double first_entry_time = datadeque[0].TOF;  //start of the event in time
-      eventvector.push_back(datadeque[0]); //put the first event in the events vector
-      datadeque.pop_front();  //remove the first entry in the deque
-      Events_Sent++;
+      while(emptythedeque) {
+	eventvector.clear();
+	double first_entry_time = datadeque[0].TOF;  //start of the event in time
+	eventvector.push_back(datadeque[0]); //put the first event in the events vector
+	datadeque.pop_front();  //remove the first entry in the deque
+	Events_Sent++;
     
-      bool event_build =true;  //initilize bool to do eventbuilding
+	bool event_build =true;  //initilize bool to do eventbuilding
     
-      while(event_build && datadeque.size()>0) {
-	if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-	  eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	  datadeque.pop_front();  //remove the first entry in the deque     
-	  Events_Sent++;
+	while(event_build && datadeque.size()>0) {
+	  if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
+	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
+	    datadeque.pop_front();  //remove the first entry in the deque     
+	    Events_Sent++;
+	  }
+	  else {
+	    event_build = false;
+	    break;
+	  }
 	}
-	else {
-	  event_build = false;
-	  break;
-	}
-      }
     
-      if(eventvector.size()>100) {
+	if(eventvector.size()>100) {
 #ifdef Eventbuilder_Verbose
-	cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
+	  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
 #endif
-      }
+	}
     
-      if(eventvector.size()>0) {
-	Analyze_Data(eventvector, input_params);
-      }
+	if(eventvector.size()>0) {
+	  Analyze_Data(eventvector, input_params);
+	}
     
-      if(datadeque.size()==0) {
-	cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
-	emptythedeque=false;
-      }
-    } 
-  }
+	if(datadeque.size()==0) {
+	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
+	  emptythedeque=false;
+	}
+      } 
+    }
 
-} // END OF MIDAS READER
+  } // END OF MIDAS READER
 
 
   //Stage 1 unpacker
-if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
 
-  while(run) {
+    while(run) {
       
-    //Event limit control
-    if(TOTAL_EVTS > EventLimit) {
-      run=false;
-    }
-      
-    //Progress indicator
-    if(TOTAL_EVTS > progresscounter*ProgressInterval) {
-      progresscounter++;
-      if(input_params.Read_Simulation == 0) {
-	cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
+      //Event limit control
+      if(TOTAL_EVTS > EventLimit) {
+	run=false;
       }
-      else {
-	cout<<"Processing Simulated Data"<<endl;
-      }
-
-      if(timesort && datadeque.size()>0) {
-	cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
-	cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
-      }	
-      cout<<TOTAL_EVTS<<" Events Unpacked "<<endl;
-      cout<<Events_Sent<<" Events Analyzed"<<endl;
-      cout<<datadeque.size()<<" Events in the Buffer"<<endl;
-      gettimeofday(&tv,NULL); 
-      time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
       
-      cout << "Average Event Processing Rate: "<<(double)TOTAL_EVTS/(time_elapsed-unpack_begin)<<" Events per second "<<endl;
-      cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-      cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
-      cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
-      
-      BYTES_READ=0;
-      time_elapsed_old = time_elapsed;
-    }
-      
-    gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
-    // gzseek(gz_in,devt_padding,SEEK_CUR);
-      
-    if(gzret!=0) {
-	
-      BYTES_READ += gzret;
-      TOTAL_BYTES += gzret;
-
-      //Fill the array
-      db_arr[TOTAL_EVTS].TOF = devt_stage1.TOF;
-      db_arr[TOTAL_EVTS].Ifast = devt_stage1.Ifast;
-      db_arr[TOTAL_EVTS].Islow = devt_stage1.Islow;
-      db_arr[TOTAL_EVTS].ID = devt_stage1.ID;
-      db_arr[TOTAL_EVTS].Valid = 1; //Everything starts valid
-
-	
-      //need to add the time deviations before time sorting
-      if(db_arr[TOTAL_EVTS].ID < 200) {
-	db_arr[TOTAL_EVTS].TOF += TimeDeviations[db_arr[TOTAL_EVTS].ID];
-      }
-	
-      //Add the DANCE delay
-      if(db_arr[TOTAL_EVTS].ID < 162) {
-	db_arr[TOTAL_EVTS].TOF += DANCE_Delay;
-      }
-	
-      //Add the He3 delay
-      if(db_arr[TOTAL_EVTS].ID == 241) {
-	db_arr[TOTAL_EVTS].TOF += He3_Delay;
-      } 
-	
-      //Add the U235 delay
-      if(db_arr[TOTAL_EVTS].ID == 243) {
-	db_arr[TOTAL_EVTS].TOF += U235_Delay;
-      } 
-	
-      //Add the Li6 delay
-      if(db_arr[TOTAL_EVTS].ID == 244) {
-	db_arr[TOTAL_EVTS].TOF += Li6_Delay;
-      }
-       	
-      TOTAL_EVTS++;
-
-    }
-    else {
-      run=false;
-      break;
-    }
-  }  //end of while(run)
-    
-  cout<<GREEN<<"Unpacker [INFO]: Unpacking Complete"<<RESET<<endl;
-
-  //Since it is stage 1 it is very likely that things are already closely ordered in time but the offsets can play with things so resort 
-  cout<<"Unpacker [INFO]: Time Sorting"<<endl;
-  heapSort(db_arr, TOTAL_EVTS);
-  cout<<GREEN<<"Unpacker [INFO]: Time Sort Complete"<<RESET<<endl;
-
-  cout<<"Unpacker [INFO]: Run Length: "<<db_arr[TOTAL_EVTS-1].TOF/1000000000.0<<" seconds"<<endl;
-
-
-  cout<<"Unpacker [INFO]: Starting Analysis"<<endl;
-
-  uint64_t stage1_counter=0;  //keep track of entries sorted into events     
-  bool event_build =true;  //initilize bool to do eventbuilding
-    
-  while(event_build) {
-      
-    double first_entry_time = db_arr[stage1_counter].TOF;  //start of the event in time
-    eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
-    Events_Sent++;
-    stage1_counter++;
-      
-    bool add_to_current_event = true; 
-      
-    while(add_to_current_event && stage1_counter<=TOTAL_EVTS) {
-      if(db_arr[stage1_counter].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-	eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
-	Events_Sent++;
-	stage1_counter++;
-      }
-      else {
-	//If the timestamp is beyond the current start of event + coincidence window this event is over
-	add_to_current_event = false;
-	  
-	//Send the current event to analyzer
-	if(eventvector.size()>0) {
-	  if(input_params.Evaluate_DeadTime) {
-	    Analyze_DeadTime(eventvector, input_params, hDetLoad);
-	  }
-	  else {
-	    Analyze_Data(eventvector, input_params);
-	  }
-	  eventvector.clear();
+      //Progress indicator
+      if(TOTAL_EVTS > progresscounter*ProgressInterval) {
+	progresscounter++;
+	if(input_params.Read_Simulation == 0) {
+	  cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
 	}
-	  
+	else {
+	  cout<<"Processing Simulated Data"<<endl;
+	}
+
+	if(timesort && datadeque.size()>0) {
+	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
+	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
+	}	
+	cout<<TOTAL_EVTS<<" Entries Unpacked "<<endl;
+	cout<<Events_Sent<<" Entries Analyzed"<<endl;
+	cout<<datadeque.size()<<" Entries in the Buffer"<<endl;
+	gettimeofday(&tv,NULL); 
+	time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
+      
+	cout << "Average Entry Processing Rate: "<<(double)TOTAL_EVTS/(time_elapsed-unpack_begin)<<" Entries per second "<<endl;
+	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl;
+      
+	BYTES_READ=0;
+	time_elapsed_old = time_elapsed;
+      }
+      
+      gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
+      // gzseek(gz_in,devt_padding,SEEK_CUR);
+      
+      if(gzret!=0) {
+	
+	BYTES_READ += gzret;
+	TOTAL_BYTES += gzret;
+	/*
+	//Fill the array
+	db_arr[TOTAL_EVTS].TOF = devt_stage1.TOF;
+	db_arr[TOTAL_EVTS].Ifast = devt_stage1.Ifast;
+	db_arr[TOTAL_EVTS].Islow = devt_stage1.Islow;
+	db_arr[TOTAL_EVTS].ID = devt_stage1.ID;
+	db_arr[TOTAL_EVTS].Valid = 1; //Everything starts valid
+
+	
+	//need to add the time deviations before time sorting
+	if(db_arr[TOTAL_EVTS].ID < 200) {
+	  db_arr[TOTAL_EVTS].TOF += TimeDeviations[db_arr[TOTAL_EVTS].ID];
+	}
+	
+	//Add the DANCE delay
+	if(db_arr[TOTAL_EVTS].ID < 162) {
+	  db_arr[TOTAL_EVTS].TOF += DANCE_Delay;
+	}
+	
+	//Add the He3 delay
+	if(db_arr[TOTAL_EVTS].ID == 241) {
+	  db_arr[TOTAL_EVTS].TOF += He3_Delay;
+	} 
+	
+	//Add the U235 delay
+	if(db_arr[TOTAL_EVTS].ID == 243) {
+	  db_arr[TOTAL_EVTS].TOF += U235_Delay;
+	} 
+	
+	//Add the Li6 delay
+	if(db_arr[TOTAL_EVTS].ID == 244) {
+	  db_arr[TOTAL_EVTS].TOF += Li6_Delay;
+	}
+*/
+
+	//Fill the array
+	db_arr[EVTS].TOF = devt_stage1.TOF;
+	db_arr[EVTS].Ifast = devt_stage1.Ifast;
+	db_arr[EVTS].Islow = devt_stage1.Islow;
+	db_arr[EVTS].ID = devt_stage1.ID;
+	db_arr[EVTS].Valid = 1; //Everything starts valid
+
+	
+	//need to add the time deviations before time sorting
+	if(db_arr[EVTS].ID < 200) {
+	  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+	}
+	
+	//Add the DANCE delay
+	if(db_arr[EVTS].ID < 162) {
+	  db_arr[EVTS].TOF += DANCE_Delay;
+	}
+	
+	//Add the He3 delay
+	if(db_arr[EVTS].ID == 241) {
+	  db_arr[EVTS].TOF += He3_Delay;
+	} 
+	
+	//Add the U235 delay
+	if(db_arr[EVTS].ID == 243) {
+	  db_arr[EVTS].TOF += U235_Delay;
+	} 
+	
+	//Add the Li6 delay
+	if(db_arr[EVTS].ID == 244) {
+	  db_arr[EVTS].TOF += Li6_Delay;
+	}
+       	
+	//keep track of the smallest timestamp
+	if(db_arr[EVTS].TOF<smallest_timestamp) {
+	  smallest_timestamp=db_arr[EVTS].TOF;
+	}    
+      	//keep track of the largest timestamp
+	if(db_arr[EVTS].TOF>largest_timestamp) {
+	  largest_timestamp=db_arr[EVTS].TOF;
+	}  
+	
+	EVTS++;
+	TOTAL_EVTS++;
+
+      }
+      else {
+	run=false;
 	break;
       }
-    } //end of while(add_to_current_event && eye<=TOTAL_EVTS) 
+
+      //Do the time sorting
+      if(timesort) {
+
+	//At this point we need to start ordering and eventbuilding
+	if(EVTS >= BlockBufferSize) {
+		
+#ifdef Unpacker_Verbose
+	  cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
+#endif
+	  int EVT_SORT=EVTS;
+	  int this_send=0;
+	  int deque_size=datadeque.size();
+		
+	  //the first time through we want to sort and push everything from the first "block" onto the buffer
+	  if(!first_sort) {
+		  
+	    //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
+	    if(event_building_active) {
+	      if(smallest_timestamp < datadeque[0].TOF) {
+		cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
+		cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
+		cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
+		cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
+		cout<<"Exiting"<<endl;
+		ofstream failfile;
+		failfile.open("Failed_Analysis.txt", ios::out | ios::app);
+		failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+		failfile.close();
+		// return -1;
+	      }   
+	    }
+		  
+	    //location where the smallest timestamp sits in the sorted data
+	    int first_index=0;
+		  
+	    //find where the smallest time stamp sits in the already time sorted data
+	    for(int k=datadeque.size()-1; k>=0; k--) {
+	      if(smallest_timestamp >= datadeque[k].TOF) {
+		first_index=k-1;
+		break;
+	      }
+	    }
+#ifdef Unpacker_Verbose
+	    cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
+#endif
+
+	    //place everything after that onto the unsorted array
+	    for(uint k=first_index; k<datadeque.size(); k++) {
+#ifdef Unpacker_Verbose
+	      cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
+#endif
+	      db_arr[EVT_SORT]=datadeque[k];
+	      EVT_SORT++;
+	    }
+		      
+	    //remove the ones put onto the array so we dont double things
+	    for(int k=0; k<(deque_size-first_index); k++) {
+	      datadeque.pop_back();
+	    }
+		    
+#ifdef Unpacker_Verbose
+	    cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
+#endif
+	  } //end loop over !first_sort
+		
+	  //the first sort is over
+	  first_sort=false;
+		
+	  //sort the unsorted data
+	  heapSort(db_arr, EVT_SORT);
+
+	  //push the now sorted data onto the sorted buffer
+	  for(int j=0; j<EVT_SORT; j++) {
+	    //Update and push it onto the deque if valid
+	    last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
+	    datadeque.push_back(db_arr[j]);
+	  }
+		    
+#ifdef CheckTheDeque
+	  cout<<"Checking deque"<<endl;
+	  for(int k=0; k<datadeque.size()-1; k++) {
+	    if(datadeque[k+1].TOF < datadeque[k].TOF) {
+	      cout<<"problem with entry "<<k<<endl;
+	    }
+#ifdef Unpacker_Verbose
+	    cout<<k<<"  "<<datadeque[k].TOF<<endl;
+#endif
+	  }
+#endif
+		
+#ifdef Eventbuilder_Verbose
+	  cout<<"About to event build deque size: "<<datadeque.size()<<endl;
+#endif
+	  //Eventbuild
+	  while(true) {
+		  
+	    //check to see if the buffer is longer than the length specificed in global.h
+	    if((datadeque[datadeque.size()-1].TOF - datadeque[0].TOF) > buffer_length) {
+		    
+	      //we have started to build
+	      event_building_active=true;
+		    
+	      //clear the event vector
+	      eventvector.clear();
+		    
+	      //first timestamp in the deque
+	      double first_entry_time = datadeque[0].TOF;  //start of the event in time
+	      eventvector.push_back(datadeque[0]); //put the first event in the events vector
+	      datadeque.pop_front();  //remove the first entry in the deque
+	      Events_Sent++;
+	      this_send++;
+		    
+	      bool event_build =true;  //bool to do eventbuilding
+		    
+	      while(event_build) {
+		if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
+		  eventvector.push_back(datadeque[0]); //put the first event in the events vector
+		  datadeque.pop_front();  //remove the first entry in the deque     
+		  Events_Sent++;
+		  this_send++;
+		}
+		else {
+		  event_build = false;
+		  break;
+		}
+	      }
+			
+	      if(eventvector.size()>0) {
+#ifdef Eventbuilder_Verbose
+		cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
+#endif
+		//Send it to the analyzer
+		Analyze_Data(eventvector, input_params);
+	      }
+	    }
+	    else {
+#ifdef Eventbuilder_Verbose
+	      cout<<"event build complete: "<<datadeque.size()<<endl;
+#endif
+	      break;
+	    }
+	  }
+		
+	  //Reset the event counter and smallest timestamp
+	  EVTS=0;
+	  smallest_timestamp=400000000000000.0;
+		
+#ifdef Unpacker_Verbose
+	  cout<<"total entries at end: "<<datadeque.size()+this_send<<"  Total Sent: "<<Events_Sent<<endl;
+#endif
+	}	
+      } //end of loop on if timesort
+      else {
+	EVTS=0;
+      } //end else
+
+
+
+
+
+    }  //end of while(run)
+
+
+    cout<<"Unpacker [INFO]: Run Length: "<<largest_timestamp/1000000000.0<<" seconds"<<endl;
+
+    //Now that we are done sorting we need to empty the buffer
+    cout<<GREEN<<"Unpacker [INFO]: Finsihed Unpacking Data"<<RESET<<endl;
+  
+    //see if anything is left in the unsorted part
+    if(EVTS>0) {
+      cout<<GREEN<<"Unpacker [INFO]: There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer" RESET<<endl;
+   
+#ifdef Eventbuilder_Verbose
+      cout<<"Sorting remaing data"<<first_sort<<" "<<EVTS<<endl;
+      cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
+#endif
+      int EVT_SORT=EVTS;
+      int deque_size=datadeque.size();
+    
+      //the first time through we want to sort and push everything from the first "block" onto the buffer
+      if(!first_sort) {
+      
+	//check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
+	if(event_building_active) {
+	  if(smallest_timestamp < datadeque[0].TOF) {
+	    cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
+	    cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
+	    cout<<RED<<"Exiting"<<RESET<<endl;
+	    ofstream failfile;
+	    failfile.open("Failed_Analysis.txt", ios::out | ios::app);
+	    failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+	    failfile.close();
+	    //  return -1;
+	  }   
+	}
+      
+	//location where the smallest timestamp sits in the sorted data
+	int first_index=0;
+      
+	//find where the smallest time stamp sits in the already time sorted data
+	for(int k=datadeque.size()-1; k>=0; k--) {
+	  if(smallest_timestamp >= datadeque[k].TOF) {
+	    first_index=k-1;
+	    break;
+	  }
+	}
+#ifdef Eventbuilder_Verbose
+	cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
+#endif
+	//place everything after that onto the unsorted array
+	for(uint k=first_index; k<datadeque.size(); k++) {
+#ifdef Eventbuilder_Verbose
+	  cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
+#endif
+	  db_arr[EVT_SORT]=datadeque[k];
+	  EVT_SORT++;
+	}
+      
+	//remove the ones put onto the array so we dont double things
+	for(int k=0; k<(deque_size-first_index); k++) {
+	  datadeque.pop_back();
+	}
+#ifdef Eventbuilder_Verbose
+	cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
+#endif
+      } //end loop over !first_sort
+    
+      //the first sort is over
+      first_sort=false;
+    
+      //sort the unsorted data
+      heapSort(db_arr, EVT_SORT);
+      
+      //push the now sorted data onto the sorted buffer
+      for(int j=0; j<EVT_SORT; j++) {
+	//Update and push it onto the deque if valid
+	last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
+	datadeque.push_back(db_arr[j]);
+      }
+#ifdef Eventbuilder_Verbose
+      cout<<"About to event build deque size: "<<datadeque.size()<<endl;
+#endif
+      EVTS=0;
+    }
+  
+    if(timesort && datadeque.size()>0) {
+      // uint64_t entry_counter=0;
+
+      while(emptythedeque) {
+	eventvector.clear();
+	double first_entry_time = datadeque[0].TOF;  //start of the event in time
+	eventvector.push_back(datadeque[0]); //put the first event in the events vector
+	datadeque.pop_front();  //remove the first entry in the deque
+	Events_Sent++;
+    
+	bool event_build =true;  //initilize bool to do eventbuilding
+    
+	while(event_build && datadeque.size()>0) {
+	  if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
+	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
+	    datadeque.pop_front();  //remove the first entry in the deque     
+	    Events_Sent++;
+	  }
+	  else {
+	    event_build = false;
+	    break;
+	  }
+	}
+    
+	if(eventvector.size()>100) {
+#ifdef Eventbuilder_Verbose
+	  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
+#endif
+	}
+    
+	if(eventvector.size()>0) {
+	  Analyze_Data(eventvector, input_params);
+	}
+    
+	if(datadeque.size()==0) {
+	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
+	  emptythedeque=false;
+	}
+      } 
+    }
+
+
+
+    /*
+
+
+    
+      cout<<GREEN<<"Unpacker [INFO]: Unpacking Complete"<<RESET<<endl;
+
+      //Since it is stage 1 it is very likely that things are already closely ordered in time but the offsets can play with things so resort 
+      cout<<"Unpacker [INFO]: Time Sorting"<<endl;
+      heapSort(db_arr, TOTAL_EVTS);
+      cout<<GREEN<<"Unpacker [INFO]: Time Sort Complete.  Sorted "<<TOTAL_EVTS<<" Entries"<<RESET<<endl;
+
+      cout<<"Unpacker [INFO]: Run Length: "<<db_arr[TOTAL_EVTS-1].TOF/1000000000.0<<" seconds"<<endl;
+
+
+      cout<<"Unpacker [INFO]: Starting Analysis"<<endl;
+
+      uint64_t stage1_counter=0;  //keep track of entries sorted into events     
+      bool event_build =true;  //initilize bool to do eventbuilding
+    
+      while(event_build) {
+      
+      double first_entry_time = db_arr[stage1_counter].TOF;  //start of the event in time
+      eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
+      Events_Sent++;
+      stage1_counter++;
+      
+      bool add_to_current_event = true; 
+      
+      while(add_to_current_event && stage1_counter<=TOTAL_EVTS) {
+      if(db_arr[stage1_counter].TOF < (first_entry_time + input_params.Coincidence_Window)) {
+      eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
+      Events_Sent++;
+      stage1_counter++;
+      }
+      else {
+      //If the timestamp is beyond the current start of event + coincidence window this event is over
+      add_to_current_event = false;
+	  
+      //Send the current event to analyzer
+      if(eventvector.size()>0) {
+      if(input_params.Evaluate_DeadTime) {
+      Analyze_DeadTime(eventvector, input_params, hDetLoad);
+      }
+      else {
+      Analyze_Data(eventvector, input_params);
+      }
+      eventvector.clear();
+      }
+	  
+      break;
+      }
+      } //end of while(add_to_current_event && eye<=TOTAL_EVTS) 
       
       //Check to see if the next event in the array is beyond the number of events unpacked
-    if(stage1_counter >= TOTAL_EVTS + 1) {
+      if(stage1_counter >= TOTAL_EVTS + 1) {
       event_build = false;
       break;
-    } //end of if(stage1_counter == TOTAL_EVENTS + 1)
-  } //end of while(event_build)
- } //end of if(input_params.Read_Binary==1)
-
-//Make the time deviations if needed (Likely only a stage 0 thing)
-if(input_params.FitTimeDev) {
-  Make_Time_Deviations(input_params.RunNumber);
- }
-  
-//Unpacking is finished.  Return the total number of events unpacked and analyzed
-return TOTAL_EVTS;
-  
-  
+      } //end of if(stage1_counter == TOTAL_EVENTS + 1)
+      } //end of while(event_build)
+    */
+  } //end of if(input_params.Read_Binary==1)
+ 
+  //Make the time deviations if needed (Likely only a stage 0 thing)
+  if(input_params.FitTimeDev) {
+    Make_Time_Deviations(input_params.RunNumber);
+  }
+ 
+  //Unpacking is finished.  Return the total number of events unpacked and analyzed
+  return TOTAL_EVTS;
+ 
+ 
 }
 
   
