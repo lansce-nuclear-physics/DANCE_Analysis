@@ -17,10 +17,10 @@ int totalindex; //Number of TMatrix Pairs read in
 
 int Read_TMatrix() {
 
-  cout <<"Reading "<<"/home/cprokop/CJP/DANCE_Analysis/Config/TMatrix.txt" << endl;
+  cout <<"Reading "<<"TMatrix.txt" << endl;
   
   ifstream timemat;
-  timemat.open("/home/cprokop/CJP/DANCE_Analysis/Config/TMatrix.txt");
+  timemat.open("./Config/TMatrix.txt");
     
   for(int i=0;i<200;i++){
     reftoindex1[i]=-1;
@@ -53,7 +53,7 @@ int Read_TMatrix() {
     cout<<"Read in TMatrix"<<endl;
   }
   else {
-    cout<<"Couldn't open /home/cprokop/CJP/DANCE_Analysis/Config/TMatrix.txt"<<endl;
+    cout<<"Couldn't open TMatrix.txt"<<endl;
   }
   
   return counter;
@@ -73,10 +73,10 @@ void Make_Time_Deviations(int start_run, int end_run) {
   stringstream fpath;
   fpath.str();
   // fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root/";
-  fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root_automated/";
+  fpath << "/data/29/dance/Automated_DANCE_Analysis/stage0_root_automated/";
 
   //stage0
-  int CW = 500;
+  int CW = 500;  // Note: This does not match the current names
   int CBT = 0;
   int DEBT = 0;
    
@@ -115,7 +115,7 @@ void Make_Time_Deviations(int start_run, int end_run) {
       //Stringstream for the outpout file name of td_out
       stringstream outfilename;
       outfilename.str();
-      outfilename << "/home/cprokop/CJP/TimeDeviations" << "/TimeDeviations_Run_" << eye << ".txt";
+      outfilename << "../TimeDeviations" << "/TimeDeviations_Run_" << eye << ".txt";
     
       //initialize the time deviation to 0.  Its cumulative...
       double time_deviation=0;
