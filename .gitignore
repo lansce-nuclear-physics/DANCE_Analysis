@@ -4,3 +4,5 @@
 .*.sw?
 diagnostics/*
 !diagnostics/.gitkeep
+*.root
+*.d
