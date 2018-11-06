@@ -29,10 +29,8 @@
 #define CLEAR "\033[2J"  // clear screen escape code 
 
 //Status indicators
-//#define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
-//#define EventLimit 50000000  //Event limit to shut off the unpacker (2^32 -1)
-#define EventLimit 1000000  //Event limit to shut off the unpacker (2^32 -1)
-#define ProgressInterval 100000   //Progress bar incriments
+#define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
+#define ProgressInterval 1000000   //Progress bar incriments
 
 //File Inputs
 #define TMatrixFile "./Config/TMatrix.txt" 
@@ -55,15 +53,15 @@
 #define RETRIGGERGATE "Retrigger.dat"
 
 //Physics Stuff
-#define	DANCE_FlightPath 20.234 // was 20.28437 meters and 20.2407 and 20.2572 and 20.2352
-#define U235_FlightPath 22.895  // was 22.8 meters and 22.8299 and 22.882
+#define	DANCE_FlightPath 20.2572  // was 20.28437 meters and 20.2407
+#define U235_FlightPath 22.8240  // was 22.8 meters and 22.8299
 #define He3_FlightPath 22.74 //meters
-#define Li6_FlightPath 22.6557 // was 22.607 meters, 22.6121, and 22.7015
+#define Li6_FlightPath 22.6121 // was 22.607 meters
 
-#define DANCE_Delay 230.8239  // ns (Was 523.0 in FARE, and 205.0, 282.26, and 293.82, 204.892 in last version)
-#define U235_Delay 412.721 //ns (Was 322.4 in FARE and 553.2 and 578.2201,397.571 in previous version)
+#define DANCE_Delay 293.82  // ns (Was 523.0 in FARE, and 205.0 and 282.26 in last version)
+#define U235_Delay 544.1223 //ns (Was 322.4 in FARE and 553.2 and 578.2201 in previous version)
 #define He3_Delay 359.3 //ns (Was -207 in previous version)
-#define Li6_Delay 195.9155 //ns (Was 376 in FARE, and 502.9, 203.336 in previous version)
+#define Li6_Delay 500.156 //ns (Was 376 in FARE, and 502.9 in previous version)
 
 //Histogramming
 #define	NeutronE_From 0.002 //Neutron energy from [eV]

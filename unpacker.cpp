@@ -2,15 +2,16 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 07/23/18    *//  
+//*  Last Edit: 11/06/18    *//  
 //***************************//
 
 //File includes
 #include "global.h"
 #include "unpacker.h"
 #include "unpack_vx725_vx730.h"
-#include "structures.h"
 #include "sort_functions.h"
+#include "eventbuilder.h"
+#include "structures.h"
 #include "analyzer.h"
 
 //C/C++ includes
@@ -38,22 +39,10 @@ using namespace std;
 /*size of the DEVT array in the unpacker*/
 #define MaxDEVTArrSize 500000000  //this should be a big number like 5e8 but pay attention
 
-/*size of the block buffer. The unpacker waits this many
-  events before looking at the deque and time sorting.  This 
-  number has huge efficiency implications so dont change it if
-  you dont understand it */
-#define BlockBufferSize 350000
-
-/*Time depth (in seconds) of the buffer.  While you cant know if you 
-  will fail the program will tell you if you did... */
-#define BufferDepth 10  //Read the whole thing in.  DANCE doesnt always flush till the end anyway. 
-
 #define Max_ChAgg_Size 65535  //This is the maximum number of words the channel aggregate can be for the read to work properly
 
 //Verbosity and Error Checking
 
-//#define CheckTheDeque
-//#define Eventbuilder_Verbose
 //#define Unpacker_Verbose
 //#define Scaler_Verbose
 //#define Diagnostic_Verbose
@@ -84,7 +73,6 @@ TH2C *hDigital_Probe2_ID;
 
 TH1I *hID_Raw;
 TH1I *hScalers;
-//TH2S *hWaveform_T0;
 
 //Histograms for Unpacker Things
 int Create_Unpacker_Histograms(Input_Parameters input_params) {
@@ -338,12 +326,14 @@ int Read_DetectorLoad_Histogram(Input_Parameters input_params){
 
 int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 
+  cout.precision(12);
+
   ofstream faillog;
   faillog.open("Readout_Status_Failures.txt", ios::app);
 
   cout<<BLUE<<"Unpacker [INIT]: Initializing Unpacker"<<RESET<<endl<<endl;
 
-  cout<<"Buffer Depth: "<<BufferDepth<<" seconds"<<endl;
+  cout<<"Buffer Depth: "<<input_params.Buffer_Depth<<" seconds"<<endl;
   cout<<"Coincidence Window: "<<input_params.Coincidence_Window<<" ns"<<endl;
   cout<<"Crystal Blocking Time: "<<input_params.Crystal_Blocking_Time<<" ns"<<endl;
   cout<<"DANCE Event Blocking Time: "<<input_params.DEvent_Blocking_Time<<" ns"<<endl;
@@ -373,7 +363,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
   Read_TimeDeviations(input_params);
 
   //Make the ouput diagnostics file
-  if(input_params.Read_Binary == 0 && (strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) && input_params.Read_Simulation==0) {
+  if(input_params.Analysis_Stage == 0 && (strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) && input_params.Read_Simulation==0) {
     Make_Output_Diagnostics_File(input_params.RunNumber);
   }
   
@@ -382,25 +372,14 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
     Make_Output_Binfile(input_params);
   }
   
-  //keep track of timestamps
-  double last_timestamp[2000];
-  for(int eye=0; eye<2000; eye++) {
-    last_timestamp[eye]=0;
-  }
   
-  //define some things for the unpacker
-  double buffer_length = (double)1000000000.0*BufferDepth; //clock ticks
-
   //Boolean control variables
   bool run=true; 
   bool first_sort=true;
   bool event_building_active=false;  //this says whether or not we are event building yet
-  bool emptythedeque=true; //once done clean out the deque
-  bool timesort=true;
 
   //Structures to put data in
   deque<DEVT_BANK> datadeque;                         //Storage container for time sorted data
-  vector<DEVT_BANK> eventvector;                      //Vector to store events for analysis
   
   //CAEN 2015 unpacking
   long devt_padding = 0;                              // padding between banks not divisible by 64 bits
@@ -488,7 +467,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
       if(TOTAL_EVTS > progresscounter*ProgressInterval) {
 	progresscounter++;
 	cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
-	if(timesort && datadeque.size()>0) {
+	if(datadeque.size()>0) {
 	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
 	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
 	}	
@@ -757,10 +736,34 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 		  db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;
    
 		
-		  //need to add the time deviations (if any) before time sorting
-		  if(db_arr[EVTS].ID < 200) {
-		    db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+		  if(input_params.Analysis_Stage > 0) {
+		    //need to add the time deviations before time sorting
+		    if(db_arr[EVTS].ID < 200) {
+		      db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+		    }
+		    
+		    //Add the DANCE delay
+		    if(db_arr[EVTS].ID < 162) {
+		      db_arr[EVTS].TOF += DANCE_Delay;
+		    }
+		    
+		    //Add the He3 delay
+		    if(db_arr[EVTS].ID == 241) {
+		      db_arr[EVTS].TOF += He3_Delay;
+		    } 
+		    
+		    //Add the U235 delay
+		    if(db_arr[EVTS].ID == 243) {
+		      db_arr[EVTS].TOF += U235_Delay;
+		    } 
+		    
+		    //Add the Li6 delay
+		    if(db_arr[EVTS].ID == 244) {
+		      db_arr[EVTS].TOF += Li6_Delay;
+		    }
 		  }
+
+
 
 		  //keep track of the smallest timestamp
 		  if(db_arr[EVTS].TOF<smallest_timestamp) {
@@ -1084,8 +1087,6 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 			//Map it
 			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];  
-
-			//	cout<<func_ret<<"  "<<chagg_data_size<<endl;
 			
 			//Do waveform analysis and calculate times
 			if(vx725_vx730_psd_data.dual_trace) {
@@ -1114,11 +1115,34 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			
 			db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;                                       //Full timestamp in ns
 		
-			//need to add the time deviations (if any) before time sorting
-			if(db_arr[EVTS].ID < 200) {
-			  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+			
+			if(input_params.Analysis_Stage > 0) {
+			  //need to add the time deviations before time sorting
+			  if(db_arr[EVTS].ID < 200) {
+			    db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+			  }
+			  
+			  //Add the DANCE delay
+			  if(db_arr[EVTS].ID < 162) {
+			    db_arr[EVTS].TOF += DANCE_Delay;
+			  }
+			  
+			  //Add the He3 delay
+			  if(db_arr[EVTS].ID == 241) {
+			    db_arr[EVTS].TOF += He3_Delay;
+			  } 
+			  
+			  //Add the U235 delay
+			  if(db_arr[EVTS].ID == 243) {
+			    db_arr[EVTS].TOF += U235_Delay;
+			  } 
+			  
+			  //Add the Li6 delay
+			  if(db_arr[EVTS].ID == 244) {
+			    db_arr[EVTS].TOF += Li6_Delay;
+			  }
 			}
-
+			
 			//keep track of the smallest timestamp
 			if(db_arr[EVTS].TOF<smallest_timestamp) {
 			  smallest_timestamp=db_arr[EVTS].TOF;
@@ -1280,11 +1304,34 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_pha_data.extended_time_stamp;        //16-bit extended time in clock ticks
 			
 			db_arr[EVTS].TOF=dT+2.*db_arr[EVTS].timestamp;                                        //Full timestamp in ns
-		
-			//need to add the time deviations (if any) before time sorting
-			if(db_arr[EVTS].ID < 200) {
-			  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+			
+			if(input_params.Analysis_Stage > 0) {
+			  //need to add the time deviations before time sorting
+			  if(db_arr[EVTS].ID < 200) {
+			    db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+			  }
+			  
+			  //Add the DANCE delay
+			  if(db_arr[EVTS].ID < 162) {
+			    db_arr[EVTS].TOF += DANCE_Delay;
+			  }
+			  
+			  //Add the He3 delay
+			  if(db_arr[EVTS].ID == 241) {
+			    db_arr[EVTS].TOF += He3_Delay;
+			  } 
+			  
+			  //Add the U235 delay
+			  if(db_arr[EVTS].ID == 243) {
+			    db_arr[EVTS].TOF += U235_Delay;
+			  } 
+			  
+			  //Add the Li6 delay
+			  if(db_arr[EVTS].ID == 244) {
+			    db_arr[EVTS].TOF += Li6_Delay;
+			  }
 			}
+		
 			//keep track of the smallest timestamp
 			if(db_arr[EVTS].TOF<smallest_timestamp) {
 			  smallest_timestamp=db_arr[EVTS].TOF;
@@ -1752,163 +1799,28 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	return -1;
       }
 
-      //Do the time sorting
-      if(timesort) {
+      //At this point we need to start ordering and eventbuilding
+      if(EVTS >= input_params.Block_Buffer_Size) {
+	
+	//Sort this block of data
+	func_ret = sort_array(db_arr,datadeque,smallest_timestamp,EVTS,input_params,first_sort,event_building_active);
+	if(func_ret) {
+	  cout<<RED<<"Problem with sort_array in the MIDAS Reader"<<RESET<<endl;
+	  return -1;
+	}
+		
+	//Eventbuild
+	func_ret = build_events(datadeque,event_building_active, input_params, Events_Sent);
+	if(func_ret) {
+	  cout<<RED<<"Problem with build_events in the MIDAS Reader"<<RESET<<endl;
+	  return -1;
+	}
 
-	//At this point we need to start ordering and eventbuilding
-	if(EVTS >= BlockBufferSize) {
-		
-#ifdef Unpacker_Verbose
-	  cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
-#endif
-	  int EVT_SORT=EVTS;
-	  int this_send=0;
-	  int deque_size=datadeque.size();
-		
-	  //the first time through we want to sort and push everything from the first "block" onto the buffer
-	  if(!first_sort) {
-		  
-	    //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
-	    if(event_building_active) {
-	      if(smallest_timestamp < datadeque[0].TOF) {
-		cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
-		cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
-		cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
-		cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
-		cout<<"Exiting"<<endl;
-		ofstream failfile;
-		failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-		failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
-		failfile.close();
-		// return -1;
-	      }   
-	    }
-		  
-	    //location where the smallest timestamp sits in the sorted data
-	    int first_index=0;
-		  
-	    //find where the smallest time stamp sits in the already time sorted data
-	    for(int k=datadeque.size()-1; k>=0; k--) {
-	      if(smallest_timestamp >= datadeque[k].TOF) {
-		first_index=k-1;
-		break;
-	      }
-	    }
-#ifdef Unpacker_Verbose
-	    cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
-#endif
-
-	    //place everything after that onto the unsorted array
-	    for(uint k=first_index; k<datadeque.size(); k++) {
-#ifdef Unpacker_Verbose
-	      cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
-#endif
-	      db_arr[EVT_SORT]=datadeque[k];
-	      EVT_SORT++;
-	    }
-		      
-	    //remove the ones put onto the array so we dont double things
-	    for(int k=0; k<(deque_size-first_index); k++) {
-	      datadeque.pop_back();
-	    }
-		    
-#ifdef Unpacker_Verbose
-	    cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
-#endif
-	  } //end loop over !first_sort
-		
-	  //the first sort is over
-	  first_sort=false;
-		
-	  //sort the unsorted data
-	  heapSort(db_arr, EVT_SORT);
-
-	  //push the now sorted data onto the sorted buffer
-	  for(int j=0; j<EVT_SORT; j++) {
-	    //Update and push it onto the deque if valid
-	    last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
-	    datadeque.push_back(db_arr[j]);
-	  }
-		    
-#ifdef CheckTheDeque
-	  cout<<"Checking deque"<<endl;
-	  for(int k=0; k<datadeque.size()-1; k++) {
-	    if(datadeque[k+1].TOF < datadeque[k].TOF) {
-	      cout<<"problem with entry "<<k<<endl;
-	    }
-#ifdef Unpacker_Verbose
-	    cout<<k<<"  "<<datadeque[k].TOF<<endl;
-#endif
-	  }
-#endif
-		
-#ifdef Eventbuilder_Verbose
-	  cout<<"About to event build deque size: "<<datadeque.size()<<endl;
-#endif
-	  //Eventbuild
-	  while(true) {
-		  
-	    //check to see if the buffer is longer than the length specificed in global.h
-	    if((datadeque[datadeque.size()-1].TOF - datadeque[0].TOF) > buffer_length) {
-		    
-	      //we have started to build
-	      event_building_active=true;
-		    
-	      //clear the event vector
-	      eventvector.clear();
-		    
-	      //first timestamp in the deque
-	      double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	      eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	      datadeque.pop_front();  //remove the first entry in the deque
-	      Events_Sent++;
-	      this_send++;
-		    
-	      bool event_build =true;  //bool to do eventbuilding
-		    
-	      while(event_build) {
-		if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-		  eventvector.push_back(datadeque[0]); //put the first event in the events vector
-		  datadeque.pop_front();  //remove the first entry in the deque     
-		  Events_Sent++;
-		  this_send++;
-		}
-		else {
-		  event_build = false;
-		  break;
-		}
-	      }
-			
-	      if(eventvector.size()>0) {
-#ifdef Eventbuilder_Verbose
-		cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-#endif
-		//Send it to the analyzer
-		Analyze_Data(eventvector, input_params);
-	      }
-	    }
-	    else {
-#ifdef Eventbuilder_Verbose
-	      cout<<"event build complete: "<<datadeque.size()<<endl;
-#endif
-	      break;
-	    }
-	  }
-		
-	  //Reset the event counter and smallest timestamp
-	  EVTS=0;
-	  smallest_timestamp=400000000000000.0;
-		
-#ifdef Unpacker_Verbose
-	  cout<<"total entries at end: "<<datadeque.size()+this_send<<"  Total Sent: "<<Events_Sent<<endl;
-#endif
-	}	
-      } //end of loop on if timesort
-      else {
+	//Reset the event counter and smallest timestamp
 	EVTS=0;
-      } //end else
-
-
+	smallest_timestamp=400000000000000.0;
+	
+      } //end check on block buffer size and eventbuild	
     }  //end of while run
 
     cout<<"Unpacker [INFO]: Run Length: "<<largest_timestamp/1000000000.0<<" seconds"<<endl;
@@ -1918,121 +1830,36 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
   
     //see if anything is left in the unsorted part
     if(EVTS>0) {
+
+
       cout<<GREEN<<"Unpacker [INFO]: There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer" RESET<<endl;
-   
-#ifdef Eventbuilder_Verbose
-      cout<<"Sorting remaing data"<<first_sort<<" "<<EVTS<<endl;
-      cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
-#endif
-      int EVT_SORT=EVTS;
-      int deque_size=datadeque.size();
-    
-      //the first time through we want to sort and push everything from the first "block" onto the buffer
-      if(!first_sort) {
-      
-	//check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
-	if(event_building_active) {
-	  if(smallest_timestamp < datadeque[0].TOF) {
-	    cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
-	    cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
-	    cout<<RED<<"Exiting"<<RESET<<endl;
-	    ofstream failfile;
-	    failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-	    failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
-	    failfile.close();
-	    //  return -1;
-	  }   
-	}
-      
-	//location where the smallest timestamp sits in the sorted data
-	int first_index=0;
-      
-	//find where the smallest time stamp sits in the already time sorted data
-	for(int k=datadeque.size()-1; k>=0; k--) {
-	  if(smallest_timestamp >= datadeque[k].TOF) {
-	    first_index=k-1;
-	    break;
-	  }
-	}
-#ifdef Eventbuilder_Verbose
-	cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
-#endif
-	//place everything after that onto the unsorted array
-	for(uint k=first_index; k<datadeque.size(); k++) {
-#ifdef Eventbuilder_Verbose
-	  cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
-#endif
-	  db_arr[EVT_SORT]=datadeque[k];
-	  EVT_SORT++;
-	}
-      
-	//remove the ones put onto the array so we dont double things
-	for(int k=0; k<(deque_size-first_index); k++) {
-	  datadeque.pop_back();
-	}
-#ifdef Eventbuilder_Verbose
-	cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
-#endif
-      } //end loop over !first_sort
-    
-      //the first sort is over
-      first_sort=false;
-    
-      //sort the unsorted data
-      heapSort(db_arr, EVT_SORT);
-      
-      //push the now sorted data onto the sorted buffer
-      for(int j=0; j<EVT_SORT; j++) {
-	//Update and push it onto the deque if valid
-	last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
-	datadeque.push_back(db_arr[j]);
+  
+      //Sort this block of data
+      func_ret = sort_array(db_arr,datadeque,smallest_timestamp,EVTS,input_params,first_sort,event_building_active);
+       if(func_ret) {
+	cout<<RED<<"Problem with sort_array in the empty stage of the MIDAS Reader"<<RESET<<endl;
+	return -1;
       }
-#ifdef Eventbuilder_Verbose
-      cout<<"About to event build deque size: "<<datadeque.size()<<endl;
-#endif
+
       EVTS=0;
     }
   
-    if(timesort && datadeque.size()>0) {
-      // uint64_t entry_counter=0;
+    if(datadeque.size()>0) {
 
-      while(emptythedeque) {
-	eventvector.clear();
-	double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	datadeque.pop_front();  //remove the first entry in the deque
-	Events_Sent++;
-    
-	bool event_build =true;  //initilize bool to do eventbuilding
-    
-	while(event_build && datadeque.size()>0) {
-	  if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	    datadeque.pop_front();  //remove the first entry in the deque     
-	    Events_Sent++;
-	  }
-	  else {
-	    event_build = false;
-	    break;
-	  }
-	}
-    
-	if(eventvector.size()>100) {
-#ifdef Eventbuilder_Verbose
-	  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-#endif
-	}
-    
-	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, input_params);
-	}
-    
-	if(datadeque.size()==0) {
-	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
-	  emptythedeque=false;
-	}
-      } 
-    }
+      //need to set the buffer depth to zero
+      input_params.Buffer_Depth = 0;
+
+      //Eventbuild
+      func_ret = build_events(datadeque,event_building_active, input_params, Events_Sent);
+      if(func_ret) {
+	cout<<RED<<"Problem with build_events in the empty stage of the MIDAS Reader"<<RESET<<endl;
+	return -1;
+      }
+
+      if(datadeque.size()==0) {
+	cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
+      }
+    } //end check on timesort and datadeque
 
   } // END OF MIDAS READER
 
@@ -2057,7 +1884,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	  cout<<"Processing Simulated Data"<<endl;
 	}
 
-	if(timesort && datadeque.size()>0) {
+	if(datadeque.size()>0) {
 	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
 	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
 	}	
@@ -2083,41 +1910,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	
 	BYTES_READ += gzret;
 	TOTAL_BYTES += gzret;
-	/*
-	//Fill the array
-	db_arr[TOTAL_EVTS].TOF = devt_stage1.TOF;
-	db_arr[TOTAL_EVTS].Ifast = devt_stage1.Ifast;
-	db_arr[TOTAL_EVTS].Islow = devt_stage1.Islow;
-	db_arr[TOTAL_EVTS].ID = devt_stage1.ID;
-	db_arr[TOTAL_EVTS].Valid = 1; //Everything starts valid
-
 	
-	//need to add the time deviations before time sorting
-	if(db_arr[TOTAL_EVTS].ID < 200) {
-	  db_arr[TOTAL_EVTS].TOF += TimeDeviations[db_arr[TOTAL_EVTS].ID];
-	}
-	
-	//Add the DANCE delay
-	if(db_arr[TOTAL_EVTS].ID < 162) {
-	  db_arr[TOTAL_EVTS].TOF += DANCE_Delay;
-	}
-	
-	//Add the He3 delay
-	if(db_arr[TOTAL_EVTS].ID == 241) {
-	  db_arr[TOTAL_EVTS].TOF += He3_Delay;
-	} 
-	
-	//Add the U235 delay
-	if(db_arr[TOTAL_EVTS].ID == 243) {
-	  db_arr[TOTAL_EVTS].TOF += U235_Delay;
-	} 
-	
-	//Add the Li6 delay
-	if(db_arr[TOTAL_EVTS].ID == 244) {
-	  db_arr[TOTAL_EVTS].TOF += Li6_Delay;
-	}
-*/
-
 	//Fill the array
 	db_arr[EVTS].TOF = devt_stage1.TOF;
 	db_arr[EVTS].Ifast = devt_stage1.Ifast;
@@ -2125,32 +1918,34 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	db_arr[EVTS].ID = devt_stage1.ID;
 	db_arr[EVTS].Valid = 1; //Everything starts valid
 
-	
-	//need to add the time deviations before time sorting
-	if(db_arr[EVTS].ID < 200) {
-	  db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+       
+	if(input_params.Analysis_Stage > 0) {
+	  //need to add the time deviations before time sorting
+	  if(db_arr[EVTS].ID < 200) {
+	    db_arr[EVTS].TOF += TimeDeviations[db_arr[EVTS].ID];
+	  }
+	  
+	  //Add the DANCE delay
+	  if(db_arr[EVTS].ID < 162) {
+	    db_arr[EVTS].TOF += DANCE_Delay;
+	  }
+	  
+	  //Add the He3 delay
+	  if(db_arr[EVTS].ID == 241) {
+	    db_arr[EVTS].TOF += He3_Delay;
+	  } 
+	  
+	  //Add the U235 delay
+	  if(db_arr[EVTS].ID == 243) {
+	    db_arr[EVTS].TOF += U235_Delay;
+	  } 
+	  
+	  //Add the Li6 delay
+	  if(db_arr[EVTS].ID == 244) {
+	    db_arr[EVTS].TOF += Li6_Delay;
+	  }
 	}
 	
-	//Add the DANCE delay
-	if(db_arr[EVTS].ID < 162) {
-	  db_arr[EVTS].TOF += DANCE_Delay;
-	}
-	
-	//Add the He3 delay
-	if(db_arr[EVTS].ID == 241) {
-	  db_arr[EVTS].TOF += He3_Delay;
-	} 
-	
-	//Add the U235 delay
-	if(db_arr[EVTS].ID == 243) {
-	  db_arr[EVTS].TOF += U235_Delay;
-	} 
-	
-	//Add the Li6 delay
-	if(db_arr[EVTS].ID == 244) {
-	  db_arr[EVTS].TOF += Li6_Delay;
-	}
-       	
 	//keep track of the smallest timestamp
 	if(db_arr[EVTS].TOF<smallest_timestamp) {
 	  smallest_timestamp=db_arr[EVTS].TOF;
@@ -2169,166 +1964,28 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	break;
       }
 
-      //Do the time sorting
-      if(timesort) {
+      //At this point we need to start ordering and eventbuilding
+      if(EVTS >= input_params.Block_Buffer_Size) {
+	
+	//sort this block of data
+	func_ret = sort_array(db_arr,datadeque,smallest_timestamp,EVTS,input_params,first_sort,event_building_active);
+	if(func_ret) {
+	  cout<<RED<<"Problem with sort_array in the Binary Reader"<<RESET<<endl;
+	  return -1;
+	}
 
-	//At this point we need to start ordering and eventbuilding
-	if(EVTS >= BlockBufferSize) {
-		
-#ifdef Unpacker_Verbose
-	  cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
-#endif
-	  int EVT_SORT=EVTS;
-	  int this_send=0;
-	  int deque_size=datadeque.size();
-		
-	  //the first time through we want to sort and push everything from the first "block" onto the buffer
-	  if(!first_sort) {
-		  
-	    //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
-	    if(event_building_active) {
-	      if(smallest_timestamp < datadeque[0].TOF) {
-		cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
-		cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
-		cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
-		cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
-		cout<<"Exiting"<<endl;
-		ofstream failfile;
-		failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-		failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
-		failfile.close();
-		// return -1;
-	      }   
-	    }
-		  
-	    //location where the smallest timestamp sits in the sorted data
-	    int first_index=0;
-		  
-	    //find where the smallest time stamp sits in the already time sorted data
-	    for(int k=datadeque.size()-1; k>=0; k--) {
-	      if(smallest_timestamp >= datadeque[k].TOF) {
-		first_index=k-1;
-		break;
-	      }
-	    }
-#ifdef Unpacker_Verbose
-	    cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
-#endif
-
-	    //place everything after that onto the unsorted array
-	    for(uint k=first_index; k<datadeque.size(); k++) {
-#ifdef Unpacker_Verbose
-	      cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
-#endif
-	      db_arr[EVT_SORT]=datadeque[k];
-	      EVT_SORT++;
-	    }
-		      
-	    //remove the ones put onto the array so we dont double things
-	    for(int k=0; k<(deque_size-first_index); k++) {
-	      datadeque.pop_back();
-	    }
-		    
-#ifdef Unpacker_Verbose
-	    cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
-#endif
-	  } //end loop over !first_sort
-		
-	  //the first sort is over
-	  first_sort=false;
-		
-	  //sort the unsorted data
-	  heapSort(db_arr, EVT_SORT);
-
-	  //push the now sorted data onto the sorted buffer
-	  for(int j=0; j<EVT_SORT; j++) {
-	    //Update and push it onto the deque if valid
-	    last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
-	    datadeque.push_back(db_arr[j]);
-	  }
-		    
-#ifdef CheckTheDeque
-	  cout<<"Checking deque"<<endl;
-	  for(int k=0; k<datadeque.size()-1; k++) {
-	    if(datadeque[k+1].TOF < datadeque[k].TOF) {
-	      cout<<"problem with entry "<<k<<endl;
-	    }
-#ifdef Unpacker_Verbose
-	    cout<<k<<"  "<<datadeque[k].TOF<<endl;
-#endif
-	  }
-#endif
-		
-#ifdef Eventbuilder_Verbose
-	  cout<<"About to event build deque size: "<<datadeque.size()<<endl;
-#endif
-	  //Eventbuild
-	  while(true) {
-		  
-	    //check to see if the buffer is longer than the length specificed in global.h
-	    if((datadeque[datadeque.size()-1].TOF - datadeque[0].TOF) > buffer_length) {
-		    
-	      //we have started to build
-	      event_building_active=true;
-		    
-	      //clear the event vector
-	      eventvector.clear();
-		    
-	      //first timestamp in the deque
-	      double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	      eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	      datadeque.pop_front();  //remove the first entry in the deque
-	      Events_Sent++;
-	      this_send++;
-		    
-	      bool event_build =true;  //bool to do eventbuilding
-		    
-	      while(event_build) {
-		if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-		  eventvector.push_back(datadeque[0]); //put the first event in the events vector
-		  datadeque.pop_front();  //remove the first entry in the deque     
-		  Events_Sent++;
-		  this_send++;
-		}
-		else {
-		  event_build = false;
-		  break;
-		}
-	      }
-			
-	      if(eventvector.size()>0) {
-#ifdef Eventbuilder_Verbose
-		cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-#endif
-		//Send it to the analyzer
-		Analyze_Data(eventvector, input_params);
-	      }
-	    }
-	    else {
-#ifdef Eventbuilder_Verbose
-	      cout<<"event build complete: "<<datadeque.size()<<endl;
-#endif
-	      break;
-	    }
-	  }
-		
-	  //Reset the event counter and smallest timestamp
-	  EVTS=0;
-	  smallest_timestamp=400000000000000.0;
-		
-#ifdef Unpacker_Verbose
-	  cout<<"total entries at end: "<<datadeque.size()+this_send<<"  Total Sent: "<<Events_Sent<<endl;
-#endif
-	}	
-      } //end of loop on if timesort
-      else {
+	//Eventbuild
+	func_ret = build_events(datadeque,event_building_active, input_params, Events_Sent);
+	if(func_ret) {
+	  cout<<RED<<"Problem with build_events in the Binary Reader"<<RESET<<endl;
+	  return -1;
+	}
+	
+	//Reset the event counter and smallest timestamp
 	EVTS=0;
-      } //end else
-
-
-
-
-
+	smallest_timestamp=400000000000000.0;
+		
+      }	
     }  //end of while(run)
 
 
@@ -2341,182 +1998,32 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
     if(EVTS>0) {
       cout<<GREEN<<"Unpacker [INFO]: There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer" RESET<<endl;
    
-#ifdef Eventbuilder_Verbose
-      cout<<"Sorting remaing data"<<first_sort<<" "<<EVTS<<endl;
-      cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
-#endif
-      int EVT_SORT=EVTS;
-      int deque_size=datadeque.size();
-    
-      //the first time through we want to sort and push everything from the first "block" onto the buffer
-      if(!first_sort) {
-      
-	//check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
-	if(event_building_active) {
-	  if(smallest_timestamp < datadeque[0].TOF) {
-	    cout<<RED<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<RESET<<endl;
-	    cout<<RED<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<RESET<<endl;
-	    cout<<RED<<"Exiting"<<RESET<<endl;
-	    ofstream failfile;
-	    failfile.open("Failed_Analysis.txt", ios::out | ios::app);
-	    failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
-	    failfile.close();
-	    //  return -1;
-	  }   
-	}
-      
-	//location where the smallest timestamp sits in the sorted data
-	int first_index=0;
-      
-	//find where the smallest time stamp sits in the already time sorted data
-	for(int k=datadeque.size()-1; k>=0; k--) {
-	  if(smallest_timestamp >= datadeque[k].TOF) {
-	    first_index=k-1;
-	    break;
-	  }
-	}
-#ifdef Eventbuilder_Verbose
-	cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
-#endif
-	//place everything after that onto the unsorted array
-	for(uint k=first_index; k<datadeque.size(); k++) {
-#ifdef Eventbuilder_Verbose
-	  cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
-#endif
-	  db_arr[EVT_SORT]=datadeque[k];
-	  EVT_SORT++;
-	}
-      
-	//remove the ones put onto the array so we dont double things
-	for(int k=0; k<(deque_size-first_index); k++) {
-	  datadeque.pop_back();
-	}
-#ifdef Eventbuilder_Verbose
-	cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
-#endif
-      } //end loop over !first_sort
-    
-      //the first sort is over
-      first_sort=false;
-    
-      //sort the unsorted data
-      heapSort(db_arr, EVT_SORT);
-      
-      //push the now sorted data onto the sorted buffer
-      for(int j=0; j<EVT_SORT; j++) {
-	//Update and push it onto the deque if valid
-	last_timestamp[db_arr[j].ID] = db_arr[j].TOF;
-	datadeque.push_back(db_arr[j]);
+      //Sort this block of data
+      func_ret = sort_array(db_arr,datadeque,smallest_timestamp,EVTS,input_params,first_sort,event_building_active);
+      if(func_ret) {
+	cout<<RED<<"Problem with sort_array in the empty stage of the Binary Reader"<<RESET<<endl;
+	return -1;
       }
-#ifdef Eventbuilder_Verbose
-      cout<<"About to event build deque size: "<<datadeque.size()<<endl;
-#endif
+      
       EVTS=0;
     }
   
-    if(timesort && datadeque.size()>0) {
-      // uint64_t entry_counter=0;
+    if(datadeque.size()>0) {
 
-      while(emptythedeque) {
-	eventvector.clear();
-	double first_entry_time = datadeque[0].TOF;  //start of the event in time
-	eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	datadeque.pop_front();  //remove the first entry in the deque
-	Events_Sent++;
-    
-	bool event_build =true;  //initilize bool to do eventbuilding
-    
-	while(event_build && datadeque.size()>0) {
-	  if(datadeque[0].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-	    eventvector.push_back(datadeque[0]); //put the first event in the events vector
-	    datadeque.pop_front();  //remove the first entry in the deque     
-	    Events_Sent++;
-	  }
-	  else {
-	    event_build = false;
-	    break;
-	  }
-	}
-    
-	if(eventvector.size()>100) {
-#ifdef Eventbuilder_Verbose
-	  cout<<"Processing Event with Size: "<<eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
-#endif
-	}
-    
-	if(eventvector.size()>0) {
-	  Analyze_Data(eventvector, input_params);
-	}
-    
-	if(datadeque.size()==0) {
-	  cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
-	  emptythedeque=false;
-	}
-      } 
+      //need to set the buffer depth to zero
+      input_params.Buffer_Depth = 0;
+
+      //Eventbuild
+      func_ret = build_events(datadeque,event_building_active, input_params, Events_Sent);
+       if(func_ret) {
+	cout<<RED<<"Problem with build_events in the empty stage of the Binary Reader"<<RESET<<endl;
+	return -1;
+      }
+       
+      if(datadeque.size()==0) {
+	cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
+      }
     }
-
-
-
-    /*
-
-
-    
-      cout<<GREEN<<"Unpacker [INFO]: Unpacking Complete"<<RESET<<endl;
-
-      //Since it is stage 1 it is very likely that things are already closely ordered in time but the offsets can play with things so resort 
-      cout<<"Unpacker [INFO]: Time Sorting"<<endl;
-      heapSort(db_arr, TOTAL_EVTS);
-      cout<<GREEN<<"Unpacker [INFO]: Time Sort Complete.  Sorted "<<TOTAL_EVTS<<" Entries"<<RESET<<endl;
-
-      cout<<"Unpacker [INFO]: Run Length: "<<db_arr[TOTAL_EVTS-1].TOF/1000000000.0<<" seconds"<<endl;
-
-
-      cout<<"Unpacker [INFO]: Starting Analysis"<<endl;
-
-      uint64_t stage1_counter=0;  //keep track of entries sorted into events     
-      bool event_build =true;  //initilize bool to do eventbuilding
-    
-      while(event_build) {
-      
-      double first_entry_time = db_arr[stage1_counter].TOF;  //start of the event in time
-      eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
-      Events_Sent++;
-      stage1_counter++;
-      
-      bool add_to_current_event = true; 
-      
-      while(add_to_current_event && stage1_counter<=TOTAL_EVTS) {
-      if(db_arr[stage1_counter].TOF < (first_entry_time + input_params.Coincidence_Window)) {
-      eventvector.push_back(db_arr[stage1_counter]); //put the first event in the events vector
-      Events_Sent++;
-      stage1_counter++;
-      }
-      else {
-      //If the timestamp is beyond the current start of event + coincidence window this event is over
-      add_to_current_event = false;
-	  
-      //Send the current event to analyzer
-      if(eventvector.size()>0) {
-      if(input_params.Evaluate_DeadTime) {
-      Analyze_DeadTime(eventvector, input_params, hDetLoad);
-      }
-      else {
-      Analyze_Data(eventvector, input_params);
-      }
-      eventvector.clear();
-      }
-	  
-      break;
-      }
-      } //end of while(add_to_current_event && eye<=TOTAL_EVTS) 
-      
-      //Check to see if the next event in the array is beyond the number of events unpacked
-      if(stage1_counter >= TOTAL_EVTS + 1) {
-      event_build = false;
-      break;
-      } //end of if(stage1_counter == TOTAL_EVENTS + 1)
-      } //end of while(event_build)
-    */
   } //end of if(input_params.Read_Binary==1)
  
   //Make the time deviations if needed (Likely only a stage 0 thing)

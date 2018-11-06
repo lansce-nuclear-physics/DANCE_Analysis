@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  structures.h           *// 
-//*  Last Edit: 05/11/18    *//  
+//*  Last Edit: 11/06/18    *//  
 //***************************//
 
 #ifndef STRUCTURES_H
@@ -219,6 +219,12 @@ typedef struct{
   std::string DetectorLoad_HistName;
   int Long_Gate;
   bool Use_Firmware_FineTime;  
+  int Analysis_Stage;
+
+  //Unpacker variables
+  double Buffer_Depth;
+  uint32_t Max_DEVT_Array_Size;
+  uint32_t Block_Buffer_Size;
 
 } Input_Parameters;
 

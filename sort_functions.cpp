@@ -2,14 +2,14 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  sort_functions.cpp     *// 
-//*  Last Edit: 01/23/18    *//  
+//*  Last Edit: 11/06/18    *//  
 //***************************//
 
 //File includes
 #include "sort_functions.h"
 
-//C/C++ includes
-#include <iostream>
+//#define CheckTheDeque
+//#define EventSort_Verbose
 
 // To heapify a subtree rooted with node i which is
 // an index in arr[]. n is size of heap
@@ -51,4 +51,96 @@ void heapSort(DEVT_BANK arr[], int n) {
   }
 }
 
-/* STAGE 0 SORTING */
+
+int sort_array(DEVT_BANK db_arr[], deque<DEVT_BANK> &datadeque, double smallest_timestamp, uint32_t EVTS, Input_Parameters input_params, bool &first_sort, bool event_building_active) {
+
+  
+  int EVT_SORT=EVTS;
+  int deque_size=datadeque.size();
+  
+#ifdef EventSort_Verbose
+  cout<<endl<<"total events at start: "<<EVTS+datadeque.size()<<" deque size: "<<datadeque.size()<<endl;
+#endif
+  
+  //the first time through we want to sort and push everything from the first "block" onto the buffer
+  if(!first_sort) {
+    
+    //check to see if there are any timestamps that originate before the first one in the buffer.  If so event building is broken and the analysis is wrong
+    if(event_building_active) {
+      if(smallest_timestamp < datadeque[0].TOF) {
+	cout<<"WARNING THE SMALLEST TIMESTAMP IS LOWER THAN THE SMALLEST ONE IN THE DEQUE!!"<<endl;
+	cout<<"smallest: "<<smallest_timestamp<<"  smallest in deque: "<<datadeque[0].TOF<<" largest in deque: "<<datadeque[datadeque.size()-1].TOF<<endl;
+	cout<<"Deque Depth: "<<(datadeque[datadeque.size()-1].TOF - datadeque[0].TOF)/(1.0e9)<<" seconds"<<endl;
+	cout<<"Make the deque: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds deeper"<<endl;
+	cout<<"Exiting"<<endl;
+	ofstream failfile;
+	failfile.open("Failed_Analysis.txt", ios::out | ios::app);
+	failfile << "Run: "<<input_params.RunNumber<<" Failed due to insufficient buffer depth...  Add: "<<(datadeque[0].TOF-smallest_timestamp)/(1.0e9)<<" seconds\n";
+	failfile.close();
+        return -1;
+      }   
+    }
+    
+    //location where the smallest timestamp sits in the sorted data
+    int first_index=0;
+    
+    //find where the smallest time stamp sits in the already time sorted data
+    for(int k=datadeque.size()-1; k>=0; k--) {
+      if(smallest_timestamp >= datadeque[k].TOF) {
+	first_index=k-1;
+	break;
+      }
+    }
+#ifdef EventSort_Verbose
+    cout<<"start at "<<first_index<<" of "<<datadeque.size()<<endl;
+#endif
+    
+    //place everything after that onto the unsorted array
+    for(uint k=first_index; k<datadeque.size(); k++) {
+#ifdef EventSort_Verbose
+      cout<<"EVT_SORT: "<<EVT_SORT<<"  k: "<<k<<endl;
+#endif
+      db_arr[EVT_SORT]=datadeque[k];
+      EVT_SORT++;
+    }
+    
+    //remove the ones put onto the array so we dont double things
+    for(int k=0; k<(deque_size-first_index); k++) {
+      datadeque.pop_back();
+    }
+  }
+  
+#ifdef EventSort_Verbose
+  cout<<"Deque Size after reduction: "<<datadeque.size()<<"  About to sort "<<EVT_SORT<<" events"<<endl;
+#endif
+  
+  //the first sort is over
+  first_sort=false;
+  
+  //sort the unsorted data
+  heapSort(db_arr, EVT_SORT);
+  
+  //push the now sorted data onto the sorted buffer
+  for(int j=0; j<EVT_SORT; j++) {
+    //Update and push it onto the deque if valid
+    datadeque.push_back(db_arr[j]);
+  }
+  
+#ifdef CheckTheDeque
+  cout<<"Checking deque"<<endl;
+  for(int k=0; k<datadeque.size()-1; k++) {
+    if(datadeque[k+1].TOF < datadeque[k].TOF) {
+      cout<<"problem with entry "<<k<<endl;
+      return -1
+    }
+#ifdef EventSort_Verbose
+    cout<<k<<"  "<<datadeque[k].TOF<<endl;
+#endif
+  }
+#endif
+
+  return 0;
+
+}
+
+

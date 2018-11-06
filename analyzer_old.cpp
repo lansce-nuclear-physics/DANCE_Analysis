@@ -22,11 +22,10 @@
 #include "TH3.h"
 #include "TCutG.h"
 #include "TGraph.h"
-#include "TMath.h"
 
 using namespace std;
 
-#define Histogram_DetectorLoad
+//#define Histogram_DetectorLoad
 
 //Analyzer stats
 uint32_t events_analyzed;
@@ -126,8 +125,8 @@ TH3F *En_Esum_Mcr;
 TH3F *hTOF_Esum_Mcl;
 TH3F *hTOF_Esum_Mcr;
 
-TH3F *hTOF_Esum_Mcr_Removed[20];
-TH3F *hEn_Esum_Mcr_Removed[20];
+TH3F *hTOF_Esum_Mcr_Removed[12];
+TH3F *hEn_Esum_Mcr_Removed[12];
 
 TH3F *En_Eg_Mcl; // this should have a Qgate on it
 TH3F *En_Eg_Mcr; // this should have a Qgate on it
@@ -268,9 +267,15 @@ int Make_Time_Deviations(int RunNumber) {
     hTimeDev->GetXaxis()->SetRangeUser(-500,500);
 
     //Iteratively Close in on the proper range 
-    for(int kay=3; kay<103; kay++) {
-      hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-(103.0-kay), hTimeDev->GetMean()+(103.0-kay));
-    }
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-100.0, hTimeDev->GetMean()+100.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-50.0, hTimeDev->GetMean()+50.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-10.0, hTimeDev->GetMean()+10.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-5.0, hTimeDev->GetMean()+5.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
+    hTimeDev->GetXaxis()->SetRangeUser(hTimeDev->GetMean()-4.0, hTimeDev->GetMean()+4.0);
+    // cout<<hTimeDev->GetMean()<<"  "<<time_deviation<<endl;
     time_deviation += hTimeDev->GetMean();
     td_out <<index2[eye]<<"   \t"<<time_deviation<<"\n";
   }
@@ -345,12 +350,12 @@ int Make_Output_Binfile(Input_Parameters input_params ) {
   outfilename.str();
   
   //stage0 
-  if(input_params.Analysis_Stage==0) {
+  if(input_params.Read_Binary==0) {
     outfilename << STAGE0_BIN; 
     outfilename <<"/stage0_run_";
   }
   //stage1
-  if(input_params.Analysis_Stage==1) {
+  if(input_params.Read_Binary==1) {
     outfilename << STAGE1_BIN;
     outfilename <<"/stage0_run_";
   }
@@ -396,7 +401,7 @@ int Read_Energy_Calibrations(Input_Parameters input_params) {
   
     bool encalfail=false;
   
-    if(input_params.Analysis_Stage==1) {
+    if(input_params.Read_Binary==1) {
       if(encal.is_open()) {
 	while(!encal.eof()) {
 	  //encal>>id>>temp[0]>>temp[1]>>temp[2]>>temp[3]>>temp[4]>>temp[5];
@@ -421,7 +426,7 @@ int Read_Energy_Calibrations(Input_Parameters input_params) {
 	encalfail=true;
       }
     }
-    if(input_params.Analysis_Stage==0 || encalfail==true)
+    if(input_params.Read_Binary==0 || encalfail==true)
       cout<<"Analyzer [INFO]: Looking for calib_ideal.dat"<<endl;
   
     stringstream idealcal_name;
@@ -635,18 +640,18 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   
   //RAW TOF
-  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,10000000,162,0,162); //TOF for each crystal 
+  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
   hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
   //2D out to 1 ms
   hTOF_Mcl = new TH2D("Mcl_TOF","Mcl_TOF",100000,0,1000000,8,0,8);
 
   //Corrected TOF
-  hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,10000000,162,0,162); //TOF for each crystal 
+  hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",6000000,0,60000000);
   //2D out to 1 ms
-  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,10000000,8,0,8);
+  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,1000000,8,0,8);
 
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
@@ -664,11 +669,11 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   
 
   //Gamma Histograms
-  hGamma = new TH2D("hGamma","hGamma",3500,0,70000,162,0,162);
+  hGamma = new TH2D("hGamma","hGamma",3000,0,60000,162,0,162);
   hGammaCalib = new TH2D("hGammaCalib","hGammaCalib",2000,0.0,20.0,162,0,162);
 
   //Gamma gated on Crystal Mult 1
-  hGamma_Mcr1 = new TH2D("hGamma_Mcr1","hGamma_Mcr1",3500,0,70000,162,0,162);
+  hGamma_Mcr1 = new TH2D("hGamma_Mcr1","hGamma_Mcr1",3000,0,60000,162,0,162);
   hGammaCalib_Mcr1 = new TH2D("hGammaCalib_Mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
 
   //Alpha Histograms
@@ -701,7 +706,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   };
 
 #ifdef Histogram_DetectorLoad
-  if(input_params.Read_Simulation==0) {
+  if(read_simulation==0) {
     hDetectorLoad = new TH1D("DetectorLoad","DetectorLoad",10000000,0,10000000);
     hDetectorLoad_perT0 = new TH1D("DetectorLoad_perT0","DetectorLoad_perT0",10000000,0,10000000);
     hDetectorLoad_En = new TH1D("DetectorLoad_En","DetectorLoad_En",NEbins,x);
@@ -767,7 +772,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   // ------------------------------------------------------------
 
 
-  if(input_params.Analysis_Stage==1 || input_params.Read_Simulation==1) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
 
     hEn = new TH1D("En","En",NEbins,x); //Raw En
     hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
@@ -775,12 +780,12 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
-    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
-    for(int kay=0; kay<20; kay++) {
+    for(int kay=0; kay<12; kay++) {
       //Same spectra but with one gamma ray at random thrown away
-      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),10000,0,100000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
       hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%d_Removed",kay),Form("En_Etot_Mcr_%d_Removed",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     }
 
@@ -884,7 +889,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   hDANCE_Events_per_T0->Write();
 
 #ifdef Histogram_DetectorLoad
-  if(input_params.Read_Simulation==0) { 
+  if(read_simulation==0) { 
     for(int eye=0; eye<10000000; eye++) {
       hDetectorLoad_perT0->SetBinContent(eye+1,Detector_Load[eye]/(160.0*T0_Counter));
       hDetectorLoad->SetBinContent(eye+1,Detector_Load[eye]/(160.0));
@@ -926,7 +931,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   Gamma_Gate->Write();
   Retrigger_Gate->Write();
 
-  if(input_params.Analysis_Stage==1 || input_params.Read_Simulation == 1) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation == 1) {
     hTOF->Write();
     hTOF_Corr->Write();
     hTOF_Mcl->Write();
@@ -940,7 +945,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
 
-    for(int kay=0; kay<20; kay++) {
+    for(int kay=0; kay<12; kay++) {
       hTOF_Esum_Mcr_Removed[kay]->Write();
       hEn_Esum_Mcr_Removed[kay]->Write();
     }
@@ -1242,7 +1247,7 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
     if(devent.Valid == 1) {
      
       //make the removed spectra
-      for(int kay=1; kay<20; kay++) {
+      for(int kay=1; kay<12; kay++) {
 	
 	//Initialize Second DANCE Event
 	devent2.Crystal_mult=0;
@@ -1265,8 +1270,8 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	    devent2.ESum += devent.Ecrystal[eye];
 	    devent2.tof[Crystal_Mult2] = input_params.Artificial_TOF;
 	    devent2.tof_corr[Crystal_Mult2] = devent2.tof[Crystal_Mult2];
-	    devent2.En = devent.En;
-            devent2.En_corr = devent.En_corr;
+	    
+	    devent2.Crystal_mult++;
 	    devent2.Valid=1;  //event is now valid
 	    Crystal_Mult2++;	
 	  }      
@@ -1274,7 +1279,6 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	
 	if(devent2.Valid == 1 ) {
 	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
-	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr,devent2.ESum,devent2.Crystal_mult);
 	}
       }     
     } //end check on valid original dance event
@@ -1487,7 +1491,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
   hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
   // }
   // if(eventvector.size() > 10) {
-  cout<<events_analyzed<<" "<<eventvector.size()<<"  "<<eventvector[0].TOF<<" "<<eventvector[eventvector.size()-1].TOF<<" "<<eventvector[eventvector.size()-1].TOF-eventvector[0].TOF<<endl;
+  //  cout<<eventvector.size()<<endl;
+  //   cout<<eventvector[eventvector.size()-1].TOF-eventvector[0].TOF<<endl;
   // }
   
   //Loop over event 
@@ -1650,9 +1655,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 
 	//Fill detecotor load
 	if(last_t0_timestamp > 0) {
-	  uint32_t temptof = (uint32_t) gr_DANCE_TOF_Corr->Eval((eventvector[eye].TOF-last_t0_timestamp));
+	  uint32_t temptof = (uint32_t)(eventvector[eye].TOF-last_t0_timestamp);
 	  if(temptof>0) {
-	    for(int el=(int)temptof; el<((int)(temptof+input_params.Long_Gate+input_params.Crystal_Blocking_Time)); el++) {
+	    for(int el=(int)temptof; el<((int)(temptof+1000+Crystal_Blocking_Time)); el++) {
 	      if(el >=0 && el < 100000000) {
 		Detector_Load[el]+=1.0;
 	      }
@@ -1821,7 +1826,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
     }
   } //end check of devent.Valid
   
-  if(input_params.Analysis_Stage==1 || input_params.Read_Simulation ==1 ) {
+  if(input_params.Read_Binary==1 || input_params.Read_Simulation ==1 ) {
     
     //Handle various events and do some physics
     if(devent.Valid==1) {
@@ -2013,7 +2018,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       //Make the gamma removed 3D TOF_Mcr_ spectra
       
       //make the removed spectra
-      for(int kay=1; kay<20; kay++) {
+      for(int kay=1; kay<12; kay++) {
 	
 	//Initialize Second DANCE Event
 	devent2.Crystal_mult=0;
@@ -2036,8 +2041,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    devent2.ESum += devent.Ecrystal[eye];
 	    devent2.tof[Crystal_Mult2] = devent.tof[Crystal_Mult];
 	    devent2.tof_corr[Crystal_Mult2] = devent.tof_corr[Crystal_Mult];
-	    devent2.En = devent.En;
-	    devent2.En_corr = devent.En_corr;   
+	    
 	    devent2.Crystal_mult++;
 	    devent2.Valid=1;  //event is now valid
 	    Crystal_Mult2++;	
@@ -2046,7 +2050,6 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	
 	if(devent2.Valid == 1 ) {
 	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
-	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr,devent2.ESum,devent2.Crystal_mult);
 	}
       }     
            

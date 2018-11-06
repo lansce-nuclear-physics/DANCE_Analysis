@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  main.cpp               *// 
-//*  Last Edit: 05/16/18    *//  
+//*  Last Edit: 11/06/18    *//  
 //***************************//
 
 //File includes
@@ -48,7 +48,10 @@ int main(int argc, char *argv[]) {
   input_params.Artificial_TOF=0;
   input_params.Long_Gate=1000;
   input_params.Use_Firmware_FineTime=false;
-
+  input_params.Analysis_Stage = 0;
+  input_params.Buffer_Depth = 10;
+  input_params.Block_Buffer_Size = 250000;
+      
   //Control things
   int RunNum=0;
   string pathtodata;
@@ -170,6 +173,18 @@ int main(int argc, char *argv[]) {
       if(item.compare("Use_Firmware_FineTime") == 0) {
 	cfgf>>input_params.Use_Firmware_FineTime;
       }  
+      if(item.compare("Analysis_Stage") == 0) {
+	cfgf>>input_params.Analysis_Stage;
+      }
+      if(item.compare("Buffer_Depth") == 0) {
+	cfgf>>input_params.Buffer_Depth;
+      } 
+      if(item.compare("Block_Buffer_Size") == 0) {
+	cfgf>>input_params.Block_Buffer_Size;
+      } 
+
+
+
     }
 
     //Set the bool for QGates
@@ -190,6 +205,7 @@ int main(int argc, char *argv[]) {
     
     
     cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
+    cout<<"Analysis Stage: "<<input_params.Analysis_Stage<<endl;
     cout<<"Coincidence Window: "<<input_params.Coincidence_Window<<endl;
     cout<<"Read Binary: "<<input_params.Read_Binary<<endl;
     cout<<"Write Binary: "<<input_params.Write_Binary<<endl;
@@ -197,6 +213,10 @@ int main(int argc, char *argv[]) {
     if(input_params.Read_Simulation) {
       cout<<"Simulated File Name: "<<input_params.Simulation_File_Name<<endl;
     }
+ 
+    cout<<"Buffer Depth: "<<input_params.Buffer_Depth<<" seconds"<<endl;
+    cout<<"Block Buffer Size: "<<input_params.Block_Buffer_Size<<" entries"<<endl;
+     
     cout<<"Crystal Blocking Time: "<<input_params.Crystal_Blocking_Time<<endl;
     cout<<"DANCE Event Blocking Time: "<<input_params.DEvent_Blocking_Time<<endl;
     cout<<"Have Threshold: "<<input_params.HAVE_Threshold<<endl;
@@ -240,7 +260,7 @@ int main(int argc, char *argv[]) {
   stringstream runname;
   runname.str();
     
-  //Stage 0
+  //MIDAS input
   if(input_params.Read_Binary == 0 && input_params.Read_Simulation == 0) {
 
     stringstream midasrunname;
@@ -273,7 +293,7 @@ int main(int argc, char *argv[]) {
     }
   }
   
-  //Stage 1
+  //Binary input that is not simulation
   else if(input_params.Read_Binary == 1 && input_params.Read_Simulation == 0) {
     
     stringstream binaryrunname;
@@ -345,24 +365,23 @@ int main(int argc, char *argv[]) {
   
   //Initialize Things
   Initialize_Analyzer(input_params);
-  //  Initialize_Analyzer(Read_Binary, Write_Binary,Read_Simulation,NQGates,QGates);
 
   //Name of the output root file
   stringstream rootfilename;
   rootfilename.str();
   
   //stage 0
-  if(input_params.Read_Binary==0 && input_params.Read_Simulation==0) {
+  if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
     rootfilename << "./stage0_root/Stage0_Histograms_Run_";
     rootfilename << RunNum;
   }
   //stage 1
-  else if(input_params.Read_Binary==1 && input_params.Read_Simulation==0) {
+  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==0) {
     rootfilename << "./stage1_root/Stage1_Histograms_Run_";
     rootfilename << RunNum;
   }
   //simulation
-  else if(input_params.Read_Binary==0 && input_params.Read_Simulation==1) {
+  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==1) {
     rootfilename << "./stage1_root/Stage1_Histograms_";
     rootfilename << input_params.Simulation_File_Name;
   }
