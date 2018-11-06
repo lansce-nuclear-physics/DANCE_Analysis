@@ -60,6 +60,9 @@ double TimeDeviations[200];
 //holds the id of each detector from dancemap
 int MapID[20][20];
 
+//function return
+int func_ret = 0;
+
 //Histograms
 TH3S *hWaveform_ID;
 TH2S *hWaveform_Li6;
@@ -907,9 +910,6 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 	uint32_t wordstoread = 0;
 	uint32_t chaggcounter = 0;
 	uint32_t chaggwordstoread = 0;
-
-	//function return
-	int func_ret = 0;
 
 	//Start reading the file
 	gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
