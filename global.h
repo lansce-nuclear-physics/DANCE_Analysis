@@ -29,10 +29,10 @@
 #define CLEAR "\033[2J"  // clear screen escape code 
 
 //Status indicators
-//#define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
+#define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
 //#define EventLimit 50000000  //Event limit to shut off the unpacker (2^32 -1)
-#define EventLimit 1000000  //Event limit to shut off the unpacker (2^32 -1)
-#define ProgressInterval 100000   //Progress bar incriments
+//#define EventLimit 1000000  //Event limit to shut off the unpacker (2^32 -1)
+#define ProgressInterval 1000000   //Progress bar incriments
 
 //File Inputs
 #define TMatrixFile "./Config/TMatrix.txt" 

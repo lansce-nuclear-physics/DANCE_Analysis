@@ -1487,7 +1487,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
   hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
   // }
   // if(eventvector.size() > 10) {
-  cout<<events_analyzed<<" "<<eventvector.size()<<"  "<<eventvector[0].TOF<<" "<<eventvector[eventvector.size()-1].TOF<<" "<<eventvector[eventvector.size()-1].TOF-eventvector[0].TOF<<endl;
+  //  cout<<events_analyzed<<" "<<eventvector.size()<<"  "<<eventvector[0].TOF<<" "<<eventvector[eventvector.size()-1].TOF<<" "<<eventvector[eventvector.size()-1].TOF-eventvector[0].TOF<<endl;
   // }
   
   //Loop over event 
