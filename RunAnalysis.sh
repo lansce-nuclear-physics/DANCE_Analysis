@@ -2,10 +2,10 @@
 #set -x
 
 #where the data are
-#input=./hygelac14/
-#input=./stage0_bin_automated
-#input=./dancedaq2/
-input=./stage0_bin
+#input=./hygelac22/
+input=./stage0_bin_automated
+#input=./dancedaq3/
+#input=./stage0_bin
 
 #input=./dancedaq7/
 
@@ -47,7 +47,7 @@ do
      ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
 
 
-    sleep 1
+    sleep 10
 done
 
 #the last one gets the remainder
