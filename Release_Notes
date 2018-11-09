@@ -81,3 +81,5 @@ Version 9.0.0 - Added a struct for parameters from .cfg file and added the histo
 Version 9.1.0 - Added the Long Gate to the input struct. Changed the time deviations algorithm.  Fixed a coding error in the unpacker for the read_binary option that wasn't updated to the struct.
 
 Version 10.0 - Changed the version scheme to not have a minor subrevision since it is essentially meaningless.  Now the Major version will be major changes, and the minor version will be minor changes.  Moved the time sort of the block buffer to a function in sort_functions.cpp instead of repeating the same code 3 times in unpacker.cpp.  Moved the eventbuilding code to a build_events function in a new file called evenbuilder.cpp.  Made the block buffering work for the stage 1 replay.  Made the stage of replay a variable in the .cfg files as well as the buffer depth and the block buffer size.  Allowed for stage1 to read in the MIDAS format eliminating the need for a binary input created from stage0 replay.
+
+Version 10.1 - Fixed an issue with the detector load histogram in the presence of Crystal Blocking.  The long gate and the crystal blocking time should not add together. 

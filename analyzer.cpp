@@ -1652,13 +1652,22 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	if(last_t0_timestamp > 0) {
 	  uint32_t temptof = (uint32_t) gr_DANCE_TOF_Corr->Eval((eventvector[eye].TOF-last_t0_timestamp));
 	  if(temptof>0) {
-	    for(int el=(int)temptof; el<((int)(temptof+input_params.Long_Gate+input_params.Crystal_Blocking_Time)); el++) {
-	      if(el >=0 && el < 100000000) {
-		Detector_Load[el]+=1.0;
+	    if(input_params.Crystal_Blocking_Time > input_params.Long_Gate) {
+	      for(int el=(int)temptof; el<((int)(temptof+input_params.Crystal_Blocking_Time)); el++) {
+		if(el >=0 && el < 100000000) {
+		  Detector_Load[el]+=1.0;
+		}
 	      }
 	    }
-	  }
-	}
+	    else {
+	      for(int el=(int)temptof; el<((int)(temptof+input_params.Long_Gate)); el++) {
+		if(el >=0 && el < 100000000) {
+		  Detector_Load[el]+=1.0;
+		}
+	      }
+	    }
+	  } //end check on temptof
+	} //end check on T0 timestamp
       }
 #endif
     }
