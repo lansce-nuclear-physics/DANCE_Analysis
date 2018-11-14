@@ -1,6 +1,8 @@
 #!/bin/bash
 #set -x
 
+./Copy_Automated.sh
+
 #where the data are
 #input=./hygelac22/
 input=./stage0_bin_automated
