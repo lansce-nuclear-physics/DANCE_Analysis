@@ -66,13 +66,13 @@
 #define Li6_Delay 195.9155 //ns (Was 376 in FARE, and 502.9, 203.336 in previous version)
 
 //Histogramming
-#define	NeutronE_From 0.002 //Neutron energy from [eV]
+#define	NeutronE_From 0.005 //Neutron energy from [eV]
 #define	NeutronE_To 5e6 //Neutron energy to [eV]
-#define	NeutronE_BinsPerDecade 500.0 // Number of neutron energy bins per decade
+#define	NeutronE_BinsPerDecade 400.0 // Number of neutron energy bins per decade
 
 #define	GammaE_From 0.0 //Gamma energy [MeV] - low limit
 #define	GammaE_To 20.0 //Gamma energy [MeV] - upper limit
-#define	GammaE_NoOfBins 400.0 //Number of bins
+#define	GammaE_NoOfBins 200.0 //Number of bins
 
 
 #endif

@@ -129,11 +129,8 @@ TH3F *hTOF_Esum_Mcr;
 TH3F *hTOF_Esum_Mcr_Removed[20];
 TH3F *hEn_Esum_Mcr_Removed[20];
 
-TH3F *En_Eg_Mcl; // this should have a Qgate on it
-TH3F *En_Eg_Mcr; // this should have a Qgate on it
-
-TH3F *Esum_Eg_Mcl; // Eg is Ecluster here
-TH3F *Esum_Eg_Mcr; // Eg is Ecrystal here
+TH3F *En_Ecr1_Ecr2_mcr2;
+TH2F *En_Ecr1_mcr1;
 
 //Beam Monitors
 TH1D *hU235_TOF;  //Raw TOF for U235 Monitor
@@ -635,18 +632,18 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   
   //RAW TOF
-  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,10000000,162,0,162); //TOF for each crystal 
+  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
   hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
   //2D out to 1 ms
-  hTOF_Mcl = new TH2D("Mcl_TOF","Mcl_TOF",100000,0,1000000,8,0,8);
+  hTOF_Mcl = new TH2D("Mcl_TOF","Mcl_TOF",10000,0,1000000,8,0,8);
 
   //Corrected TOF
   hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,10000000,162,0,162); //TOF for each crystal 
   hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
   hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",6000000,0,60000000);
   //2D out to 1 ms
-  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",100000,0,10000000,8,0,8);
+  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",10000,0,1000000,8,0,8);
 
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
@@ -775,20 +772,18 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
-    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+    hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     
+    //Make a plot of energy 1 vs energy 2 for mcr==2 as a function of energy
+    En_Ecr1_Ecr2_mcr2 = new TH3F("En_Ecr1_Ecr2_mcr2","En_Ecr1_Ecr2_mcr2",NEbins,x,NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins);
+    En_Ecr1_mcr1 = new TH2F("En_Ecr1_mcr1","En_Ecr1_mcr1",NEbins,x,NoOfEnergyBins,EtotBins);
+
     for(int kay=0; kay<20; kay++) {
       //Same spectra but with one gamma ray at random thrown away
-      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),10000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
       hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%d_Removed",kay),Form("En_Etot_Mcr_%d_Removed",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    }
-
-    En_Eg_Mcl=new TH3F("En_Eg_Mcl","En_Eg_Mcl gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    En_Eg_Mcr=new TH3F("En_Eg_Mcr","En_Eg_Mcr gated on Q",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    
-    Esum_Eg_Mcl=new TH3F("Esum_Eg_Mcl","Esum_Eg_Mcl where Eg is Ecluster",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
-    Esum_Eg_Mcr=new TH3F("Esum_Eg_Mcr","Esum_Eg_Mcr where Eg is Ecrystal",NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins,20,Mbins);
+    } 
 
 
     if(input_params.QGatedSpectra) {
@@ -815,7 +810,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
       for (int kay=0; kay<input_params.NQGates; kay++) {
 	hTOF_Mcl_QGated[kay] = new TH2D(Form("Mcl_TOF_ESum_Gated_%d",kay),
 					Form("Mcl_TOF_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
-					100000,0,1000000,8,0,8);
+					2000,0,1000000,8,0,8);
       }
     }
 
@@ -939,6 +934,9 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
+
+    En_Ecr1_Ecr2_mcr2->Write();
+    En_Ecr1_mcr1->Write();
 
     for(int kay=0; kay<20; kay++) {
       hTOF_Esum_Mcr_Removed[kay]->Write();
@@ -1400,6 +1398,8 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
       //Mults vs ESum vs En
       En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
       En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
+      
+    
       // cout<<devent.tof[0]<<"  "<<devent.Valid<<endl;
 
       //Mults vs ESum vs TOF
@@ -1923,6 +1923,13 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
       En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
       
+      if(devent.Crystal_mult == 1) {
+	En_Ecr1_mcr1->Fill(devent.En_corr,devent.Ecrystal[0]);
+      }
+      if(devent.Crystal_mult == 2) {
+	En_Ecr1_Ecr2_mcr2->Fill(devent.En_corr,devent.Ecrystal[0],devent.Ecrystal[1]);
+      }
+
       //Mults vs ESum vs TOF
       hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
       hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
