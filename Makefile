@@ -18,7 +18,7 @@ ROOTGLIBS    := $(shell ${ROOTSYS}/bin/root-config --glibs)
 ROOTLDFLAGS  := $(shell ${ROOTSYS}/bin/root-config --ldflags)
 CXXFLAGS += $(ROOTCFLAGS)
 
-INCLUDES:= eventbuilder.h analyzer.h main.h sort_functions.h unpacker.h unpack_vx725_vx730.h structures.h
+INCLUDES:= eventbuilder.h analyzer.h main.h sort_functions.h unpacker.h unpack_vx725_vx730.h structures.h global.h
 
 OBJECTS:= eventbuilder.o analyzer.o main.o sort_functions.o unpacker.o unpack_vx725_vx730.o 
 
@@ -31,11 +31,11 @@ all: main
 main:  $(SRCS) $(OBJECTS) $(INCLUDES) 
 	$(CXX) -o DANCE_Analysis $(OBJECTS) $(CXXFLAGS) $(ROOTGLIBS) $(LIBS)
 
-%.o: %.cpp 
+%.o: %.cpp ${INCLUDES} 
 	$(CXX) $(CXXFLAGS) -c $< 
-%.o: %.cxx 
+%.o: %.cxx ${INCLUDES}
 	$(CXX) $(CXXFLAGS) -c $< 
-%.o: %.c
+%.o: %.c ${INCLUDES}
 	$(CXX) $(CXXFLAGS) -c $< 
 
 clean:
