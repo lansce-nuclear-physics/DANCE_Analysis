@@ -72,6 +72,8 @@ TH1D *hDetectorLoad_perT0; //Average detector load vs TOF
 TH1D *hDetectorLoad_En; //Average detector load vs TOF
 TH1D *hDetectorLoad_En_perT0; //Average detector load vs TOF
 
+TH1D *hEn_BinWidth; //width in ns for each bin in En
+
 TH1D *hDANCE_Entries_per_T0;
 TH1D *hDANCE_Events_per_T0;
 
@@ -93,6 +95,8 @@ TH1D *hTOF;                  //TOF for dance events
 TH2D *hTOF_Mcl;              //MCl vs TOF from dance events
 
 TH1D *hEn_Corr;              //Neutron Energy from dance events
+TH1D *hCrystal_En_Corr;      //Neutron Energy from each crystal dance events
+TH2D *hECrystal_En_Corr;      //Neutron Energy from each crystal dance events
 TH1D *hTOF_Corr;             //TOF for dance events
 TH2D *hTOF_Mcl_Corr;         //MCl vs TOF for dance events
 
@@ -131,6 +135,10 @@ TH3F *hEn_Esum_Mcr_Removed[20];
 
 TH3F *En_Ecr1_Ecr2_mcr2;
 TH2F *En_Ecr1_mcr1;
+
+TH3F *hEn_TimeBetweenCrystals_Mcr;  // En vs time between subsequent hits of the same crystal (ns) vs mcr
+
+TH3F *hEn_Eg_Mcr;
 
 //Beam Monitors
 TH1D *hU235_TOF;  //Raw TOF for U235 Monitor
@@ -190,6 +198,8 @@ Li6_Event li6event;
 
 /* VARIABLES */
 double last_timestamp[256];        //This keeps track of the last timestamp valid or not
+double last_timestamp_devent[256];        //This keeps track of the last timestamp valid or not
+double last_energy_devent[256];        //This keeps track of the last timestamp valid or not
 double last_valid_timestamp[256];  //This keeps track of the last timestamp that was valid
 double current_timestamp[256];     //current timestamp 
 
@@ -233,6 +243,8 @@ uint32_t T0_Counter=0;
 double Detector_Load[100000000];
 uint32_t DANCE_Entries_per_T0=0;
 uint32_t DANCE_Events_per_T0=0;
+
+
 
 //This function goes through and makes the run-by-run time deviations
 int Make_Time_Deviations(int RunNumber) {
@@ -449,7 +461,7 @@ int Read_Energy_Calibrations(Input_Parameters input_params) {
       return 0;
     }
     else {
-      cout<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
+      cout<<RED<<"Analyzer [ERROR]: Can NOT Open Energy Calibration File..."<<RESET<<endl;
       return-1;
     }
   }  
@@ -685,12 +697,18 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   int NoOfEnergyBins=GammaE_NoOfBins;
   double *EtotBins=new double[NoOfEnergyBins+1];
   double *Mbins=new double[21];
+  double *Tbins=new double[3001];
   
   for(int i=0;i<21;i++){
     Mbins[i]=i;
     //   Mbins[i]=0.5+1.*i;
   };
   
+  for(int i=0;i<3001;i++){
+    Tbins[i]=i*10.0;
+  };
+  
+
   double DEGamma=(GammaE_To-GammaE_From)/GammaE_NoOfBins;
   for(int i=0;i<NoOfEnergyBins+1;i++){
     //EtotBins[i]=i*16./128.;
@@ -706,6 +724,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   }
 #endif
 
+  hEn_BinWidth = new TH1D("En_BinWidth","En_BinWidth",NEbins,x);
 
 
   // ------ JU physics histograms (tof) ----------------------------------------------- 
@@ -768,6 +787,8 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
 
     hEn = new TH1D("En","En",NEbins,x); //Raw En
     hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
+    hCrystal_En_Corr = new TH1D("Crystal_En_Corr","Crystal_En_Corr",NEbins,x);  //Corrected En 
+    hECrystal_En_Corr = new TH2D("ECrystal_En_Corr","ECrystal_En_Corr",NEbins,x,NoOfEnergyBins,EtotBins);  //Corrected En vs ECrystal
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
@@ -779,6 +800,10 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     En_Ecr1_Ecr2_mcr2 = new TH3F("En_Ecr1_Ecr2_mcr2","En_Ecr1_Ecr2_mcr2",NEbins,x,NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins);
     En_Ecr1_mcr1 = new TH2F("En_Ecr1_mcr1","En_Ecr1_mcr1",NEbins,x,NoOfEnergyBins,EtotBins);
 
+    hEn_TimeBetweenCrystals_Mcr = new TH3F("En_TimeBetweenCrystals_Mcr","En_TimeBetweenCrystals_Mcr",NEbins,x,3000,Tbins,20,Mbins);
+
+    hEn_Eg_Mcr = new TH3F("En_Eg_Mcr","En_Eg_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    
     for(int kay=0; kay<20; kay++) {
       //Same spectra but with one gamma ray at random thrown away
       hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
@@ -886,6 +911,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
     }
     //make the deadtime relative to En
     for(int eye=0; eye< hDetectorLoad_En->GetNbinsX(); eye++) {
+      
       double temptof = 1.0e9*DANCE_FlightPath / TMath::Sqrt(2*(hDetectorLoad_En->GetXaxis()->GetBinCenter(eye+1))*2.997924589e8*2.997924589e8/(939.565379e6));
       //                        meters                          eV                                                m/s        m/s                 eV/c^2
       
@@ -901,6 +927,12 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   }
 #endif
 
+  for(int eye=0; eye<hEn_BinWidth->GetNbinsX(); eye++) {
+    double temptoflow = 1.0e9*DANCE_FlightPath / TMath::Sqrt(2*(hEn_BinWidth->GetXaxis()->GetBinLowEdge(eye+1))*2.997924589e8*2.997924589e8/(939.565379e6));
+    double temptofhigh = 1.0e9*DANCE_FlightPath / TMath::Sqrt(2*(hEn_BinWidth->GetXaxis()->GetBinLowEdge(eye+1)+hEn_BinWidth->GetXaxis()->GetBinWidth(eye+1))*2.997924589e8*2.997924589e8/(939.565379e6));
+    hEn_BinWidth->SetBinContent(eye+1,temptoflow-temptofhigh);
+  }
+  hEn_BinWidth->Write();
 
   ADC_calib->Write();
   ADC_raw->Write();
@@ -928,6 +960,8 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
     hTOF_Mcl_Corr->Write();
     hEn->Write();
     hEn_Corr->Write();
+    hCrystal_En_Corr->Write();
+    hECrystal_En_Corr->Write();
 
     En_Esum_Mcl->Write();
     En_Esum_Mcr->Write();
@@ -937,6 +971,10 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     En_Ecr1_Ecr2_mcr2->Write();
     En_Ecr1_mcr1->Write();
+
+    hEn_TimeBetweenCrystals_Mcr->Write();
+
+    hEn_Eg_Mcr->Write();
 
     for(int kay=0; kay<20; kay++) {
       hTOF_Esum_Mcr_Removed[kay]->Write();
@@ -1036,6 +1074,8 @@ int Initialize_Analyzer(Input_Parameters input_params) {
   
   for(int eye=0; eye<162; eye++) {
     last_timestamp[eye]=0;
+    last_timestamp_devent[eye]=0;
+    last_energy_devent[eye]=0;
     last_valid_timestamp[eye]=0;
     current_timestamp[eye]=0;
 
@@ -1082,6 +1122,9 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
     
     //this is a dance crystal
     if(id_eye<162) {
+
+
+
       
       //Apply Energy Calibration
       double temp_slow = eventvector[eye].Islow + gRandom->Uniform(0,1);
@@ -1190,8 +1233,8 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
   cout<<events_analyzed<<endl;
 
   // for(int tofbin=1; tofbin<hDetLoad->GetNbinsX(); tofbin++) {
-    for(int tofbin=1; tofbin<1001; tofbin++) {
-// for(int tofbin=100; tofbin<200; tofbin++) {
+  for(int tofbin=1; tofbin<1001; tofbin++) {
+    // for(int tofbin=100; tofbin<200; tofbin++) {
 
     //Set the artificial TOF
 
@@ -1226,6 +1269,7 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
 	devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
 	devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
+	devent.timestamp[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
 	devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
 	devent.ESum += eventvector[eye].Eslow; //ESum 
 	devent.Crystal_mult++;
@@ -1257,14 +1301,14 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	  //Loop over event 
 	  for(int eye=0; eye < devent.Crystal_mult-kay; eye++) {
 	    //Make a DANCE Event 2
-	    devent2.Crystal_ID[Crystal_Mult2] = devent.Crystal_ID[eye];  //Crystal ID
-	    devent2.Cluster_ID[Crystal_Mult2] = devent.Cluster_ID[eye];  //??????
-	    devent2.Ecrystal[Crystal_Mult2] = devent.Ecrystal[eye];   //Energy if calibrated 
+	    devent2.Crystal_ID[Crystal_Mult2] = devent.Crystal_ID[Crystal_Mult2];  //Crystal ID
+	    devent2.Cluster_ID[Crystal_Mult2] = devent.Cluster_ID[Crystal_Mult2];  //??????
+	    devent2.Ecrystal[Crystal_Mult2] = devent.Ecrystal[Crystal_Mult2];   //Energy if calibrated 
 	    devent2.ESum += devent.Ecrystal[eye];
 	    devent2.tof[Crystal_Mult2] = input_params.Artificial_TOF;
 	    devent2.tof_corr[Crystal_Mult2] = devent2.tof[Crystal_Mult2];
-	    devent2.En = devent.En;
-            devent2.En_corr = devent.En_corr;
+	    devent2.En[Crystal_Mult2] = devent.En[Crystal_Mult2];
+            devent2.En_corr[Crystal_Mult2] = devent.En_corr[Crystal_Mult2];
 	    devent2.Valid=1;  //event is now valid
 	    Crystal_Mult2++;	
 	  }      
@@ -1272,7 +1316,7 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	
 	if(devent2.Valid == 1 ) {
 	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
-	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr,devent2.ESum,devent2.Crystal_mult);
+	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr[0],devent2.ESum,devent2.Crystal_mult);
 	}
       }     
     } //end check on valid original dance event
@@ -1283,19 +1327,30 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
       //DANCE Event Diagnostics
       DANCE_Events_per_T0++;
       
-      last_valid_devent_timestamp=devent.tof[0];
+      last_valid_devent_timestamp=devent.timestamp[0];
       
       //Set Last devent timestamp to current one
-      last_devent_timestamp=devent.tof[0];
+      last_devent_timestamp=devent.timestamp[0];
       
       //TOF now set to artificial value
       for(int kay=0; kay<devent.Crystal_mult; kay++) {
 	
 	//Make TOF relative to last T0
 	devent.tof[kay] = input_params.Artificial_TOF;
-		  devent.tof_corr[kay] = devent.tof[kay];
+	devent.tof_corr[kay] = devent.tof[kay];
 
-	
+	//Calculate the neutron energy    
+	devent.En[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[kay])/1e9)/((devent.tof[kay])/1e9)/(2.997924589e8*2.997924589e8); 
+	//Calculate corrrected nuetron energy
+	devent.En_corr[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[kay])/1e9)/((devent.tof_corr[kay])/1e9)/(2.997924589e8*2.997924589e8); 
+
+
+	hEn_Eg_Mcr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],devent.Crystal_mult,1);
+
+	//Fill TOF for each crystal
+	hCrystal_En_Corr->Fill(devent.En_corr[kay],1);
+	hECrystal_En_Corr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],1);
+
 	//Fill the 2D spectrum of TOF vs Crystal
 	hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
 	hCrystalTOF->Fill(devent.tof[kay],1);
@@ -1308,14 +1363,11 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
       
       //   cout<<devent.tof[0]<<endl;
       
-      //Calculate the neutron energy    
-      devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0])/1e9)/((devent.tof[0])/1e9)/(2.997924589e8*2.997924589e8); 
-      //Calculate corrrected nuetron energy
-      devent.En_corr = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[0])/1e9)/((devent.tof_corr[0])/1e9)/(2.997924589e8*2.997924589e8); 
+    
     
       //Fill TOF and En
-      hEn->Fill(devent.En,1);
-      hEn_Corr->Fill(devent.En_corr,1);
+      hEn->Fill(devent.En[0],1);
+      hEn_Corr->Fill(devent.En_corr[0],1);
       hTOF->Fill(devent.tof[0]);
       hTOF_Corr->Fill(devent.tof_corr[0]);
     
@@ -1396,8 +1448,8 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
       hTOF_Mcl_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
     
       //Mults vs ESum vs En
-      En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
-      En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
+      En_Esum_Mcl->Fill(devent.En_corr[0],devent.ESum,devent.Cluster_mult);
+      En_Esum_Mcr->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
       
     
       // cout<<devent.tof[0]<<"  "<<devent.Valid<<endl;
@@ -1419,7 +1471,7 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
 	  for(int kay=0; kay<input_params.NQGates; kay++) {
 	    if(devent.ESum > input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
-	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
+	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En[0], devent.Ecluster[jay], devent.Cluster_mult );
 	      hTOF_Mcl_QGated[kay]->Fill(devent.tof_corr[0],devent.Cluster_mult);
 	    } //Done Checking QGates
 	  } //Done Looping over QGates
@@ -1435,7 +1487,7 @@ int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_
 	for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
 	  for(int kay=0; kay<input_params.NQGates; kay++) {
 	    if(devent.ESum >input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
-	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En, devent.Ecrystal[jay], devent.Crystal_mult );
+	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En[0], devent.Ecrystal[jay], devent.Crystal_mult );
 	      ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
 	    } //Done Checking QGates
 	  } //Done Looping over QGates
@@ -1597,6 +1649,11 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       if(Retrigger_Gate->IsInside((current_timestamp[id_eye]-last_timestamp[id_eye]),(current_energy[id_eye]/last_energy[id_eye]))) {
 	eventvector[eye].Valid=0;
       }
+
+      //Upper Level Discriminator to reject junk that appears huge because of invalid conversion between signed and unsigned integers
+      if(eventvector[eye].Islow > 60000) {
+	eventvector[eye].Valid=0;
+      }
       
       if(eventvector[eye].Valid==1) {
 	//Fill ADC Calib
@@ -1628,6 +1685,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
 	    devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
 	    devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
+	    devent.timestamp[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
 	    devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
 	    devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
 	    devent.ESum += eventvector[eye].Eslow; //ESum 
@@ -1786,19 +1844,19 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       DANCE_Events_per_T0++;
 
       //DEvent Blocking Time
-      if((devent.tof[0]-last_valid_devent_timestamp) < input_params.DEvent_Blocking_Time) {
+      if((devent.timestamp[0]-last_valid_devent_timestamp) < input_params.DEvent_Blocking_Time) {
 	devent.Valid=0;
       }
       else {
-	hTimeBetweenDEvents->Fill(devent.tof[0]-last_devent_timestamp);
-	hTimeBetweenDEvents_ESum_Mcr->Fill(devent.tof[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);
+	hTimeBetweenDEvents->Fill(devent.timestamp[0]-last_devent_timestamp);
+	hTimeBetweenDEvents_ESum_Mcr->Fill(devent.timestamp[0]-last_devent_timestamp,devent.ESum,devent.Crystal_mult);
 
 	//Update the last valid devent timestamp.  Same non-paralyzable model
-	last_valid_devent_timestamp=devent.tof[0];
+	last_valid_devent_timestamp=devent.timestamp[0];
       }
      
       //Set Last devent timestamp to current one
-      last_devent_timestamp=devent.tof[0];
+      last_devent_timestamp=devent.timestamp[0];
       
       //TOF now relative to last T0
       for(int kay=0; kay<devent.Crystal_mult; kay++) {
@@ -1815,6 +1873,17 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	  devent.Valid=0;
 	}
 	
+	//Calculate the neutron energy    
+	devent.En[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[kay])/1e9)/((devent.tof[kay])/1e9)/(2.997924589e8*2.997924589e8); 
+	//Calculate corrrected nuetron energy
+	devent.En_corr[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[kay])/1e9)/((devent.tof_corr[kay])/1e9)/(2.997924589e8*2.997924589e8); 
+
+	hEn_Eg_Mcr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],devent.Crystal_mult,1);
+
+	//Fill TOF for each crystal
+	hCrystal_En_Corr->Fill(devent.En_corr[kay],1);
+	hECrystal_En_Corr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],1);
+
 	//Fill the 2D spectrum of TOF vs Crystal
 	hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
 	hCrystalTOF->Fill(devent.tof[kay],1);
@@ -1835,14 +1904,18 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
     //Handle various events and do some physics
     if(devent.Valid==1) {
       
-      //Calculate the neutron energy    
-      devent.En = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[0])/1e9)/((devent.tof[0])/1e9)/(2.997924589e8*2.997924589e8); 
-      //Calculate corrrected nuetron energy
-      devent.En_corr = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[0])/1e9)/((devent.tof_corr[0])/1e9)/(2.997924589e8*2.997924589e8); 
+    
+
+      for(int kay=0; kay<devent.Crystal_mult; kay++) {
+	hEn_TimeBetweenCrystals_Mcr->Fill(last_energy_devent[devent.Crystal_ID[kay]],(devent.timestamp[kay]-last_timestamp_devent[devent.Crystal_ID[kay]]),devent.Crystal_mult);
+	last_timestamp_devent[devent.Crystal_ID[kay]] = devent.timestamp[kay];
+	last_energy_devent[devent.Crystal_ID[kay]] = devent.En_corr[kay];
+
+      }
       
       //Fill TOF and En
-      hEn->Fill(devent.En,1);
-      hEn_Corr->Fill(devent.En_corr,1);
+      hEn->Fill(devent.En[0],1);
+      hEn_Corr->Fill(devent.En_corr[0],1);
       hTOF->Fill(devent.tof[0]);
       hTOF_Corr->Fill(devent.tof_corr[0]);
 
@@ -1920,14 +1993,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       hTOF_Mcl_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
 
       //Mults vs ESum vs En
-      En_Esum_Mcl->Fill(devent.En_corr,devent.ESum,devent.Cluster_mult);
-      En_Esum_Mcr->Fill(devent.En_corr,devent.ESum,devent.Crystal_mult);
+      En_Esum_Mcl->Fill(devent.En_corr[0],devent.ESum,devent.Cluster_mult);
+      En_Esum_Mcr->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
       
       if(devent.Crystal_mult == 1) {
-	En_Ecr1_mcr1->Fill(devent.En_corr,devent.Ecrystal[0]);
+	En_Ecr1_mcr1->Fill(devent.En_corr[0],devent.Ecrystal[0]);
       }
       if(devent.Crystal_mult == 2) {
-	En_Ecr1_Ecr2_mcr2->Fill(devent.En_corr,devent.Ecrystal[0],devent.Ecrystal[1]);
+	En_Ecr1_Ecr2_mcr2->Fill(devent.En_corr[0],devent.Ecrystal[0],devent.Ecrystal[1]);
       }
 
       //Mults vs ESum vs TOF
@@ -1982,7 +2055,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
 	  for(int kay=0; kay<input_params.NQGates; kay++) {
 	    if(devent.ESum > input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
-	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En, devent.Ecluster[jay], devent.Cluster_mult );
+	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En_corr[0], devent.Ecluster[jay], devent.Cluster_mult );
 	      hTOF_Mcl_QGated[kay]->Fill(devent.tof_corr[0],devent.Cluster_mult);
 	    } //Done Checking QGates
 	  } //Done Looping over QGates
@@ -1998,7 +2071,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
 	  for(int kay=0; kay<input_params.NQGates; kay++) {
 	    if(devent.ESum >input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
-	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En, devent.Ecrystal[jay], devent.Crystal_mult );
+	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En_corr[0], devent.Ecrystal[jay], devent.Crystal_mult );
 	      ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
 	    } //Done Checking QGates
 	  } //Done Looping over QGates
@@ -2050,10 +2123,10 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    devent2.Cluster_ID[Crystal_Mult2] = devent.Cluster_ID[eye];  //??????
 	    devent2.Ecrystal[Crystal_Mult2] = devent.Ecrystal[eye];   //Energy if calibrated 
 	    devent2.ESum += devent.Ecrystal[eye];
-	    devent2.tof[Crystal_Mult2] = devent.tof[Crystal_Mult];
-	    devent2.tof_corr[Crystal_Mult2] = devent.tof_corr[Crystal_Mult];
-	    devent2.En = devent.En;
-	    devent2.En_corr = devent.En_corr;   
+	    devent2.tof[Crystal_Mult2] = devent.tof[Crystal_Mult2];
+	    devent2.tof_corr[Crystal_Mult2] = devent.tof_corr[Crystal_Mult2];
+	    devent2.En[Crystal_Mult2] = devent.En[Crystal_Mult2];
+	    devent2.En_corr[Crystal_Mult2] = devent.En_corr[Crystal_Mult2];   
 	    devent2.Crystal_mult++;
 	    devent2.Valid=1;  //event is now valid
 	    Crystal_Mult2++;	
@@ -2062,7 +2135,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	
 	if(devent2.Valid == 1 ) {
 	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
-	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr,devent2.ESum,devent2.Crystal_mult);
+	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr[0],devent2.ESum,devent2.Crystal_mult);
 	}
       }     
            
