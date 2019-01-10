@@ -48,8 +48,8 @@ using namespace std;
 //#define Diagnostic_Verbose
 
 //Diagnostics Histogramming
-//#define Histogram_Waveforms 
-//#define Histogram_Digital_Probes 
+#define Histogram_Waveforms 
+#define Histogram_Digital_Probes 
 
 //output diagnostics file
 ofstream outputdiagnosticsfile;
@@ -77,6 +77,9 @@ TH2C *hDigital_Probe2_ID;
 TH1I *hID_Raw;
 TH1I *hScalers;
 
+TH1S *hWaveforms[20];
+int waveform_counter=0;
+
 //Histograms for Unpacker Things
 int Create_Unpacker_Histograms(Input_Parameters input_params) {
   
@@ -84,6 +87,10 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
   
   //Make a histogram for waveforms
   if(input_params.Read_Binary==0) {
+    for(int eye=0; eye<20; eye++){
+      hWaveforms[eye] = new TH1S(Form("hWaveform_%d",eye),Form("hWaveform_%d",eye),80,0,80);
+    }
+
 #ifdef Histogram_Waveforms 
     hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,162,0,162);
     hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",200,0,200,2000,0,20000);
@@ -114,6 +121,10 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
 
   if(input_params.Read_Binary==0) {
 #ifdef Histogram_Waveforms
+    for(int eye=0; eye<20; eye++){
+      hWaveforms[eye]->Write();
+    }
+    
     hWaveform_ID->Write();
     hWaveform_T0->Write();
     hWaveform_Li6->Write();
@@ -1183,9 +1194,18 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params) {
 			//Fill waveform histograms
 			if(input_params.Read_Binary==0) {
 			  if(db_arr[EVTS].ID<162) {
+			    if(waveform_counter < 20) {
+			      if(db_arr[EVTS].Islow > 5000 && db_arr[EVTS].Ifast >500 && db_arr[EVTS].Ifast <1000) {
+				for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+				  hWaveforms[waveform_counter]->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+				}
+				waveform_counter++;
+			      }
+			    }
 			    for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
 			      hWaveform_ID->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
 			    }
+			    
 			  }			
 			  
 			  if(db_arr[EVTS].ID == 241) {
