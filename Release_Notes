@@ -85,3 +85,5 @@ Version 10.0 - Changed the version scheme to not have a minor subrevision since 
 Version 10.1 - Fixed an issue with the detector load histogram in the presence of Crystal Blocking.  The long gate and the crystal blocking time should not add together. 
 
 Version 10.2 - Added tracking of header files in the Makefile.
+
+Version 10.3 - Added upper level discriminator for rejecting the events with negative slow integrals that are converted to a large number due to unsigned to signed integer conversion.
