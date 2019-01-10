@@ -131,8 +131,9 @@ typedef struct {
 
 // DANCE event
 typedef struct{
-  double En;                 //Neutron energy from TOF
-  double En_corr;            //Neutron energy from TOF corrected for moderator function
+  double En[162];                 //Neutron energy from TOF
+  double En_corr[162];            //Neutron energy from TOF corrected for moderator function
+  double timestamp[162];     //Timestamp of the crystal
   double tof[162];           //Neutron Time-Of-Flight from each crystal
   double tof_corr[162];      //Neutron Time-Of-Flight from each crystal corrected for moderator function
   uint16_t Crystal_mult;     //DANCE crystal multiplicity 
