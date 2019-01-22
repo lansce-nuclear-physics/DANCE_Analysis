@@ -1454,7 +1454,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 
     entries_analyzed++;
     
-    if(eventvector[eye].Valid = 0) {
+    if(eventvector[eye].Valid == 0) {
       entries_analyzed++;
     }
     
