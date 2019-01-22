@@ -87,3 +87,5 @@ Version 10.1 - Fixed an issue with the detector load histogram in the presence o
 Version 10.2 - Added tracking of header files in the Makefile.
 
 Version 10.3 - Added upper level discriminator for rejecting the events with negative slow integrals that are converted to a large number due to unsigned to signed integer conversion.
+
+Version 10.4 - Added an invalid entry counter output to the analyzer.

@@ -27,10 +27,12 @@
 using namespace std;
 
 #define Histogram_DetectorLoad
+#define Make_Removed_Spectra
 
 //Analyzer stats
 uint32_t events_analyzed;
 uint32_t entries_analyzed;
+uint32_t invalid_entries_analyzed;
 uint32_t analyzer_counter;
 
 //output binary file
@@ -60,7 +62,10 @@ TH1D *hEventLength;  //length in ns of the event (diagnostic)
 TH2D *hEventLength_Etot; //ESum vs Event Legnth
 TH2D *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
 TH2D *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
+TH2D *hTimeBetweenCrystals_LongShortRatio; //ratio of the present long/short integrals vs time difference between hits in the same cyrstal (ns)
+TH2D *hELong_LongShortRatio; //ratio of the present long/short integrals vs time difference between hits in the same cyrstal (ns)
 TH1D *hTimeBetweenDEvents;  //time between subsequent DANCE events (ns)
+TH1D *hInvalid_ID; //fill this when detectors are not valid after event processing
 TH3D *hTimeBetweenDEvents_ESum_Mcr; //DANCE ESum vs time between subsequent DANCE events for Mcr==1
 TH1D *hTimeBetweenT0s; //time between T0s (ns)
 TH2D *hCrystalIDvsTOF; //TOF for each crystal 
@@ -639,6 +644,9 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hEventLength_Etot = new TH2D("EventLength_Etot","EventLength_Etot",1000,0,10,400,0,20);
   hTimeBetweenCrystals = new TH2D("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
   hTimeBetweenCrystals_EnergyRatio = new TH2D("TimeBetweenCrystals_EnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
+  hTimeBetweenCrystals_LongShortRatio = new TH2D("TimeBetweenCrystals_LongShortRatio","TimeBetweenCrystals_LongShortRatio",1250,0,10000,1000,0,100);
+  hELong_LongShortRatio = new TH2D("ELong_LongShortRatio","ELong_LongShortRatio",1200,0.,12.0,1000,0,100);
+  hInvalid_ID = new TH1D("Invalid_ID","Invalid_ID",162,0,162);
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
   hTimeBetweenDEvents_ESum_Mcr = new TH3D("TimeBetweenDEvents_ESum_Mcr","TimeBetweenDEvents_ESum_Mcr",1000,0,10000,500,0,10,20,0,20);
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
@@ -804,12 +812,13 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
 
     hEn_Eg_Mcr = new TH3F("En_Eg_Mcr","En_Eg_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     
+#ifdef Make_Removed_Spectra
     for(int kay=0; kay<20; kay++) {
       //Same spectra but with one gamma ray at random thrown away
       hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
       hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%d_Removed",kay),Form("En_Etot_Mcr_%d_Removed",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     } 
-
+#endif
 
     if(input_params.QGatedSpectra) {
       
@@ -892,7 +901,10 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   hEventLength_Etot->Write();
   hTimeBetweenCrystals->Write();
   hTimeBetweenCrystals_EnergyRatio->Write();
-  hTimeBetweenDEvents->Write();
+   hTimeBetweenCrystals_LongShortRatio->Write();
+   hELong_LongShortRatio->Write();
+   hInvalid_ID->Write();
+   hTimeBetweenDEvents->Write();
   hTimeBetweenDEvents_ESum_Mcr->Write();
   hTimeBetweenT0s->Write();
   hCrystalIDvsTOF_Corr->Write();
@@ -976,11 +988,13 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     hEn_Eg_Mcr->Write();
 
+#ifdef Make_Removed_Spectra
     for(int kay=0; kay<20; kay++) {
       hTOF_Esum_Mcr_Removed[kay]->Write();
       hEn_Esum_Mcr_Removed[kay]->Write();
     }
-    
+#endif
+
     if(input_params.QGatedSpectra) {
       for (int kay=0; kay<input_params.NQGates; kay++) {
 	En_Ecl_Mcl_QGated[kay]->Write();
@@ -1064,6 +1078,7 @@ int Initialize_Analyzer(Input_Parameters input_params) {
 
   events_analyzed=0;
   entries_analyzed=0;
+  invalid_entries_analyzed=0;
   analyzer_counter=1;
 
   Read_Moderation_Time_Graphs();
@@ -1106,417 +1121,14 @@ int Initialize_Analyzer(Input_Parameters input_params) {
 }
 
 
-int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_params, TH1D *hDetLoad) {
-
-  hEventLength->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF);
-
-  //Loop over event 
-  for(uint32_t eye=0; eye<eventvector.size(); eye++) {
-
-    //Fill ID histogram
-    hID->Fill(eventvector[eye].ID);
-    int id_eye=eventvector[eye].ID;
-    
-    //Place the current time in the 
-    current_timestamp[id_eye] = eventvector[eye].TOF;
-    
-    //this is a dance crystal
-    if(id_eye<162) {
-
-
-
-      
-      //Apply Energy Calibration
-      double temp_slow = eventvector[eye].Islow + gRandom->Uniform(0,1);
-      double temp_fast = eventvector[eye].Ifast + gRandom->Uniform(0,1);
-      
-      eventvector[eye].Eslow = 0.001*(temp_slow*temp_slow*slow_quad[eventvector[eye].ID] +
-				      temp_slow*slow_slope[eventvector[eye].ID] +
-				      slow_offset[eventvector[eye].ID]);
-      
-      eventvector[eye].Efast = 0.001*(temp_fast*temp_fast*fast_quad[eventvector[eye].ID] +
-				      temp_fast*fast_slope[eventvector[eye].ID] +
-				      fast_offset[eventvector[eye].ID]);
-      
-      //  cout<<eventvector[eye].Eslow<<"  "<<temp_slow<<endl;
-
-      //update the current energy
-      current_energy[id_eye] = eventvector[eye].Eslow;
-
-      if(input_params.HAVE_Threshold==1) {
-	if(eventvector[eye].Eslow < input_params.Energy_Threshold) {
-	  eventvector[eye].Valid=0;
-	}
-      }
-      
-      //Coincidences
-      if(eventvector.size() > 1 && eye < (eventvector.size()-1)) {
-	
-	//start with the next one
-	for(uint32_t jay=eye+1; jay<eventvector.size(); jay++) {
-	  
-	  int id_jay = eventvector[jay].ID;
-	  
-	  if(id_jay<162) {
-
-	    //time difference between crystal jay and eye
-	    double ddT = eventvector[jay].TOF - eventvector[eye].TOF;
-	    
-	    //Fill the coincidence matrix
-	    hCoinCAEN->Fill(id_eye,id_jay,1);
-	    hCoinCAEN->Fill(id_jay,id_eye,1);
-	    
-	    //Look at time deviations
-	    //Check relative to 0 first
-	    if(id_eye==0) { 
-	      hTimeDev_Rel0->Fill(-ddT,id_jay,1);
-	    } 
-	    if(id_jay==0) {
-	      hTimeDev_Rel0->Fill(ddT,id_eye,1);
-	    }
-	    
-	    //id11 is the index of where this crystal is in TMatrix if it is the first one listed
-	    int id11=reftoindex1[eventvector[eye].ID];
-	    //same but for if it is the second one listed
-	    int id12=reftoindex2[eventvector[eye].ID];
-	    
-	    //same references to the crystals in the tmatrix as before but for the second crystal 
-	    int id21=reftoindex1[eventvector[jay].ID];
-	    //same but for if it is the second one listed
-	    int id22=reftoindex2[eventvector[jay].ID];
-	    
-	    //if the leftmost crystal referernce is >=0 
-	    //if the left and right are neighbors (reftocrystals are equal) 
-	    //eye on left and jay on right
-	    if(id11>=0 && id11==id22){
-	      hTimeDev->Fill(-ddT,index1[id11]);
-	    }
-	    //if the leftmost crystal referernce is >=0 
-	    //if the left and right are neighbors (reftocrystals are equal)
-	    //eye on right and jay on left 
-	    if(id12>=0 && id12==id21){
-	      hTimeDev->Fill(ddT,index1[id21]);
-	    }	  
-	  }
-	}
-      }  //Done with coincidences 
-      
-      //Fill time between crystal hits
-      hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
-      if(current_energy[id_eye] < 16) {
-	hTimeBetweenCrystals_EnergyRatio->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),(current_energy[id_eye]/last_energy[id_eye]),1);
-      }
- 
-      //Blocking Time to avoid retrigger problems
-      if((current_timestamp[id_eye]-last_valid_timestamp[id_eye]) < input_params.Crystal_Blocking_Time) {
-	eventvector[eye].Valid=0;
-      }
- 
-      if(eventvector[eye].Valid==1) {
-	
-	//Fill some Calibration Spectra
-	hGamma->Fill(eventvector[eye].Islow, eventvector[eye].ID,1);
-	hGammaCalib->Fill(eventvector[eye].Eslow, eventvector[eye].ID,1);
-	ADC_gamma->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);	// JU diagnostic histogram
-      }
-      
-    }
-    
-  }
-  
-  //Progress indicator
-  if( entries_analyzed > analyzer_counter*ProgressInterval) {
-    cout<< events_analyzed<<" Events Comprised of "<<entries_analyzed<<" Entries Analyzed. "<<
-      "Average Mult: "<<1.0*entries_analyzed/(1.0*events_analyzed)<<endl;
-    analyzer_counter++;
-  }
-  cout<<events_analyzed<<endl;
-
-  // for(int tofbin=1; tofbin<hDetLoad->GetNbinsX(); tofbin++) {
-  for(int tofbin=1; tofbin<1001; tofbin++) {
-    // for(int tofbin=100; tofbin<200; tofbin++) {
-
-    //Set the artificial TOF
-
-    input_params.Artificial_TOF = hDetLoad->GetBinCenter(tofbin);
-    //  cout<<tofbin<<"  "<<input_params.Artificial_TOF<<endl;
-
-    int Crystal_Mult=0;
-    int Crystal_Mult2=0;
-
-    //Initialize DANCE Event
-    devent.Crystal_mult=0;
-    devent.ESum=0;
-
-    //No Physics events are valid until created
-    devent.Valid=0;
-   
-  
-    double random_double=0;
-  
-    //Loop over event 
-    for(uint32_t eye=0; eye<eventvector.size(); eye++) {
-
-      random_double = gRandom->Uniform(0,1);
-      // cout<<"random_double: "<<random_double<<"  "<<hDetLoad->GetBinContent(tofbin)<<endl;
-
-      if(random_double > hDetLoad->GetBinContent(tofbin)) { 
-	
-	//	cout<<Crystal_Mult<<"  "<<eventvector[eye].ID<<endl;
-	//Make a DANCE Event
-	devent.Crystal_ID[Crystal_Mult] = eventvector[eye].ID;  //Crystal ID
-	devent.Cluster_ID[Crystal_Mult] = Crystal_Mult+1;  //??????
-	devent.Islow[Crystal_Mult] = eventvector[eye].Islow;  //Crystal long integral
-	devent.Ifast[Crystal_Mult] = eventvector[eye].Ifast;  //Crystal short integral
-	devent.tof[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
-	devent.timestamp[Crystal_Mult] = eventvector[eye].TOF;  //time of flight
-	devent.Ecrystal[Crystal_Mult] = eventvector[eye].Eslow;   //Energy if calibrated 
-	devent.ESum += eventvector[eye].Eslow; //ESum 
-	devent.Crystal_mult++;
-	devent.Valid=1;  //event is now valid
-	Crystal_Mult++;	
-	// }
-      }           
-    }
-    
-     
-    //Make sure the first one is valid
-    if(devent.Valid == 1) {
-     
-      //make the removed spectra
-      for(int kay=1; kay<20; kay++) {
-	
-	//Initialize Second DANCE Event
-	devent2.Crystal_mult=0;
-	devent2.ESum=0;
-	
-	//No Physics events are valid until created
-	devent2.Valid=0;
-	Crystal_Mult2=0;
-
-	//If it is greater than kay do stuff  
-	if(devent.Crystal_mult>kay) {
-	  
-	  //Throw away last crystal
-	  //Loop over event 
-	  for(int eye=0; eye < devent.Crystal_mult-kay; eye++) {
-	    //Make a DANCE Event 2
-	    devent2.Crystal_ID[Crystal_Mult2] = devent.Crystal_ID[Crystal_Mult2];  //Crystal ID
-	    devent2.Cluster_ID[Crystal_Mult2] = devent.Cluster_ID[Crystal_Mult2];  //??????
-	    devent2.Ecrystal[Crystal_Mult2] = devent.Ecrystal[Crystal_Mult2];   //Energy if calibrated 
-	    devent2.ESum += devent.Ecrystal[eye];
-	    devent2.tof[Crystal_Mult2] = input_params.Artificial_TOF;
-	    devent2.tof_corr[Crystal_Mult2] = devent2.tof[Crystal_Mult2];
-	    devent2.En[Crystal_Mult2] = devent.En[Crystal_Mult2];
-            devent2.En_corr[Crystal_Mult2] = devent.En_corr[Crystal_Mult2];
-	    devent2.Valid=1;  //event is now valid
-	    Crystal_Mult2++;	
-	  }      
-	} //end check on original dance crystal mult
-	
-	if(devent2.Valid == 1 ) {
-	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
-	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr[0],devent2.ESum,devent2.Crystal_mult);
-	}
-      }     
-    } //end check on valid original dance event
-    
-    //DANCE Events
-    if(devent.Valid == 1) {
-
-      //DANCE Event Diagnostics
-      DANCE_Events_per_T0++;
-      
-      last_valid_devent_timestamp=devent.timestamp[0];
-      
-      //Set Last devent timestamp to current one
-      last_devent_timestamp=devent.timestamp[0];
-      
-      //TOF now set to artificial value
-      for(int kay=0; kay<devent.Crystal_mult; kay++) {
-	
-	//Make TOF relative to last T0
-	devent.tof[kay] = input_params.Artificial_TOF;
-	devent.tof_corr[kay] = devent.tof[kay];
-
-	//Calculate the neutron energy    
-	devent.En[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[kay])/1e9)/((devent.tof[kay])/1e9)/(2.997924589e8*2.997924589e8); 
-	//Calculate corrrected nuetron energy
-	devent.En_corr[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[kay])/1e9)/((devent.tof_corr[kay])/1e9)/(2.997924589e8*2.997924589e8); 
-
-
-	hEn_Eg_Mcr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],devent.Crystal_mult,1);
-
-	//Fill TOF for each crystal
-	hCrystal_En_Corr->Fill(devent.En_corr[kay],1);
-	hECrystal_En_Corr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],1);
-
-	//Fill the 2D spectrum of TOF vs Crystal
-	hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
-	hCrystalTOF->Fill(devent.tof[kay],1);
-	
-	//Fill the 2D spectrum of Corrected TOF vs Crystal
-	hCrystalIDvsTOF_Corr->Fill(devent.tof_corr[kay],devent.Crystal_ID[kay],1);
-	hCrystalTOF_Corr->Fill(devent.tof_corr[kay],1);
-	
-      } //end loop over devent crystals
-      
-      //   cout<<devent.tof[0]<<endl;
-      
-    
-    
-      //Fill TOF and En
-      hEn->Fill(devent.En[0],1);
-      hEn_Corr->Fill(devent.En_corr[0],1);
-      hTOF->Fill(devent.tof[0]);
-      hTOF_Corr->Fill(devent.tof_corr[0]);
-    
-
-      /* First DANCE Event */
-
-      //Only one crystal...
-      if(devent.Crystal_mult==1) {
-	devent.Cluster_mult=1;
-	devent.Ecluster[0]=devent.Ecrystal[0];
-      }
-    
-      //Multiple Crystals... Clusterize
-      if(devent.Crystal_mult > 1) {
-      
-	// Here we will clusterize. Result will be in Cluster_ID[i] where i runs through all the crystals. The minimum of Cluster_ID is 1 so don't forget to lower it by 1. It is somewhat different then Jan Wouters routine but should lead to same results. Label value (after this routine) is the cluster multiplicity
-      
-	int jj=0;
-	int Label=0;
-	int intcounter;
-	int Hits;
-	int Internal_ID[163];
-      
-	for(int loop=0; loop<devent.Crystal_mult; loop++){
-	  devent.Ecluster[loop]=0.;
-	
-	  if(loop==0 || devent.Cluster_ID[loop]>Label){
-	  
-	    Label++;
-	    intcounter=0;
-	    Hits=1;
-	    Internal_ID[0]=devent.Crystal_ID[loop];
-	  
-	    for(int l=0;l<Hits;l++) {
-	      for(jj=0;jj<devent.Crystal_mult;jj++) {
-		if(Internal_ID[l]!=devent.Crystal_ID[jj]) { // no need to check the same crystals
-		
-		  bool IsNeighbor=false;
-		
-		  if(DetMat1[Internal_ID[l]]==DetMat2[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		  else if(DetMat1[Internal_ID[l]]==DetMat3[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		  else if(DetMat1[Internal_ID[l]]==DetMat4[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		  else if(DetMat1[Internal_ID[l]]==DetMat5[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		  else if(DetMat1[Internal_ID[l]]==DetMat6[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		  else if(DetMat1[Internal_ID[l]]==DetMat7[devent.Crystal_ID[jj]]) IsNeighbor=true;
-		
-		  if(IsNeighbor) {	
-		    // if neighbor is found label it and add it to internal list (Internal_ID[]) for checking further in l loop (Hits is incremented by one)
-		    // this way a new participant of the cluster is being chacked agains the other crystals
-		  
-		    if((1.*devent.Cluster_ID[jj])>=0 && (1.*devent.Cluster_ID[jj])>(1.*Label)) {
-		      // here if the crystal is already labeled we skip so that we do not have to repeat already labeled crystals more speed to it
-		    
-		      devent.Cluster_ID[jj]=Label; // this one is important- Adding the crystals to the cluster
-		    
-		      Hits++;
-		      intcounter++;
-		      Internal_ID[intcounter]=devent.Crystal_ID[jj];	
-		    }
-		  }
-		}
-	      }
-	    }
-	    if(Hits==1) devent.Cluster_ID[loop]=Label;
-	  }
-	}
-      
-	devent.Cluster_mult=Label;
-      
-	// Fill the cluster energy. Labels go through 1,2,3 ... CrystalMult
-	for(int ii=0;ii<devent.Crystal_mult;ii++){
-	  devent.Ecluster[devent.Cluster_ID[ii]-1]+=devent.Ecrystal[ii];
-	};
-      }  //Done checking mult > 1
-    
-      //Mults vs TOF
-      hTOF_Mcl->Fill(devent.tof[0],devent.Cluster_mult);
-      hTOF_Mcl_Corr->Fill(devent.tof_corr[0],devent.Cluster_mult);
-    
-      //Mults vs ESum vs En
-      En_Esum_Mcl->Fill(devent.En_corr[0],devent.ESum,devent.Cluster_mult);
-      En_Esum_Mcr->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
-      
-    
-      // cout<<devent.tof[0]<<"  "<<devent.Valid<<endl;
-
-      //Mults vs ESum vs TOF
-      hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
-      hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);
-    
-      // fill esum histos (for convenience, they are redundant to the 3d histo above --- JU -----)
-      esum -> Fill(devent.ESum);
-      if(devent.Cluster_mult==2)esum2->Fill(devent.ESum);
-      if(devent.Cluster_mult==3)esum3->Fill(devent.ESum);
-      if(devent.Cluster_mult==4)esum4->Fill(devent.ESum);
-      if(devent.Cluster_mult==5)esum5->Fill(devent.ESum);
-    
-      if(input_params.QGatedSpectra) {
-      
-	//Loop over the cluster mult
-	for(int jay=0; jay<devent.Cluster_mult; jay++ )  {
-	  for(int kay=0; kay<input_params.NQGates; kay++) {
-	    if(devent.ESum > input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
-	      En_Ecl_Mcl_QGated[kay]-> Fill(devent.En[0], devent.Ecluster[jay], devent.Cluster_mult );
-	      hTOF_Mcl_QGated[kay]->Fill(devent.tof_corr[0],devent.Cluster_mult);
-	    } //Done Checking QGates
-	  } //Done Looping over QGates
-	} //Done looping over cluster mult
-      
-	//Crystal mult 1
-	if(devent.Crystal_mult == 1) {
-	  hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
-	  hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
-	}
-      
-	//Loop over the crystal mult
-	for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
-	  for(int kay=0; kay<input_params.NQGates; kay++) {
-	    if(devent.ESum >input_params.QGates[kay*2] && devent.ESum < input_params.QGates[kay*2+1]) {
-	      En_Ecr_Mcr_QGated[kay]-> Fill(devent.En[0], devent.Ecrystal[jay], devent.Crystal_mult );
-	      ID_Ecr_Mcr_QGated[kay]-> Fill(devent.Crystal_ID[jay], devent.Ecrystal[jay], devent.Crystal_mult );
-	    } //Done Checking QGates
-	  } //Done Looping over QGates
-	} //Done looping over crystal mult
-      }
-    
-      hEventLength_Etot->Fill(eventvector[eventvector.size()-1].TOF-eventvector[0].TOF,devent.ESum);
-    
-    
-    } //End of checking valid DANCE event    
-
-  } //End loop on TOF Bins
-
-  //Done with Event Processing
-  //increment counter
-  events_analyzed++;
-  
-  return 0;
-  
-} //End of analyze efficiency 
-
-
-
 int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_params) {
 
   //Progress indicator
   if( entries_analyzed > analyzer_counter*ProgressInterval) {
-    cout<< events_analyzed<<" Events Comprised of "<<entries_analyzed<<" Entries Analyzed. "<<
-      "Average Mult: "<<1.0*entries_analyzed/(1.0*events_analyzed)<<endl;
+    cout<< events_analyzed<<" Events Comprised of "<<entries_analyzed<<" Entries Analyzed. ";  
+    cout<<"Average Mult: "<<1.0*entries_analyzed/(1.0*events_analyzed)<<endl;
+    cout<<"Invalid Entries: "<<invalid_entries_analyzed<<"  ("<<100.0*(1.0*invalid_entries_analyzed)/(1.0*entries_analyzed)<<"%)"<<endl;
+    
     analyzer_counter++;
   }
 
@@ -1568,6 +1180,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 				      temp_fast*fast_slope[eventvector[eye].ID] +
 				      fast_offset[eventvector[eye].ID]);
       
+      if(temp_fast>0) {
+	hELong_LongShortRatio->Fill(eventvector[eye].Eslow,temp_slow/temp_fast,1);
+      }
       //  cout<<eventvector[eye].Eslow<<"  "<<temp_slow<<endl;
 
       //update the current energy
@@ -1630,11 +1245,17 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	  }
 	}
       }  //Done with coincidences 
-      
+
+      //   	cout<<id_eye<<"  "<<eventvector[eye].Ifast<<"  "<<eventvector[eye].Islow<<"    "<<eventvector[eye].Efast<<"  "<<eventvector[eye].Eslow<<endl;
+      //	cout<<endl;
+
       //Fill time between crystal hits
       hTimeBetweenCrystals->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),id_eye,1);
       if(current_energy[id_eye] < 16) {
 	hTimeBetweenCrystals_EnergyRatio->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),(current_energy[id_eye]/last_energy[id_eye]),1);
+	if(eventvector[eye].Ifast > 0) {
+	  hTimeBetweenCrystals_LongShortRatio->Fill((current_timestamp[id_eye]-last_timestamp[id_eye]),temp_slow/temp_fast,1);
+	}
       }
       //   if((current_timestamp[id_eye]-last_timestamp[id_eye]) < 2500) {
       //	cout<<current_timestamp[id_eye]-last_timestamp[id_eye]<<"      "<<current_energy[id_eye]/last_energy[id_eye]<<"      "<<current_energy[id_eye]<<"  "<<last_energy[id_eye]<<endl;
@@ -1700,6 +1321,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       } //end of Valid Check
       else {
 	ADC_calib_Invalid->Fill(eventvector[eye].Eslow, eventvector[eye].Efast,1);
+	hInvalid_ID->Fill(eventvector[eye].ID);
       } //end of not valid else
       
 #ifdef Histogram_DetectorLoad
@@ -1831,11 +1453,17 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
     }    
 
     entries_analyzed++;
+    
+    if(eventvector[eye].Valid = 0) {
+      entries_analyzed++;
+    }
+    
   } //end of eventvector loop
 
 
   //Handle various events and do some physics
-  
+  if(input_params.Analysis_Stage==1 || input_params.Read_Simulation ==1 ) {
+
   //DANCE Events
   if(devent.Valid == 1) {
     if(last_t0_timestamp > 0) {
@@ -1898,9 +1526,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       devent.Valid = 0;
     }
   } //end check of devent.Valid
-  
-  if(input_params.Analysis_Stage==1 || input_params.Read_Simulation ==1 ) {
-    
+      
     //Handle various events and do some physics
     if(devent.Valid==1) {
       
@@ -2099,8 +1725,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 
 
   
-      //Make the gamma removed 3D TOF_Mcr_ spectra
       
+#ifdef Make_Removed_Spectra
       //make the removed spectra
       for(int kay=1; kay<20; kay++) {
 	
@@ -2133,12 +1759,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	  }      
 	} //end check on original dance crystal mult
 	
+	
 	if(devent2.Valid == 1 ) {
 	  hTOF_Esum_Mcr_Removed[kay]->Fill(devent2.tof_corr[0],devent2.ESum,devent2.Crystal_mult);
 	  hEn_Esum_Mcr_Removed[kay]->Fill(devent2.En_corr[0],devent2.ESum,devent2.Crystal_mult);
 	}
+	
       }     
-           
+#endif
     } //End of checking valid DANCE event
 
 

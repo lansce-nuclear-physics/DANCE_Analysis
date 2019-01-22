@@ -25,8 +25,6 @@ int Read_DMatrix();
 int Initialize_Analyzer(Input_Parameters input_params);
 int Create_Analyzer_Histograms(Input_Parameters input_params);
 
-int Analyze_DeadTime(std::vector<DEVT_BANK> eventvector, Input_Parameters input_params, TH1D *hDetLoad);
-
 int Analyze_Data(std::vector<DEVT_BANK> eventvector,Input_Parameters input_params);
 int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params);
 int Read_PI_Gates();
