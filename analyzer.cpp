@@ -55,6 +55,7 @@ double He3_TOF_Corr_Limit[2];   //[0] is lower [1] is upper
 
 /* HISTOGRAMS */
 TH1D *hID;  //ID's present in datastream
+TH1D *hID_Invalid; //ID's in the datastream deamed invalid for retrigger and ULD rejection
 TH2D *hCoinCAEN;  //coincidence matrix
 
 //Time Diagnostics
@@ -86,7 +87,7 @@ TH1D *hDANCE_Events_per_T0;
 TH2D *hTimeDev_Rel0;  //Time deviations of all crystals to crystal 0
 TH2D *hTimeDev;  //Time deviations relative to adjacent crystals
 
-//Energy Histograms
+//Energy Hisstograms
 TH2D *ADC_calib;  //2D PSD Plot (calibrated)
 TH2D *ADC_raw;    //2D PSD Plot (uncalibrated)
 TH2D *ADC_calib_Invalid;  //2D PSD Plot of invalid events (calibrated)
@@ -634,7 +635,8 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   //Make Histograms
   hCoinCAEN = new TH2D("CoinCAEN","CoinCAEN",162,0,162,162,0,162);  //coincidence matrix
   hID = new TH1D("hID","hID",256,0,256);
-  
+  hID_Invalid = new TH1D("hID_Invalid","hID_Invalid",256,0,256);
+
   //Time Deviations
   hTimeDev_Rel0 = new TH2D("TimeDev_Rel0","TimeDev_Rel0",10000,-500,500,162,0,162);  //Time deviations relative to crystal 0
   hTimeDev = new TH2D("TimeDev","TimeDev",10000,-500,500,162,0,162);  //Time deviations
@@ -893,6 +895,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   
   fout->cd();
   hID->Write();
+  hID_Invalid->Write();
   hCoinCAEN->Write();
   hTimeDev_Rel0->Write();
   hTimeDev->Write();
@@ -1456,6 +1459,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
     
     if(eventvector[eye].Valid == 0) {
       invalid_entries_analyzed++;
+      //Fill the invalid ID histogram
+      hID_Invalid->Fill(eventvector[eye].ID);
     }
     
   } //end of eventvector loop
