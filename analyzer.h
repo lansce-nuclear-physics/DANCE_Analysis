@@ -25,12 +25,9 @@ int Read_DMatrix();
 int Initialize_Analyzer(Input_Parameters input_params);
 int Create_Analyzer_Histograms(Input_Parameters input_params);
 
-int Analyze_Data(std::vector<DEVT_BANK> eventvector,Input_Parameters input_params);
+int Analyze_Data(std::vector<DEVT_BANK> eventvector,Input_Parameters input_params,Analysis_Parameters *analysis_params);
 int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params);
-int Read_PI_Gates();
 int Read_Energy_Calibrations( Input_Parameters input_params);
-int Make_Output_Binfile( Input_Parameters input_params);
-int Read_Moderation_Time_Graphs();
 int Make_Time_Deviations(int RunNumber);
 
 #endif

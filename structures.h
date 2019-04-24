@@ -10,6 +10,7 @@
 
 //File includes
 #include "global.h"
+#include "message.h"
 
 // C/C++ includes 
 #include <stdint.h>  //uint16_t, uint32_t, uint64_t
@@ -106,17 +107,21 @@ typedef struct{
 } test_struct_cevt;
 
 typedef struct {
-  uint64_t timestamp;        // timestamp
+  double timestamp;        // timestamp
   uint16_t Ns;               // number of samples in waveform
   uint16_t Ifast;            // short integral
   uint16_t Islow;            // long integral
   uint8_t board;             // board number
   uint8_t channel;           // channel number
   double TOF;                // Time of Flight in ns
+  double TOF_Corr;           // Corrected Time of Flight in ns
   double Eslow;              // Calibrated slow integral
   double Efast;              // Calibrated fast integral
   uint16_t ID;               // Extracted ID using DANCE Map
   uint8_t Valid;             // Valid Flag
+  uint8_t IsGamma;           // Gamma Flag
+  uint8_t IsAlpha;           // Alpha Flag
+  uint8_t InvalidReason;    // Reason the entry is invalid
 } DEVT_BANK;
 
 
@@ -124,7 +129,7 @@ typedef struct {
 typedef struct {
   uint16_t Ifast;            // short integral
   uint16_t Islow;            // long integral
-  double TOF;                // Time-Of-Flight in ns
+  double timestamp;                // Time-Of-Flight in ns
   uint8_t ID;                // ID from DANCE Map 0 to 161 are dance //241 to 244 are beam monitors //200 is t0
 } DEVT_STAGE1;
 
@@ -181,6 +186,16 @@ typedef struct{
   uint16_t Valid;            //Valid event flag
 } Li6_Event;
 
+// Background Beam Monitor event
+typedef struct{
+  double En;                 //Neutron energy from TOF
+  double En_corr;            //Neutron energy from TOF corrected for moderator function
+  double tof;                //Neutron Time-Of-Flight 
+  double tof_corr;           //Neutron Time-Of-Flight corrected for moderator function
+  uint16_t Ifast;            //Uncalibrated fast integral  
+  uint16_t Islow;            //Uncalibrated slow integral 
+  uint16_t Valid;            //Valid event flag
+} Bkg_Event;
 
 
 //Input parameters 
@@ -224,10 +239,56 @@ typedef struct{
 
   //Unpacker variables
   double Buffer_Depth;
-  uint32_t Max_DEVT_Array_Size;
-  uint32_t Block_Buffer_Size;
+
+
 
 } Input_Parameters;
+
+
+//Analysis parameters
+typedef struct{
+  double last_timestamp[256];
+  double last_Islow[256];
+  double last_Eslow[256];
+
+  double last_valid_timestamp[256];
+  double last_valid_Islow[256];
+  double last_valid_Eslow[256];
+
+  uint32_t entries_unpacked;            //Entries that have been unpacked
+  uint32_t entries_awaiting_timesort;   //Entries in the devt array waiting for timesort
+  uint32_t entries_written_to_binary;   //Entries written to binary
+  uint32_t entries_processed;           //Entries that have been through eventbuilding (valid or invalid)
+  uint32_t entries_invalid;             //Entries invalid before analysis
+  uint32_t entries_built;               //Entries built into events
+  uint32_t events_built;                //Events built
+
+  uint32_t entries_analyzed;
+  uint32_t DANCE_entries_analyzed;
+  uint32_t T0_entries_analyzed;
+  uint32_t He3_entries_analyzed;
+  uint32_t Li6_entries_analyzed;
+  uint32_t U235_entries_analyzed;
+  uint32_t Bkg_entries_analyzed;
+  uint32_t Unknown_entries;
+
+  uint32_t events_analyzed;
+  uint32_t DANCE_events_analyzed;
+  uint32_t T0_events_analyzed;
+  uint32_t He3_events_analyzed;
+  uint32_t Li6_events_analyzed;
+  uint32_t Bkg_events_analyzed;
+  uint32_t U235_events_analyzed;
+
+  double max_buffer_utilization;
+
+  bool first_sort;
+  bool event_building_active;  //this says whether or not we are event building yet
+  double smallest_timestamp;
+  double largest_timestamp;
+
+} Analysis_Parameters;
+  
 
 
 

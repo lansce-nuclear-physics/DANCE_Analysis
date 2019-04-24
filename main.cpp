@@ -10,13 +10,20 @@
 #include "main.h"
 #include "unpacker.h"
 #include "analyzer.h"
+#include "calibrator.h"
+#include "validator.h"
+#include "eventbuilder.h"
 
 //C/C++ includes
 #include <sys/time.h>
 
 using namespace std;
 
+stringstream mmsg;
+
 int main(int argc, char *argv[]) {
+
+  int func_ret=0;
 
   //Read in the version information
   ifstream version_file;
@@ -25,11 +32,58 @@ int main(int argc, char *argv[]) {
   string filler, version;
   version_file >> filler >> version;
   
-  //Output the version information
-  cout<<"You are Running DANCE Analysis version "<<version<<endl;
 
-  Input_Parameters input_params;
+  //Output the version information
+  mmsg.str("");
+  mmsg<<"DANCE Analyzer Version "<<version<<" Initializing";
+  DANCE_Init("Main",mmsg.str());
+
+  Analysis_Parameters analysis_params;
+  for(int eye=0; eye<256; eye++) {
+    analysis_params.last_timestamp[eye]=0;
+    analysis_params.last_Islow[eye]=65535;
+    analysis_params.last_Eslow[eye]=20;
+
+    analysis_params.last_valid_timestamp[eye]=0;
+    analysis_params.last_valid_Islow[eye]=65535;
+    analysis_params.last_valid_Eslow[eye]=20;
+
+    analysis_params.entries_unpacked=0;
+    analysis_params.entries_awaiting_timesort=0;
+    analysis_params.entries_written_to_binary=0;
+    analysis_params.entries_processed=0;
+    analysis_params.entries_invalid=0;
+    analysis_params.entries_built=0;
+    analysis_params.events_built=0;
+
+    analysis_params.entries_analyzed=0;
+    analysis_params.DANCE_entries_analyzed=0;
+    analysis_params.T0_entries_analyzed=0;
+    analysis_params.He3_entries_analyzed=0;
+    analysis_params.Li6_entries_analyzed=0;
+    analysis_params.Bkg_entries_analyzed=0;
+    analysis_params.U235_entries_analyzed=0;
+    analysis_params.Unknown_entries=0;
+
+    analysis_params.events_analyzed=0;
+    analysis_params.DANCE_events_analyzed=0;
+    analysis_params.T0_events_analyzed=0;
+    analysis_params.He3_events_analyzed=0;
+    analysis_params.Li6_events_analyzed=0;
+    analysis_params.Bkg_events_analyzed=0;
+    analysis_params.U235_events_analyzed=0;
+
+    analysis_params.max_buffer_utilization=0;
+    
+    analysis_params.first_sort=true;
+    analysis_params.event_building_active=false; 
+    analysis_params.smallest_timestamp=2.814749767e14; //this is the largest the clock can be on CAEN boards
+    analysis_params.largest_timestamp=0; 
+
+  }
   
+  Input_Parameters input_params;
+
   //Initialize input parameters
   input_params.Crystal_Blocking_Time=0;
   input_params.DEvent_Blocking_Time=0;
@@ -50,51 +104,46 @@ int main(int argc, char *argv[]) {
   input_params.Use_Firmware_FineTime=false;
   input_params.Analysis_Stage = 0;
   input_params.Buffer_Depth = 10;
-  input_params.Block_Buffer_Size = 250000;
       
   //Control things
   int RunNum=0;
   string pathtodata;
   string cfgfile;
-
-  if(argc<2) {
-    cout<<RED<<"Main [ERROR]: Too few arguments provided.  See README file"<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \""<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \""<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Simulations: \"./DANCE_Analysis cfgfile.cfg \""<<RESET<<endl;
-    return -1;
-  }
   
-  else if(argc==2) {
+  //Make sure the number of arguments is reasonable
+  if(argc==2) {
     cfgfile = argv[1];
   }
-  //  else if(argc==3) {
-  //   RunNum = atoi(argv[1]);
-  //   cfgfile = argv[2];
-  // }
   else if(argc==4) {
     pathtodata = argv[1];
     RunNum = atoi(argv[2]);
     cfgfile = argv[3];
   }
   else {
-    cout<<RED<<"Main [ERROR]: Too many or too few arguments provided.  See README file"<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Stage0 and Stage1: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \""<<RESET<<endl;
-    // cout<<RED<<"Main [ERROR]: for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \""<<RESET<<endl;
-    cout<<RED<<"Main [ERROR]: for Simulations: \"./DANCE_Analysis cfgfile.cfg \""<<RESET<<endl;
+    DANCE_Error("Main","Too many or too few arguments provided.  See README file");
+    DANCE_Error("Main","for Stage 0 and Stage 1: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg");
+    DANCE_Error("Main","for Simulations: \"./DANCE_Analysis cfgfile.cfg");
     return -1;
   }
-  
+
+  //Set the run number
   input_params.RunNumber = RunNum;
 
-  cout<<"Main [INFO]: Run Number: "<<input_params.RunNumber<<endl;
+  //Display the run number
+  mmsg.str("");
+  mmsg<<"Run Number: "<<input_params.RunNumber;
+  DANCE_Info("Main",mmsg.str());
 
+  DANCE_Info("Main","Opening Configuration File");
+  
   ifstream cfgf;
   cfgf.open(cfgfile.c_str());
 
   if(cfgf.is_open()) {
-
-    cout<<"Main [INFO]: Configuration File "<<cfgfile.c_str()<<" is Open"<<endl;
+    
+    mmsg.str("");
+    mmsg<<"Configuration File "<<cfgfile.c_str()<<" is Open";
+    DANCE_Success("Main",mmsg.str());
 
     string item;
     while(!cfgf.eof()) {
@@ -179,12 +228,7 @@ int main(int argc, char *argv[]) {
       if(item.compare("Buffer_Depth") == 0) {
 	cfgf>>input_params.Buffer_Depth;
       } 
-      if(item.compare("Block_Buffer_Size") == 0) {
-	cfgf>>input_params.Block_Buffer_Size;
-      } 
-
-
-
+   
     }
 
     //Set the bool for QGates
@@ -203,8 +247,10 @@ int main(int argc, char *argv[]) {
       input_params.IsomerSpectra = false;
     }
     
-    
-    cout<<GREEN<<"Main [INFO]: Read Configuration File: "<<cfgfile<<RESET<<endl;
+    mmsg.str("");
+    mmsg<<"Read Configuration File: "<<cfgfile;
+    DANCE_Success("Main",mmsg.str());
+
     cout<<"Analysis Stage: "<<input_params.Analysis_Stage<<endl;
     cout<<"Coincidence Window: "<<input_params.Coincidence_Window<<endl;
     cout<<"Read Binary: "<<input_params.Read_Binary<<endl;
@@ -215,7 +261,6 @@ int main(int argc, char *argv[]) {
     }
  
     cout<<"Buffer Depth: "<<input_params.Buffer_Depth<<" seconds"<<endl;
-    cout<<"Block Buffer Size: "<<input_params.Block_Buffer_Size<<" entries"<<endl;
      
     cout<<"Crystal Blocking Time: "<<input_params.Crystal_Blocking_Time<<endl;
     cout<<"DANCE Event Blocking Time: "<<input_params.DEvent_Blocking_Time<<endl;
@@ -244,12 +289,14 @@ int main(int argc, char *argv[]) {
     cout<<"Use Firmware Fine Time: "<<input_params.Use_Firmware_FineTime<<endl;
   }
   
+  //If no configuration file then exit
   else {
-    cout<<RED<<"Main [ERROR]: Failed to Read Configuration File: "<<cfgfile<<RESET<<endl;
+    mmsg.str("");
+    mmsg<<"Failed to Read Configuration File: "<<cfgfile;
+    DANCE_Error("Main",mmsg.str());
     return -1;
   }
-  
-   
+ 
   //make the file handle
   gzFile gz_in;
   
@@ -271,23 +318,36 @@ int main(int argc, char *argv[]) {
     else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
       midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
     }
-    cout<<"Main [INFO]: Checking for: "<<midasrunname.str()<<endl;
+
+    mmsg.str("");
+    mmsg<<"Checking for: "<<midasrunname.str();
+    DANCE_Info("Main",mmsg.str());
     
     //Look for uncompressed .mid files
     gz_in=gzopen(midasrunname.str().c_str(),"rb");
     
     //check to see if its open
     if(gz_in) {
-      cout<<GREEN<<"Main [INFO]: File "<<midasrunname.str().c_str()<<" Found"<<RESET<<endl;
-      runname << midasrunname.str();
+       mmsg.str("");
+       mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+       DANCE_Success("Main",mmsg.str());
+       
+       runname << midasrunname.str();
     }
     else {
       //look for compressed .mid.gz files
       midasrunname << ".gz";
-      cout<<"Main [INFO]: Checking for: "<<midasrunname.str()<<endl;
+      
+      mmsg.str("");
+      mmsg<<"Checking for: "<<midasrunname.str();
+      DANCE_Info("Main",mmsg.str());
+      
       gz_in=gzopen(midasrunname.str().c_str(),"rb");
       if(gz_in) {
-	cout<<GREEN<<"Main [INFO]: File "<<midasrunname.str().c_str()<<" Found"<<RESET<<endl;
+	mmsg.str("");
+	mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+	DANCE_Success("Main",mmsg.str());
+
 	runname << midasrunname.str();
       }
     }
@@ -299,23 +359,32 @@ int main(int argc, char *argv[]) {
     stringstream binaryrunname;
     binaryrunname.str();
     binaryrunname << pathtodata << "/stage0_run_" << RunNum << ".bin";
-    cout<<"Main [INFO]: Checking for: "<<binaryrunname.str()<<endl;
+    mmsg.str("");
+    mmsg<<"Checking for: "<<binaryrunname.str();
+    DANCE_Info("Main",mmsg.str());
     
     //Look for uncompressed .bin files
     gz_in=gzopen(binaryrunname.str().c_str(),"rb");
     
     //check to see if its open
     if(gz_in) {
-      cout<<GREEN<<"Main [INFO]: File "<<binaryrunname.str().c_str()<<" Found"<<RESET<<endl;
+      mmsg.str("");
+      mmsg<<"File "<<binaryrunname.str().c_str()<<" Found";
+      DANCE_Success("Main",mmsg.str());
       runname << binaryrunname.str();
     }
     else {
       //look for compressed .bin.gz files
       binaryrunname << ".gz";
-      cout<<"Main [INFO]: Checking for: "<<binaryrunname.str()<<endl;
+      mmsg.str("");
+      mmsg<<"Checking for: "<<binaryrunname.str();
+      DANCE_Info("Main",mmsg.str());
       gz_in=gzopen(binaryrunname.str().c_str(),"rb");
+
       if(gz_in) {
-	cout<<GREEN<<"Main [INFO]: File "<<binaryrunname.str().c_str()<<" Found"<<RESET<<endl;
+	mmsg.str("");
+	mmsg<<"File "<<binaryrunname.str().c_str()<<" Found";
+	DANCE_Success("Main",mmsg.str());
 	runname << binaryrunname.str();
       }
     }
@@ -327,30 +396,46 @@ int main(int argc, char *argv[]) {
     stringstream simulationrunname;
     simulationrunname.str();
     simulationrunname << STAGE0_SIM << "/"<< input_params.Simulation_File_Name <<".bin";
-    cout<<"Main [INFO]: Checking for: "<<simulationrunname.str()<<endl;
+
+    mmsg.str("");
+    mmsg<<"Checking for: "<<simulationrunname.str();
+    DANCE_Info("Main",mmsg.str());
     
     //Look for uncompressed .bin files
     gz_in=gzopen(simulationrunname.str().c_str(),"rb");
     
     //check to see if its open
     if(gz_in) {
-      cout<<GREEN<<"Main [INFO]: File "<<simulationrunname.str().c_str()<<" Found"<<RESET<<endl;
+      mmsg.str("");
+      mmsg<<"File "<<simulationrunname.str().c_str()<<" Found";
+      DANCE_Success("Main",mmsg.str());
+
       runname << simulationrunname.str();
     }
     else {
       //look for compressed .bin.gz files
       simulationrunname << ".gz";
-      cout<<"Main [INFO]: Checking for: "<<simulationrunname.str()<<endl;
+
+      mmsg.str("");
+      mmsg<<"Checking for: "<<simulationrunname.str();
+      DANCE_Info("Main",mmsg.str());
+    
       gz_in=gzopen(simulationrunname.str().c_str(),"rb");
       if(gz_in) {
-	cout<<GREEN<<"Main [INFO]: File "<<simulationrunname.str().c_str()<<" Found"<<RESET<<endl;
+
+	mmsg.str("");
+	mmsg<<"File "<<simulationrunname.str().c_str()<<" Found";
+	DANCE_Success("Main",mmsg.str());
+	
 	runname << simulationrunname.str();
       }
     }
   }
 
   else {
-    cout<<RED<<"Main [ERROR]: Conflict Between Read_Binary (set to "<<input_params.Read_Binary<<") and Read_Simulation (set to ("<<input_params.Read_Simulation<<"). Exiting"<<RESET<<endl;
+    mmsg.str("");
+    mmsg<<"Conflict Between Read_Binary (set to "<<input_params.Read_Binary<<") and Read_Simulation (set to ("<<input_params.Read_Simulation<<"). Exiting";
+    DANCE_Error("Main",mmsg.str());
     return -1;
   }
   
@@ -359,74 +444,60 @@ int main(int argc, char *argv[]) {
 
   //check to see if its open
   if(!gz_in) {
-    cout<<RED<<"Main [ERROR]: No Files for run "<<RunNum<< " Found. Exiting."<<RESET<<endl;
+    mmsg.str("");
+    mmsg<<"No Files for run "<<RunNum<< " Found. Exiting.";
+    DANCE_Error("Main",mmsg.str());
     return -1;
   }
   
-  //Initialize Things
-  Initialize_Analyzer(input_params);
 
-  //Name of the output root file
-  stringstream rootfilename;
-  rootfilename.str();
-  
-  //stage 0
-  if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
-    rootfilename << "./stage0_root/Stage0_Histograms_Run_";
-    rootfilename << RunNum;
-  }
-  //stage 1
-  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==0) {
-    rootfilename << "./stage1_root/Stage1_Histograms_Run_";
-    rootfilename << RunNum;
-  }
-  //simulation
-  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==1) {
-    rootfilename << "./stage1_root/Stage1_Histograms_";
-    rootfilename << input_params.Simulation_File_Name;
-  }
-  else {
-    cout<<RED<<"Main [ERROR]: Cannot understand options for making rootfile. Exiting."<<RESET<<endl;
-    return -1;
-  }
-    
-  //make the root file  
-  TFile *fout;
-  
   //Time profiling stuff
   struct timeval tv;  						// real time  
   double begin, end, time_elapsed;			// start,stop, elapsed time
-
-
-  //Initialize some stuff
-  Read_Energy_Calibrations(input_params);
 
   //start time
   gettimeofday(&tv,NULL); 
   begin=tv.tv_sec+(tv.tv_usec/1000000.0);
 
-  int events_analyzed=  Unpack_Data(gz_in, begin, input_params);
-  cout<<GREEN<<"Main [INFO]: Analysis Complete. Analyzed: "<<events_analyzed<<" Entries"<<RESET<<endl;
-  
-  //Make the file
-  fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),
-			(int)input_params.Coincidence_Window,
-			(int)input_params.Crystal_Blocking_Time,
-			(int)input_params.DEvent_Blocking_Time),"RECREATE");
-  
-  cout<<GREEN<<"Main [INFO]: Rootfile Created"<<RESET<<endl;
-  
-  //Write histograms
-  Write_Unpacker_Histograms(fout, input_params);
-  Write_Analyzer_Histograms(fout, input_params);
+  //Initialize Unpacker
+  func_ret = Initialize_Unpacker(input_params);
+  if(func_ret) {
+    return func_ret;
+  }
+  //initialize eventbuilder
+  func_ret = Initialize_Eventbuilder(input_params);
+  if(func_ret) {
+    return func_ret;
+  }
+  //initialize calibrator
+  func_ret = Initialize_Calibrator(input_params);
+if(func_ret) {
+    return func_ret;
+  }
+  //initialize validator
+  func_ret = Initialize_Validator(input_params);
+if(func_ret) {
+    return func_ret;
+  }
+  //Initialize analyzer
+  func_ret = Initialize_Analyzer(input_params);
+if(func_ret) {
+    return func_ret;
+  }
+  //Launch the upacker
+  int events_analyzed=  Unpack_Data(gz_in, begin, input_params, &analysis_params);
 
-  //Write the root file
-  fout->Write();
-  cout<<GREEN<<"Main [INFO]: Rootfile Written"<<RESET<<endl;
+  mmsg.str("");
+  mmsg<<"Analysis Complete. Analyzed: "<<events_analyzed<<" Entries";
+  DANCE_Success("Main",mmsg.str());
   
   //Print the time elapsed for the entire process
   gettimeofday(&tv,NULL);  
   end=tv.tv_sec+(tv.tv_usec/1000000.0);
   time_elapsed = (double)(end-begin); ;
-  cout<<GREEN<<"Main [INFO]: Time Elapsed: "<<time_elapsed<<" Seconds"<<RESET<<endl;
+
+  mmsg.str("");
+  mmsg<<"Time Elapsed: "<<time_elapsed<<" Seconds";
+  DANCE_Info("Main",mmsg.str());
+
 }

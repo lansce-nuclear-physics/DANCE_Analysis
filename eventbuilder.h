@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  eventbuilder.h         *// 
-//*  Last Edit: 11/06/18    *//  
+//*  Last Edit: 04/18/19    *//  
 //***************************//
 
 #ifndef EVENTBUILDER_H
@@ -19,10 +19,21 @@
 #include <vector>
 #include <stdlib.h>
 
-using namespace std;
+#include "TFile.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TH3.h"
+#include "TMath.h"
+#include "TGraph.h"
 
-int build_events(deque<DEVT_BANK> &datadeque, bool &event_building_active, Input_Parameters input_params, uint32_t &Events_Sent);
 
+int Initialize_Eventbuilder(Input_Parameters input_params);
+  
+int Build_Events(std::deque<DEVT_BANK> &datadeque, Input_Parameters input_params,Analysis_Parameters *analysis_params);
 
-
+int Create_Eventbuilder_Histograms(Input_Parameters input_params);
+int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Analysis_Parameters *analysis_params);
+int Read_Moderation_Time_Graphs();
+  
+ 
 #endif
