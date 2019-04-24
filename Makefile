@@ -2,7 +2,7 @@
 ##  Christopher J. Prokop  ##
 ##  cprokop@lanl.gov       ##
 ##  Makefile               ## 
-##  Last Edit: 07/23/18    ##  
+##  Last Edit: 04/15/19    ##  
 ##*************************##
 
 CC=g++
@@ -18,13 +18,13 @@ ROOTGLIBS    := $(shell ${ROOTSYS}/bin/root-config --glibs)
 ROOTLDFLAGS  := $(shell ${ROOTSYS}/bin/root-config --ldflags)
 CXXFLAGS += $(ROOTCFLAGS)
 
-INCLUDES:= eventbuilder.h analyzer.h main.h sort_functions.h unpacker.h unpack_vx725_vx730.h structures.h global.h
+INCLUDES:= message.h calibrator.h validator.h eventbuilder.h analyzer.h main.h sort_functions.h unpacker.h unpack_vx725_vx730.h structures.h global.h 
 
-OBJECTS:= eventbuilder.o analyzer.o main.o sort_functions.o unpacker.o unpack_vx725_vx730.o 
+OBJECTS:= message.o calibrator.o validator.o eventbuilder.o analyzer.o main.o sort_functions.o unpacker.o unpack_vx725_vx730.o
 
 LIBS  = -lm $(ROOTGLIBS) -lz -lbz2
 
-SRCS:= eventbuilder.cpp analyzer.cpp main.cpp sort_functions.cpp unpacker.cpp unpack_vx725_vx730.cpp 
+SRCS:= message.cpp calibrator.cpp validator.cpp eventbuilder.cpp analyzer.cpp main.cpp sort_functions.cpp unpacker.cpp unpack_vx725_vx730.cpp 
 
 all: main
 
