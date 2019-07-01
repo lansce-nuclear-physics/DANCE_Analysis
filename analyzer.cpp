@@ -42,6 +42,8 @@ TH2D *hCoinCAEN;                      //coincidence matrix
 //Time Diagnostics
 TH1D *hEventLength;                   //length in ns of the event (diagnostic)
 TH2D *hEventLength_Etot;              //ESum vs Event Legnth
+TH2D *hEventLength_MCr;              //Mcr vs Event Legnth
+TH2D *hEventTimeDist_Etot;              //ESum vs Event Legnth
 
 TH1D *hTimeBetweenDEvents;            //time between subsequent DANCE events (ns)
 TH3D *hTimeBetweenDEvents_ESum_Mcr;   //DANCE ESum vs time between subsequent DANCE events for Mcr==1
@@ -89,6 +91,8 @@ vector<double> Isomer_Delayed[10]; //Storage for Delayed TOFs
 //3D Histograms
 TH3F *En_Esum_Mcl;
 TH3F *En_Esum_Mcr;
+TH3F *En_Esum_Mcr_Pileup;
+TH3F *En_Esum_Mcr_NoPileup;
 
 TH3F *hTOF_Esum_Mcl;
 TH3F *hTOF_Esum_Mcr;
@@ -337,6 +341,8 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   //Diagnostics
   hEventLength = new TH1D("EventLength","EventLength",10000,0,100);
   hEventLength_Etot = new TH2D("EventLength_Etot","EventLength_Etot",1000,0,10,400,0,20);
+  hEventLength_MCr = new TH2D("EventLength_MCr","EventLength_MCr",1000,0,10,30,0,30);
+  hEventTimeDist_Etot = new TH2D("EventTimeDist_Etot","EventTimeDist_Etot",1000,0,10,400,0,20);
 
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
   hTimeBetweenDEvents_ESum_Mcr = new TH3D("TimeBetweenDEvents_ESum_Mcr","TimeBetweenDEvents_ESum_Mcr",1000,0,10000,500,0,10,20,0,20);
@@ -473,6 +479,8 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Esum_Mcr_Pileup=new TH3F("En_Etot_Mcr_Pileup","En_Etot_Mcr_Pileup",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Esum_Mcr_NoPileup=new TH3F("En_Etot_Mcr_NoPileup","En_Etot_Mcr_NoPileup",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
     hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
@@ -572,7 +580,9 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
   hEventLength->Write();
   hEventLength_Etot->Write();
- 
+  hEventLength_MCr->Write();
+  hEventTimeDist_Etot->Write();
+
   hTimeBetweenDEvents->Write();
   hTimeBetweenDEvents_ESum_Mcr->Write();
   hTimeBetweenT0s->Write();
@@ -605,6 +615,8 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     En_Esum_Mcl->Write();
     En_Esum_Mcr->Write();
+    En_Esum_Mcr_Pileup->Write();
+    En_Esum_Mcr_NoPileup->Write();
 
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
@@ -752,6 +764,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 
   //No Physics events are valid until created
   devent.Valid=0;
+  devent.pileup_detected=0;
   devent2.Valid=0;
   u235event.Valid=0;
   he3event.Valid=0;
@@ -760,7 +773,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
  
   //Event length
   hEventLength->Fill(eventvector[eventvector.size()-1].timestamp-eventvector[0].timestamp);
- 
+  hEventLength_MCr->Fill(eventvector[eventvector.size()-1].timestamp-eventvector[0].timestamp,eventvector.size());
+
   //Loop over event 
   for(uint32_t eye=0; eye<eventvector.size(); eye++) {
 
@@ -838,7 +852,11 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	devent.Crystal_mult++;
 	devent.Valid=1;  //event is now valid
 	Crystal_Mult++;	
-	//	cout<<"Gamma"<<endl;
+	if(eventvector[eye].pileup_detected==1) {
+	  //  cout<<"PU Det 1"<<endl;
+	  devent.pileup_detected=1;
+	}
+	//	cout<<"Gamma  "<<devent.pileup_detected<<endl;
 	
 	DANCE_Entries_per_T0++;
 	analysis_params->DANCE_entries_analyzed++;
@@ -956,6 +974,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
     //DANCE Events
   if(devent.Valid == 1) {
     
+    //   cout<<"processing"<<"  "<<devent.pileup_detected<<endl;
     analysis_params->events_analyzed++;
     analysis_params->DANCE_events_analyzed++;
     
@@ -1106,6 +1125,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	//Mults vs ESum vs En
 	En_Esum_Mcl->Fill(devent.En_corr[0],devent.ESum,devent.Cluster_mult);
 	En_Esum_Mcr->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
+
+	if(devent.pileup_detected==1) {
+	  // cout<<"PU Det"<<endl;
+	  En_Esum_Mcr_Pileup->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
+	}
+	else {
+	  En_Esum_Mcr_NoPileup->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
+	}
       
 	if(devent.Crystal_mult == 1) {
 	  En_Ecr1_mcr1->Fill(devent.En_corr[0],devent.Ecrystal[0]);
@@ -1178,6 +1205,8 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
 	  }
 	
+
+	  
 	  //Loop over the crystal mult
 	  for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
 	    for(int kay=0; kay<input_params.NQGates; kay++) {
@@ -1188,6 +1217,21 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    } //Done Looping over QGates
 	  } //Done looping over crystal mult
 	}
+	
+	double largesttimediff=0;
+
+	//Loop over the crystal mult
+	if(devent.Crystal_mult>1) {
+	  for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
+	    
+	    if(jay > 0) {
+	      if(devent.timestamp[jay]-devent.timestamp[jay-1] > largesttimediff) {
+		largesttimediff = devent.timestamp[jay]-devent.timestamp[jay-1];	    
+	      }
+	    }
+	  }
+	}
+	hEventTimeDist_Etot->Fill(largesttimediff,devent.ESum);
 
 	
 	/*

@@ -51,6 +51,7 @@ int func_ret = 0;
 
 //Histograms
 TH3S *hWaveform_ID;
+TH3S *hWaveform_ID_NR;
 TH2S *hWaveform_Li6;
 TH2S *hWaveform_U235;
 TH2S *hWaveform_Bkg;
@@ -60,6 +61,8 @@ TH2S *hWaveform_T0;
 TH2C *hDigital_Probe1_ID;
 TH2C *hDigital_Probe2_ID;
 
+TH2F *hID_vs_WFRatio;
+TH3F *hID_vs_WFInt_vs_Islow;
 TH1I *hScalers;
 
 TH1S *hWaveforms[20];
@@ -77,12 +80,16 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
     }
 
 #ifdef Histogram_Waveforms 
-    hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",80,0,80,2000,0,20000,162,0,162);
+    hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",40,0,40,2000,0,20000,162,0,162);
+    hWaveform_ID_NR = new TH3S("Waveform_ID_NR","Waveform_ID_NR",40,0,40,2000,0,20000,162,0,162);
     hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",200,0,200,2000,0,20000);
     hWaveform_Li6 = new TH2S("Waveform_Li6","Waveform_Li6",600,0,600,2000,0,20000);
     hWaveform_U235 = new TH2S("Waveform_U235","Waveform_U235",600,0,600,2000,0,20000);
     hWaveform_Bkg = new TH2S("Waveform_Bkg","Waveform_Bkg",600,0,600,2000,0,20000);
     hWaveform_He3 = new TH2S("Waveform_He3","Waveform_He3",600,0,600,2000,0,20000);
+    hID_vs_WFRatio = new TH2F("ID_vs_WFRatio","ID_vs_WFRatio",1000,-0.2,0.8,162,0,162);
+    hID_vs_WFInt_vs_Islow = new TH3F("ID_vs_WFInt_vs_Islow","ID_vs_WFInt_vs_Islow",500,-1000,4000,2000,0,40000,162,0,162);
+
 #endif
 
 #ifdef Histogram_Digital_Probes
@@ -114,11 +121,14 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
     }
     
     hWaveform_ID->Write();
-    hWaveform_T0->Write();
+    hWaveform_ID_NR->Write();
+ hWaveform_T0->Write();
     hWaveform_Li6->Write();
     hWaveform_U235->Write();
     hWaveform_Bkg->Write();
     hWaveform_He3->Write();
+    hID_vs_WFRatio->Write();
+    hID_vs_WFInt_vs_Islow->Write();
 #endif
 
 #ifdef Histogram_Digital_Probes
@@ -243,14 +253,14 @@ int Read_TimeDeviations(Input_Parameters input_params) {
 }
 
 
-double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_trace, uint16_t model) {
+double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_trace, uint16_t model, Analysis_Parameters *analysis_params) {
 
   // CALCULATE THE LEADING EDGE using constant fraction "frac"
   uint32_t imin=0;
   double sigmin=1e9;
   double frac=0.04;
   double base=0;
-  uint32_t NNN=10;
+  uint32_t NNN=4;
   
   //fraction
   frac=0.2;
@@ -317,6 +327,18 @@ double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_
       iLD=kay;
     }		
   }      
+
+  //Use dT to calculate the integral of the end of the waveform
+  double wf_counter=0.0;
+  double integral=0.0;
+  for(int kay=(int)dT/2.0+10; kay<(int)Ns; kay++) {
+    integral += base-waveform[kay];    
+    wf_counter += 1.0;
+  }
+  integral /= wf_counter;
+
+  analysis_params->wf_integral=integral;
+
   return dT;
 }
 
@@ -1087,12 +1109,15 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
 			
 			double dT=0;
 			
+			analysis_params->wf_integral=0;
+
 			//If the detector is not a DANCE crystal or the use fine time is off
                         if ( ! input_params.Use_Firmware_FineTime || db_arr[EVTS].ID >= 162) {
 			  dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                 //Function that calculates the fine time stamp
 			  			         db_arr[EVTS].Ns, 
 						         vx725_vx730_psd_data.dual_trace, 
-						         user_data.modtype);
+						         user_data.modtype,
+							 analysis_params);
                         }
                         else {
                           dT = 2.* vx725_vx730_psd_data.fine_time_stamp/1024.;
@@ -1104,7 +1129,13 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
 			db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
 			db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
 
-		
+			//	if((analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < 0.04 && analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > -0.005) || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > 0.11 ) {
+			if(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < 0.05 || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > 0.1 ) {
+			  db_arr[EVTS].pileup_detected=1;                                                         //Full timestamp in ns
+			} 
+			else {
+			  db_arr[EVTS].pileup_detected=0;                                                         //Full timestamp in ns
+			}
 			
 			if(input_params.Analysis_Stage > 0) {
 			  //need to add the time deviations before time sorting
@@ -1164,9 +1195,18 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
 #endif
 			
 #ifdef Histogram_Waveforms
+
 			//Fill waveform histograms
 			if(input_params.Read_Binary==0) {
 			  if(db_arr[EVTS].ID<162) {
+
+			hID_vs_WFRatio->Fill(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow),db_arr[EVTS].ID);
+
+			hID_vs_WFInt_vs_Islow->Fill(analysis_params->wf_integral,db_arr[EVTS].Islow,db_arr[EVTS].ID);
+
+
+			//	cout<<db_arr[EVTS].ID<<"  "<<analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow)<<endl;
+
 			    if(waveform_counter < 20) {
 			      if(db_arr[EVTS].Islow > 5000 && db_arr[EVTS].Ifast >500 && db_arr[EVTS].Ifast <1000) {
 				for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
@@ -1175,8 +1215,16 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
 				waveform_counter++;
 			      }
 			    }
-			    for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
-			      hWaveform_ID->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
+			 
+			    if(analysis_params->wf_integral<0) {
+			      for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+				hWaveform_ID_NR->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
+			      }			      
+			    }
+			    else {
+			      for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+				hWaveform_ID->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
+			      }
 			    }
 			    
 			  }			
@@ -1297,7 +1345,8 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
 			  dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
 							 db_arr[EVTS].Ns, 
 							 vx725_vx730_pha_data.dual_trace, 
-							 user_data.modtype);
+							 user_data.modtype,
+							 analysis_params);
                         }
                         else {
                           dT = 2.*vx725_vx730_pha_data.fine_time_stamp/65356.;
@@ -1776,7 +1825,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
 	  // 0x8001 is an end of run
 	  // 0x8002 is an ASCII message created by the logger 
 	
-	  else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ) {
+	  else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 || head.fEventId == 9 ) {
 	    //see if its the end of run
 	    if(head.fEventId==0x8001) {
 	      run=false;

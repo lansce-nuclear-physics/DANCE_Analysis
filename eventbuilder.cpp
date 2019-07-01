@@ -76,6 +76,8 @@ TH3F *ADC_raw_ID;    //3D Plot of 2D PSD plot (uncalibrated) vs DANCE Crystal ID
 TH3F *ADC_calib_ID;  //3D Plot of 2D PSD plot (calibrated) vs DANCE Crystal ID (z)
 
 TH2F *ADC_calib_Invalid;  //2D PSD Plot of invalid events (calibrated)
+TH2F *ADC_calib_Pileup;  //2D PSD Plot of invalid events (calibrated)
+TH2F *ADC_calib_Pileup_Removed;  //2D PSD Plot of invalid events (calibrated)
 
 //Alpha Spectra
 TH2F *ADC_alpha;
@@ -86,7 +88,8 @@ TH2F *hAlphaCalib;
 TH2F *ADC_gamma;
 TH2F *hGamma;
 TH2F *hGammaCalib;
-  
+TH2F *hGammaCalib_PU;
+
 //Crystal Diagnostics
 TH2F *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
 TH2F *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
@@ -317,7 +320,13 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  //Fill 2D ADC Calib
 	  ADC_calib->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
 	  ADC_raw->Fill(datadeque[0].Islow, datadeque[0].Ifast,1);
-	    
+	  if(datadeque[0].pileup_detected==1) {
+	    ADC_calib_Pileup->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
+	  }
+	  else {
+	    ADC_calib_Pileup_Removed->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
+	  }
+
 	  //Fill 3D ADC Calib vs Detector
 	  ADC_calib_ID->Fill(datadeque[0].Eslow, datadeque[0].Efast, datadeque[0].ID,1);
 	  ADC_raw_ID->Fill(datadeque[0].Islow, datadeque[0].Ifast,datadeque[0].ID,1);
@@ -338,7 +347,12 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  }
 	  if(datadeque[0].IsGamma) {
 	    hGamma->Fill(datadeque[0].Islow, datadeque[0].ID,1);
-	    hGammaCalib->Fill(datadeque[0].Eslow, datadeque[0].ID,1);
+	    if(datadeque[0].pileup_detected==1) {
+	      hGammaCalib_PU->Fill(datadeque[0].Eslow, datadeque[0].ID,1);
+	    }
+	    else {
+	      hGammaCalib->Fill(datadeque[0].Eslow, datadeque[0].ID,1);
+	    }
 	    ADC_gamma->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);	// JU diagnostic histogram
 	    hID_gamma->Fill(datadeque[0].ID,1);
 	  }
@@ -589,12 +603,15 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   ADC_raw_ID = new TH3F("ADC_raw_ID","ADC_raw_ID",1800,0.0,72000.0,180,0.0,7200,162,0,162);
   ADC_calib_ID = new TH3F("ADC_calib_ID","ADC_calib_ID",600,0,24,250,0,10,162,0,162);
   ADC_calib_Invalid = new TH2F("ADC_calib_Invalid","ADC_calib_Invalid",2400,0,24,1000,0,10);
-  
+    ADC_calib_Pileup = new TH2F("ADC_calib_Pileup","ADC_calib_Pileup",2400,0,24,1000,0,10);
+    ADC_calib_Pileup_Removed = new TH2F("ADC_calib_Pileup_Removed","ADC_calib_Pileup_Removed",2400,0,24,1000,0,10);
+
   //Gamma Histograms
   ADC_gamma = new TH2F("ADC_gamma","ADC_gamma",2400,0,24,1000,0,10);	// JU
   hGamma = new TH2F("hGamma","hGamma",3500,0,70000,162,0,162);
   hGammaCalib = new TH2F("hGammaCalib","hGammaCalib",2400,0,24,162,0,162);
-  
+  hGammaCalib_PU = new TH2F("hGammaCalib_PU","hGammaCalib_PU",2400,0,24,162,0,162);
+
   //Alpha Histograms
   ADC_alpha = new TH2F("ADC_alpha","ADC_alpha",2400,0.0,24.0,1000,0.0,10.0);	// JU
   hAlpha = new TH2F("hAlpha","hAlpha",1500,0,30000,162,0,162);
@@ -653,7 +670,9 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   ADC_calib->Write();
   ADC_raw->Write();
   ADC_calib_Invalid->Write();
-    
+      ADC_calib_Pileup->Write();
+      ADC_calib_Pileup_Removed->Write();
+
   ADC_raw_ID->Write();
   ADC_calib_ID->Write();
     
@@ -664,6 +683,7 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   ADC_gamma -> Write();
   hGamma->Write();
   hGammaCalib->Write();
+  hGammaCalib_PU->Write();
 
   hTimeBetweenCrystals->Write();
   hTimeBetweenCrystals_EnergyRatio->Write();

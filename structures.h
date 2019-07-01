@@ -122,6 +122,8 @@ typedef struct {
   uint8_t IsGamma;           // Gamma Flag
   uint8_t IsAlpha;           // Alpha Flag
   uint8_t InvalidReason;    // Reason the entry is invalid
+  int pileup_detected;        //Pileup detection from integral ratios
+
 } DEVT_BANK;
 
 
@@ -151,6 +153,7 @@ typedef struct{
   double Ecrystal[162];      //Calibrated crystal energy from ESlow
   double ESum;               //Total DANCE Event energy from sum of crystal ESlow in the event 
   uint16_t Valid;            //Valid event flag
+  int pileup_detected;
 } DANCE_Event;
 
 // U235 Beam Monitor event
@@ -286,6 +289,7 @@ typedef struct{
   bool event_building_active;  //this says whether or not we are event building yet
   double smallest_timestamp;
   double largest_timestamp;
+  double wf_integral;
 
 } Analysis_Parameters;
   
