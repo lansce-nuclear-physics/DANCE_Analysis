@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  README                 *// 
-//*  Last Edit: 05/16/18    *//  
+//*  Last Edit: 09/04/19   *//  
 //***************************//
 
 The purpose of this document is to explain how the program works.
@@ -36,7 +38,9 @@ FOR STAGE0 and STAGE1 ANALYSIS
    
    The argument 'pathtodata' is either a symbolic link to the location or the location of the .mid or .mid.gz files. 
 
-   The runnumber is padded with 6 zeros and other padding formats would need require a minor change in main.cpp
+   The runnumber is padded with 6 zeros and other padding formats would require a minor change in main.cpp
+
+   The subrunnumber is padded with 3 zeros and other padding formats would require a minor change in main.cpp
 
    Sample .cfg files are included when you clone the package and can be modified thereafter.
 
@@ -53,7 +57,7 @@ FOR SIMULATION ANLYSIS
    Stage 0 is responsible for unpacking and time sorting the data from either MIDAS format and performing analysis on the waveforms.  A variety of diagnostic histograms are made, time deviations are calculated, and a output binary file of the salient quantities of the data is produced.  These quantities are Ifast (the fast or short integral from the PSD firmware), Islow (the slow or long integral from the PSD firmware), the Time-Of-Flight (this is a bit of a misnomer because its actually the 31 bits of the trigger timestamp + the 16 bits (shifted up 31 bits) of the extended time stamp + the CFD timestamp from the waveform analysis), and the ID obtained from mapping the board and channel with the DANCE map.
 
 
-4) Whate Stage 1 does
+4) What Stage 1 does
 
    Stage 1 is responsible for physics analysis.  The binary format written by stage 0 is read in and events are built for DANCE, T0, and the beam monitors.  More to come on this later. 
 

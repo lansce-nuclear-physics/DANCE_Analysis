@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  main.cpp               *// 
-//*  Last Edit: 11/06/18    *//  
+//*  Last Edit: 09/08/19    *//  
 //***************************//
 
 //File includes
@@ -16,6 +16,7 @@
 
 //C/C++ includes
 #include <sys/time.h>
+#include <queue>
 
 using namespace std;
 
@@ -43,6 +44,7 @@ int main(int argc, char *argv[]) {
     analysis_params.last_timestamp[eye]=0;
     analysis_params.last_Islow[eye]=65535;
     analysis_params.last_Eslow[eye]=20;
+    analysis_params.last_Efast[eye]=20;
 
     analysis_params.last_valid_timestamp[eye]=0;
     analysis_params.last_valid_Islow[eye]=65535;
@@ -78,8 +80,9 @@ int main(int argc, char *argv[]) {
     analysis_params.first_sort=true;
     analysis_params.event_building_active=false; 
     analysis_params.smallest_timestamp=2.814749767e14; //this is the largest the clock can be on CAEN boards
-    analysis_params.largest_timestamp=0; 
-
+    analysis_params.largest_timestamp=0;
+    analysis_params.largest_subrun_timestamp=0;
+    analysis_params.last_subrun_timestamp=0;
   }
   
   Input_Parameters input_params;
@@ -128,6 +131,7 @@ int main(int argc, char *argv[]) {
 
   //Set the run number
   input_params.RunNumber = RunNum;
+  input_params.NumSubRun = 0;
 
   //Display the run number
   mmsg.str("");
@@ -299,6 +303,8 @@ int main(int argc, char *argv[]) {
  
   //make the file handle
   gzFile gz_in;
+  queue<gzFile> gz_queue;
+
   
   //Figure out what we are reading in.
   //MIDAS Files have a .mid or .mid.gz ending and staged analysis files are .bin or .bin.gz
@@ -312,43 +318,85 @@ int main(int argc, char *argv[]) {
 
     stringstream midasrunname;
     midasrunname.str();
-    if(strcmp(input_params.DataFormat.c_str(),"caen2015") == 0) {
-      midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
-    }
-    else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
-      midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
-    }
+    stringstream midassubrunname;
+    midassubrunname.str();
+
+    midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
+    midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
 
     mmsg.str("");
-    mmsg<<"Checking for: "<<midasrunname.str();
+    mmsg<<"Checking for: "<<midassubrunname.str();
     DANCE_Info("Main",mmsg.str());
     
-    //Look for uncompressed .mid files
-    gz_in=gzopen(midasrunname.str().c_str(),"rb");
+    //Look for uncompressed .mid subrun files
+    gz_in=gzopen(midassubrunname.str().c_str(),"rb");
     
     //check to see if its open
     if(gz_in) {
-       mmsg.str("");
-       mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
-       DANCE_Success("Main",mmsg.str());
+      mmsg.str("");
+      mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
+      DANCE_Success("Main",mmsg.str());
        
-       runname << midasrunname.str();
+      runname << midassubrunname.str();
+      input_params.SubRunNumber=0;
+      while(gz_in) {
+        input_params.NumSubRun++;
+        gz_queue.push(gz_in);
+        midassubrunname.str("");
+        midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
+        gz_in=gzopen(midassubrunname.str().c_str(),"rb");
+
+      }
     }
     else {
-      //look for compressed .mid.gz files
-      midasrunname << ".gz";
+      //look for compressed .mid.gz subrun files
+      midassubrunname << ".gz";
       
       mmsg.str("");
-      mmsg<<"Checking for: "<<midasrunname.str();
+      mmsg<<"Checking for: "<<midassubrunname.str();
       DANCE_Info("Main",mmsg.str());
+      input_params.SubRunNumber=0;
       
-      gz_in=gzopen(midasrunname.str().c_str(),"rb");
+      gz_in=gzopen(midassubrunname.str().c_str(),"rb");
       if(gz_in) {
 	mmsg.str("");
-	mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+	mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
 	DANCE_Success("Main",mmsg.str());
 
-	runname << midasrunname.str();
+	runname << midassubrunname.str();
+        input_params.SubRunNumber=0;
+        while(gz_in) {
+          input_params.NumSubRun++;
+          gz_queue.push(gz_in);
+          midassubrunname.str("");
+          midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
+          gz_in=gzopen(midassubrunname.str().c_str(),"rb");
+        }
+      }
+      else { //look for uncompressed .mid files (no subrun)
+        gz_in=gzopen(midasrunname.str().c_str(),"rb");
+      
+        if(gz_in) {
+          mmsg.str("");
+          mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+          DANCE_Success("Main",mmsg.str());
+          runname << midasrunname.str();
+          input_params.SubRunNumber=-1;
+          gz_queue.push(gz_in);
+        }
+        else { //look for .mid.gz files (no subrun)
+          midasrunname << ".gz";
+          gz_in=gzopen(midasrunname.str().c_str(),"rb");
+      
+          if(gz_in) {
+            mmsg.str("");
+            mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+            DANCE_Success("Main",mmsg.str());
+            runname << midasrunname.str();
+            input_params.SubRunNumber=-1;
+            gz_queue.push(gz_in);
+          }
+        }
       }
     }
   }
@@ -359,33 +407,82 @@ int main(int argc, char *argv[]) {
     stringstream binaryrunname;
     binaryrunname.str();
     binaryrunname << pathtodata << "/stage0_run_" << RunNum << ".bin";
+    stringstream binarysubrunname;
+    binarysubrunname.str();
+    binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
     mmsg.str("");
-    mmsg<<"Checking for: "<<binaryrunname.str();
+    mmsg<<"Checking for: "<<binarysubrunname.str();
     DANCE_Info("Main",mmsg.str());
     
-    //Look for uncompressed .bin files
-    gz_in=gzopen(binaryrunname.str().c_str(),"rb");
+    //Look for uncompressed .bin subrun files
+    gz_in=gzopen(binarysubrunname.str().c_str(),"rb");
     
     //check to see if its open
     if(gz_in) {
       mmsg.str("");
-      mmsg<<"File "<<binaryrunname.str().c_str()<<" Found";
+      mmsg<<"File "<<binarysubrunname.str().c_str()<<" Found";
       DANCE_Success("Main",mmsg.str());
-      runname << binaryrunname.str();
+      runname << binarysubrunname.str();
+      input_params.SubRunNumber=0;
+
+      while(gz_in) {
+        input_params.NumSubRun++;
+        gz_queue.push(gz_in);
+        binarysubrunname.str("");
+        binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
+        gz_in=gzopen(binarysubrunname.str().c_str(),"rb");
+      } 
     }
     else {
-      //look for compressed .bin.gz files
-      binaryrunname << ".gz";
+      //look for compressed .bin.gz subrun files
+      binarysubrunname << ".gz";
       mmsg.str("");
-      mmsg<<"Checking for: "<<binaryrunname.str();
+      mmsg<<"Checking for: "<<binarysubrunname.str();
       DANCE_Info("Main",mmsg.str());
-      gz_in=gzopen(binaryrunname.str().c_str(),"rb");
+      gz_in=gzopen(binarysubrunname.str().c_str(),"rb");
 
       if(gz_in) {
 	mmsg.str("");
-	mmsg<<"File "<<binaryrunname.str().c_str()<<" Found";
+	mmsg<<"File "<<binarysubrunname.str().c_str()<<" Found";
 	DANCE_Success("Main",mmsg.str());
-	runname << binaryrunname.str();
+	runname << binarysubrunname.str();
+        input_params.SubRunNumber=0;
+
+        while(gz_in) {
+          input_params.NumSubRun++;
+          gz_queue.push(gz_in);
+          binarysubrunname.str("");
+          binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin.gz";
+          gz_in=gzopen(binarysubrunname.str().c_str(),"rb");
+        } 
+
+      }
+      else {
+        mmsg.str("");
+        mmsg<<"Checking for: "<<binaryrunname.str().c_str();
+        DANCE_Info("Main",mmsg.str());
+        gz_in=gzopen(binaryrunname.str().c_str(),"rb");
+        if (gz_in) {
+          mmsg.str("");
+          mmsg<<"File "<<binaryrunname.str().c_str()<<" Found";
+          DANCE_Success("Main",mmsg.str());
+          runname << binaryrunname.str();
+          input_params.SubRunNumber=-1;
+          gz_queue.push(gz_in);
+        }
+        else {
+          binaryrunname << ".gz";
+          mmsg.str("");
+          mmsg<<"Checking for: "<<binaryrunname.str().c_str();
+          gz_in=gzopen(binaryrunname.str().c_str(),"rb");
+          if(gz_in) {
+            DANCE_Info("Main",mmsg.str());
+            DANCE_Success("Main",mmsg.str());
+            runname << binaryrunname.str();
+            input_params.SubRunNumber=-1;
+            gz_queue.push(gz_in); 
+          }
+        }
       }
     }
   }
@@ -409,47 +506,42 @@ int main(int argc, char *argv[]) {
       mmsg.str("");
       mmsg<<"File "<<simulationrunname.str().c_str()<<" Found";
       DANCE_Success("Main",mmsg.str());
-
       runname << simulationrunname.str();
+      gz_queue.push(gz_in);
+      input_params.SubRunNumber=-1;
     }
     else {
       //look for compressed .bin.gz files
       simulationrunname << ".gz";
-
       mmsg.str("");
       mmsg<<"Checking for: "<<simulationrunname.str();
       DANCE_Info("Main",mmsg.str());
-    
       gz_in=gzopen(simulationrunname.str().c_str(),"rb");
       if(gz_in) {
 
 	mmsg.str("");
 	mmsg<<"File "<<simulationrunname.str().c_str()<<" Found";
 	DANCE_Success("Main",mmsg.str());
-	
 	runname << simulationrunname.str();
+        gz_queue.push(gz_in);
+        input_params.SubRunNumber=-1;
       }
     }
   }
 
   else {
     mmsg.str("");
-    mmsg<<"Conflict Between Read_Binary (set to "<<input_params.Read_Binary<<") and Read_Simulation (set to ("<<input_params.Read_Simulation<<"). Exiting";
+    mmsg<<"Conflict Between Read_Binary (set to "<<input_params.Read_Binary<<") and Read_Simulation set to ("<<input_params.Read_Simulation<<"). Exiting";
     DANCE_Error("Main",mmsg.str());
     return -1;
   }
   
-  //Make sure after all of that we have a file
-  gz_in=gzopen(runname.str().c_str(),"rb");
-
-  //check to see if its open
-  if(!gz_in) {
+  if(gz_queue.empty()) {
     mmsg.str("");
-    mmsg<<"No Files for run "<<RunNum<< " Found. Exiting.";
+    mmsg<<"File queue empty, this is bad.  Exiting.";
     DANCE_Error("Main",mmsg.str());
     return -1;
   }
-  
 
   //Time profiling stuff
   struct timeval tv;  						// real time  
@@ -471,21 +563,22 @@ int main(int argc, char *argv[]) {
   }
   //initialize calibrator
   func_ret = Initialize_Calibrator(input_params);
-if(func_ret) {
+  if(func_ret) {
     return func_ret;
   }
   //initialize validator
   func_ret = Initialize_Validator(input_params);
-if(func_ret) {
+  if(func_ret) {
     return func_ret;
   }
   //Initialize analyzer
   func_ret = Initialize_Analyzer(input_params);
-if(func_ret) {
+  if(func_ret) {
     return func_ret;
   }
-  //Launch the upacker
-  int events_analyzed=  Unpack_Data(gz_in, begin, input_params, &analysis_params);
+  //cout << "numSubRun: " << input_params.NumSubRun << "\t subRunNum: "<< input_params.SubRunNumber << endl;
+  //Launch the unpacker
+  int events_analyzed=  Unpack_Data(gz_queue, begin, input_params, &analysis_params);
 
   mmsg.str("");
   mmsg<<"Analysis Complete. Analyzed: "<<events_analyzed<<" Entries";

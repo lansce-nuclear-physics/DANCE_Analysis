@@ -1,15 +1,15 @@
 #!/bin/bash
 #set -x
 
-./Copy_Automated.sh
+#./Copy_Automated.sh
 
 #where the data are
-#input=./hygelac22/
-input=./stage0_bin_automated
-#input=./dancedaq3/
-#input=./stage0_bin
-
-#input=./dancedaq7/
+#input=hygelac24
+#input=./stage0_bin_automated
+input=./stage0_bin
+sh gates2019.sh
+#input=data6
+#input=data7
 
 #Get the start and end run from the command line args
 startrun=$1;
@@ -17,6 +17,12 @@ endrun=$2;
 
 #number of xterms with parallel jobs running
 nxterms=$3   #number of xterms to launch at any given time
+
+#make sure there are enough command line arguments
+if [ "$#" -ne 3 ]; then
+  echo "missing command line argument (startrun, endrun, nxterms)"
+#  exit
+fi
 
 #make sure the start run is less than the end run
 if [ "$endrun" -lt "$startrun" ]
@@ -30,7 +36,7 @@ nruns=$(expr $endrun - $startrun + 1)
 
 echo "Analyzing: "$nruns" Runs" 
 
-nrunsperxterm=$(expr $nruns / $nxterms)
+nrunsperxterm=$(expr $nruns / $nxterms ) #+ 1) need the +1 if very assymetric
 
 echo "Starting: "$nxterms" terminals with "$nrunsperxterm" runs each"
 
@@ -46,7 +52,7 @@ do
    # echo $currentstart"  "$currentstop
 
     #xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
-     ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+     ./RunAnalysis_Slave.sh $input $currentstart $currentstop $nucleus &
 
 
     sleep 10
@@ -58,6 +64,7 @@ currentstop=$(( $endrun + 1 ))
 # echo $currentstart"  "$currentstop
 
 #xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
-./RunAnalysis_Slave.sh $input $currentstart $currentstop &
+./RunAnalysis_Slave.sh $input $currentstart $currentstop $nucleus &
+
 
 exit 0

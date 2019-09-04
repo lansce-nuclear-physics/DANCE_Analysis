@@ -55,7 +55,7 @@ int Read_PI_Gates() {
     
     
     msg.str("");
-    msg<<"Alpha PI Cut " << name<< "Loaded";
+    msg<<"Alpha PI Cut " << name<< " Loaded";
     DANCE_Success("Validator",msg.str());
   }
   else {
@@ -82,7 +82,7 @@ int Read_PI_Gates() {
     gammacutin.close();
    
     msg.str("");
-    msg<<"Gamma PI Cut " << name<< "Loaded";
+    msg<<"Gamma PI Cut " << name<< " Loaded";
     DANCE_Success("Validator",msg.str());
   }
   else {
@@ -108,7 +108,7 @@ int Read_PI_Gates() {
     // cout<<Nretriggercut<<endl;
     retriggercutin.close();
     msg.str("");
-    msg<<"Retrigger PI Cut " << name<< "Loaded";
+    msg<<"Retrigger PI Cut " << name<< " Loaded";
     DANCE_Success("Validator",msg.str());
   }
   else {
@@ -190,7 +190,7 @@ int Check_Crystal_Blocking(DEVT_BANK *devt_bank, Analysis_Parameters *analysis_p
   //Blocking Time to avoid retrigger problems
   if(timediff < input_params.Crystal_Blocking_Time) {
     devt_bank->Valid=0;
-    devt_bank->InvalidReason += 16;
+    devt_bank->InvalidReason += 32;
 #ifdef Validator_Verbose
     cout<<RED<<"Validator: Invalid from Blocking Time"<<RESET<<endl;
 #endif
@@ -209,17 +209,29 @@ int Check_Retrigger(DEVT_BANK *devt_bank, Analysis_Parameters *analysis_params) 
   double timediff = devt_bank->timestamp - analysis_params->last_timestamp[ID];
 
   //Ratio of this crystal hit and the last crystal hit
-  double ratio = devt_bank->Islow / analysis_params->last_Islow[ID];
+  double slowratio = devt_bank->Islow / analysis_params->last_Islow[ID];
+  double fastratio = devt_bank->Efast / analysis_params->last_Efast[ID];
   
   //  cout<<"timediff: "<<timediff<<" ratio: "<<ratio<<"  "<<Retrigger_Gate<<endl;
 
-  if(Retrigger_Gate->IsInside(timediff,ratio)) {
+  if(Retrigger_Gate->IsInside(timediff,slowratio)) {
     devt_bank->Valid=0;
     devt_bank->InvalidReason += 8;
 #ifdef Validator_Verbose
     cout<<RED<<"Validator: Invalid from Retrigger"<<RESET<<endl;
 #endif
   }
+
+  if(Retrigger_Gate->IsInside(timediff,fastratio)) {
+    devt_bank->Valid=0;
+    devt_bank->InvalidReason += 16;
+#ifdef Validator_Verbose
+    cout<<RED<<"Validator: Invalid from fast Retrigger"<<RESET<<endl;
+#endif
+  }
+
+
+
   return 0;
 }
 

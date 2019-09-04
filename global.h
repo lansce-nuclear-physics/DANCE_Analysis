@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  global.h               *// 
-//*  Last Edit: 04/19/19    *//  
+//*  Last Edit: 09/04/19    *//  
 //***************************//
 
 #ifndef GLOBAL_H
@@ -12,12 +12,14 @@
 #include <string>
 
 //Switches
-//#define Histogram_DetectorLoad     //Thes turns on the detector load histograms for the dead tim eand pileup analysis
-#define Make_Removed_Spectra       //This turns on the gamma removed spectra for the dead time and pileup analysis
+//#define Histogram_DetectorLoad     //Thes turns on the detector load histograms for the dead time and pileup analysis
+//#define Make_Removed_Spectra       //This turns on the gamma removed spectra for the dead time and pileup analysis
 //#define CheckTheDeque              //This turns on time integrity checks of the Buffer
 //#define Histogram_Waveforms        //This turns on histogramming of waveoforms
 //#define Histogram_Digital_Probes   //This turns on histogramming of digital probes (Not applicable to CAEN2015 format)
-//#define CheckBufferDepth            //This turns on a check of how much of the buffer is being used 
+//#define CheckBufferDepth           //This turns on a check of how much of the buffer is being used
+//#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
+//#define InvalidDetails             // histograms that are separated by event type before the invalid event
 
 //Verbosity
 //#define Calibrator_Verbose       //This turns on the messages from the calibrator
@@ -26,7 +28,7 @@
 //#define Eventbuilder_Verbose     //This turns on the messages from the eventbuilder
 //#define Unpacker_Verbose         //This turns on the messages from the unpacker 
 //#define Scaler_Verbose           //This turns on the scaler specific messages from the unpacker (stage 0 only)
-//#define Diagnostic_Verbose       //This turns on the diagnostics specific messaages from the unpacker (stage0 caen2018 only) 
+//#define Diagnostic_Verbose       //This turns on the diagnostics specific messages from the unpacker (stage0 caen2018 only) 
 //#define Removed_Verbose          //This turns on the messages from gamma-ray removal (Make_Removed_Spectra must be enabled)
 
 
@@ -34,7 +36,7 @@
 #define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
 //#define EventLimit 50000000  //Event limit to shut off the unpacker (2^32 -1)
 //#define EventLimit 1000000  //Event limit to shut off the unpacker (2^32 -1)
-#define ProgressInterval 100000   //Progress bar incriments
+#define ProgressInterval 1000000  //Progress bar incriments
 
 //Some Global Unpacker Variables (DONT CHANGE UNLESS NEEDED)
 //size of the block buffer (this has implications for unpacking speed.  Too many sorts and there will be too much overhead.  Not enough and NlogN is too big.  N*log(N) vs k*n*log(n) where k*n=N)
@@ -96,6 +98,8 @@
 #define	GammaE_From 0.0 //Gamma energy [MeV] - low limit
 #define	GammaE_To 20.0 //Gamma energy [MeV] - upper limit
 #define	GammaE_NoOfBins 200.0 //Number of bins
+
+
 
 
 

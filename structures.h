@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  structures.h           *// 
-//*  Last Edit: 11/06/18    *//  
+//*  Last Edit: 09/04/19    *//  
 //***************************//
 
 #ifndef STRUCTURES_H
@@ -231,6 +231,8 @@ typedef struct{
   double IsomerDelayedTOFGates[20];  //10 pairs
   bool JMOD_Background;
   int RunNumber;
+  int SubRunNumber;
+  int NumSubRun;
   //Ways to evaluate efficiency from TOF
   bool Evaluate_DeadTime;
   double Artificial_TOF;
@@ -253,7 +255,10 @@ typedef struct{
   double last_timestamp[256];
   double last_Islow[256];
   double last_Eslow[256];
-
+  double last_Efast[256];
+  uint16_t last_Alpha[256];
+  uint16_t last_Gamma[256];
+  uint8_t last_InvalidReason[256];
   double last_valid_timestamp[256];
   double last_valid_Islow[256];
   double last_valid_Eslow[256];
@@ -289,6 +294,8 @@ typedef struct{
   bool event_building_active;  //this says whether or not we are event building yet
   double smallest_timestamp;
   double largest_timestamp;
+  double largest_subrun_timestamp;
+  double last_subrun_timestamp;
   double wf_integral;
 
 } Analysis_Parameters;

@@ -72,7 +72,7 @@ void Make_Time_Deviations(int start_run, int end_run) {
   //Location of stage0 rootfiles
   stringstream fpath;
   fpath.str();
-  // fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root/";
+  // fpath << "/home/cfry/DANCE_Analysis/stage0_root/";
   fpath << "/data/29/dance/Automated_DANCE_Analysis/stage0_root_automated/";
 
   //stage0

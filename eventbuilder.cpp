@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  eventbuilder.cpp       *// 
-//*  Last Edit: 04/22/19    *//  
+//*  Last Edit: 09/04/19    *//  
 //***************************//
 
 //File includes
@@ -64,6 +64,10 @@ TH1I *hID_Raw;
 TH1I *hID_Invalid; //fill this when detectors are not valid after event processing
 TH1I *hID_gamma; //fill this when detectors have gammas
 TH1I *hID_alpha; //fill this when detectors have alphas
+TH1I *hID_gamma_Invalid; //fill this when detectors have gammas that are invalid
+TH1I *hID_alpha_Invalid; //fill this when detectors have alphas that are invalid
+TH1I *hID_invalid_Invalid;
+
 
 //Raw Slow Intergral - Fast Integral
 TH2F *Energy_raw_ID; 
@@ -93,6 +97,7 @@ TH2F *hGammaCalib_PU;
 //Crystal Diagnostics
 TH2F *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
 TH2F *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
+TH2F *hTimeBetweenCrystals_FastEnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
 TH2F *hTimeBetweenCrystals_LongShortRatio; //ratio of the present long/short integrals vs time difference between hits in the same cyrstal (ns)
   
 TH2F *hFastSlowRatio_ID;   //ID vs Ratio of Fast to Slow component
@@ -140,7 +145,8 @@ int Initialize_Eventbuilder(Input_Parameters input_params) {
       outfilename << STAGE1_BIN;
       outfilename <<"/stage1_run_";
     }
-    outfilename << input_params.RunNumber << ".bin";
+    outfilename << input_params.RunNumber;
+    outfilename << ".bin";
     
     outputbinfile.open(outfilename.str().c_str(), ios::out | ios::binary);
     
@@ -174,7 +180,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 #ifdef Eventbuilder_Verbose
   cout<<"Eventbuilder: About to event build deque size: "<<datadeque.size()<<endl;
 #endif
-   
+
   //Eventbuild
   while(true) {
     		  
@@ -199,6 +205,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
       //ID
       hID_Raw->Fill(datadeque[0].channel+(datadeque[0].board*16));  //Channel + (Board *16)
       hID->Fill(datadeque[0].ID,1);
+
       Energy_raw_ID->Fill(datadeque[0].Islow,datadeque[0].ID,1);
 
       //Calculate TOF now (difference between this timestamp and the last T0
@@ -270,7 +277,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	//Check to see crystal blocking time
 	Check_Crystal_Blocking(&datadeque[0],analysis_params,input_params);
 	
-	//The crystal blocking time has to be checked first since it effects the "effective" dector load for the deadtime code. 
+	//The crystal blocking time has to be checked first since it effects the "effective" detector load for the deadtime code. 
 	//This mimics having a longer integration window for the long charge integral
 
 	//Detector load	
@@ -304,7 +311,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	//Check Upper Level Discriminator
 	Check_ULD(&datadeque[0]);
 	  
-	//Check Upper Level Discriminator
+	//Check Threshold 
 	Check_Threshold(&datadeque[0],input_params);
 
 	//Check to see if it is a Retrigger
@@ -338,7 +345,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  if(!datadeque[0].IsAlpha) {
 	    Check_Gamma(&datadeque[0]);
 	  } //End of check on Alpha
-	    
+	   
 	  if(datadeque[0].IsAlpha) {
 	    hAlpha->Fill(datadeque[0].Islow, datadeque[0].ID,1);
 	    hAlphaCalib->Fill(datadeque[0].Eslow, datadeque[0].ID,1);
@@ -358,9 +365,10 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  }
 	    
 	}
-	else {
-	  ADC_calib_Invalid->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
-	}
+        else {
+          ADC_calib_Invalid->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
+        }
+
 
 	//Things that are not gammas are not in DANCE events
 	if(!datadeque[0].IsGamma) {
@@ -370,16 +378,22 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	    datadeque[0].InvalidReason += 1;
 	  }
 	  //or not an alpha or a gamma
-	  else {
-	    datadeque[0].InvalidReason += 2;
+	  else { 
+            datadeque[0].InvalidReason += 2;
 	  }
 	}
 
 	//Fill some DANCE histograms
 	//Time between DANCE crystals
 	hTimeBetweenCrystals->Fill((datadeque[0].timestamp-analysis_params->last_timestamp[datadeque[0].ID]),datadeque[0].ID,1);
-	
-	//Ratio of Energy of n/(n-1) hits vs time between n and n-1 hit
+
+	//Ratio of Efast of n/(n-1) hits vs time between n and n-1 hit
+	if(analysis_params->last_Efast[datadeque[0].ID] > 0) {
+	  hTimeBetweenCrystals_FastEnergyRatio->Fill((datadeque[0].timestamp-analysis_params->last_timestamp[datadeque[0].ID]),
+						 (datadeque[0].Efast/analysis_params->last_Efast[datadeque[0].ID]),1);
+	}
+        
+        //Ratio of Energy of n/(n-1) hits vs time between n and n-1 hit
 	if(analysis_params->last_Eslow[datadeque[0].ID] > 0) {
 	  hTimeBetweenCrystals_EnergyRatio->Fill((datadeque[0].timestamp-analysis_params->last_timestamp[datadeque[0].ID]),
 						 (datadeque[0].Eslow/analysis_params->last_Eslow[datadeque[0].ID]),1);
@@ -395,22 +409,39 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
       } //End of check on DANCE Ball
 
       //Check on time between T0s to remove any "junk" T0s.  
-      //Nominal is 20 Hz (50e6 ns) so if they are not at least 1e6 ns aopar then they are useless...
+      //Nominal is 20 Hz (50e6 ns) so if they are not at least 1e6 ns apart then they are useless...
       if(datadeque[0].ID == T0_ID) {
 	if(((datadeque[0].timestamp - analysis_params->last_timestamp[T0_ID]) < 1e6) && (analysis_params->last_timestamp[T0_ID])>0 ) {
 	  datadeque[0].Valid=0;      
 	}
       }
+#ifdef InvalidDetails
+      if (datadeque[0].Valid !=1) {
+	  
+         if (analysis_params->last_Alpha[datadeque[0].ID])
+            hID_alpha_Invalid->Fill(datadeque[0].ID,1);
+         if (analysis_params->last_Gamma[datadeque[0].ID])
+            hID_gamma_Invalid->Fill(datadeque[0].ID,1);
+         if (analysis_params->last_InvalidReason[datadeque[0].ID]>1){
+           hID_invalid_Invalid->Fill(datadeque[0].ID,1);
+         }
+      }
+#endif
 
       //Update analysis params
       analysis_params->last_timestamp[datadeque[0].ID] = datadeque[0].timestamp;
       analysis_params->last_Islow[datadeque[0].ID] = datadeque[0].Islow;
       analysis_params->last_Eslow[datadeque[0].ID] = datadeque[0].Eslow;
+      analysis_params->last_Efast[datadeque[0].ID] = datadeque[0].Efast;
+      analysis_params->last_Alpha[datadeque[0].ID] = datadeque[0].IsAlpha;
+      analysis_params->last_Gamma[datadeque[0].ID] = datadeque[0].IsGamma;
+      analysis_params->last_InvalidReason[datadeque[0].ID] = datadeque[0].InvalidReason;
 
       //If not valid
       if(datadeque[0].Valid != 1) {
 	analysis_params->entries_invalid++;
 	hID_Invalid->Fill(datadeque[0].ID);
+
 	hInvalid_Reason->Fill(datadeque[0].InvalidReason);
 #ifdef Eventbuilder_Verbose
 	cout<<RED<<"Eventbuilder: throwing away ID "<<datadeque[0].ID<<RESET<<endl;
@@ -593,7 +624,12 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   hID_Invalid = new TH1I("hID_Invalid","hID_Invalid",256,0,256);
   hID_gamma = new TH1I("hID_Gamma","hID_Gamma",256,0,256);
   hID_alpha = new TH1I("hID_Alpha","hID_Alpha",256,0,256);
-  
+#ifdef InvalidDetails
+  hID_gamma_Invalid = new TH1I("hID_Gamma_Invalid","hID_Gamma_Invalid",256,0,256);
+  hID_alpha_Invalid = new TH1I("hID_Alpha_Invalid","hID_Alpha_Invalid",256,0,256);
+  hID_invalid_Invalid = new TH1I("hID_Invalid_Invalid","hID_Invalid_Invalid",256,0,256);
+#endif
+
   //Raw Energy
   Energy_raw_ID =  new TH2F("Energy_raw_ID","Energy_raw_ID",3500,0.0,70000,162,0,162);
   
@@ -620,6 +656,7 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   //Crystal Diagnostics
   hTimeBetweenCrystals = new TH2F("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
   hTimeBetweenCrystals_EnergyRatio = new TH2F("TimeBetweenCrystals_EnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
+  hTimeBetweenCrystals_FastEnergyRatio = new TH2F("TimeBetweenCrystals_FastEnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
   hTimeBetweenCrystals_LongShortRatio = new TH2F("TimeBetweenCrystals_LongShortRatio","TimeBetweenCrystals_LongShortRatio",1250,0,10000,1000,0,100);
 
   hFastSlowRatio_ID = new TH2F("FastSlowRatio_ID","FastSlowRatio_ID",1000,0,1,162,0,162);
@@ -664,6 +701,11 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   hID_Invalid->Write();
   hID_gamma->Write();
   hID_alpha->Write();
+#ifdef InvalidDetails
+  hID_gamma_Invalid->Write();
+  hID_alpha_Invalid->Write();
+  hID_invalid_Invalid->Write();
+#endif
 
   Energy_raw_ID->Write();
 
@@ -687,6 +729,7 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
 
   hTimeBetweenCrystals->Write();
   hTimeBetweenCrystals_EnergyRatio->Write();
+  hTimeBetweenCrystals_FastEnergyRatio->Write();
   hTimeBetweenCrystals_LongShortRatio->Write();
 
   hFastSlowRatio_ID->Write();
@@ -727,5 +770,62 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
 #endif
   
   DANCE_Success("Eventbuilder","Wrote Histograms");
+  return 0;
+}
+
+int Reset_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Analysis_Parameters *analysis_params) {
+
+  fout->cd();
+
+  hInvalid_Reason->Reset("ICES");
+  
+  hID->Reset("ICES");
+  hID_Raw->Reset("ICES");
+  hID_Invalid->Reset("ICES");
+  hID_gamma->Reset("ICES");
+  hID_alpha->Reset("ICES");
+#ifdef InvalidDetails
+  hID_gamma_Invalid->Reset("ICES");
+  hID_alpha_Invalid->Reset("ICES");
+  hID_invalid_Invalid->Reset("ICES");
+#endif
+  Energy_raw_ID->Reset("ICES");
+
+  ADC_calib->Reset("ICES");
+  ADC_raw->Reset("ICES");
+  ADC_calib_Invalid->Reset("ICES");
+      ADC_calib_Pileup->Reset("ICES");
+      ADC_calib_Pileup_Removed->Reset("ICES");
+
+  ADC_raw_ID->Reset("ICES");
+  ADC_calib_ID->Reset("ICES");
+    
+  ADC_alpha -> Reset("ICES");
+  hAlpha->Reset("ICES");
+  hAlphaCalib->Reset("ICES");
+    
+  ADC_gamma -> Reset("ICES");
+  hGamma->Reset("ICES");
+  hGammaCalib->Reset("ICES");
+  hGammaCalib_PU->Reset("ICES");
+
+  hTimeBetweenCrystals->Reset("ICES");
+  hTimeBetweenCrystals_EnergyRatio->Reset("ICES");
+  hTimeBetweenCrystals_FastEnergyRatio->Reset("ICES");
+  hTimeBetweenCrystals_LongShortRatio->Reset("ICES");
+
+  hFastSlowRatio_ID->Reset("ICES");
+
+#ifdef Histogram_DetectorLoad
+
+  if(input_params.Read_Simulation==0) { 
+    
+    hDetectorLoad_perT0->Reset("ICES");
+    hDetectorLoad->Reset("ICES");
+    hDetectorLoad_En_perT0->Reset("ICES");
+    hDetectorLoad_En->Reset("ICES");
+    hEn_BinWidth->Reset("ICES");
+  }
+#endif
   return 0;
 }

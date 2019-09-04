@@ -2,7 +2,7 @@
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 04/15/19    *//  
+//*  Last Edit: 09/04/19    *//  
 //***************************//
 
 //File includes
@@ -65,6 +65,8 @@ TH2F *hID_vs_WFRatio;
 TH3F *hID_vs_WFInt_vs_Islow;
 TH1I *hScalers;
 
+TH1D* hTimestamps; 
+
 TH1S *hWaveforms[20];
 int waveform_counter=0;
 
@@ -90,6 +92,10 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
     hID_vs_WFRatio = new TH2F("ID_vs_WFRatio","ID_vs_WFRatio",1000,-0.2,0.8,162,0,162);
     hID_vs_WFInt_vs_Islow = new TH3F("ID_vs_WFInt_vs_Islow","ID_vs_WFInt_vs_Islow",500,-1000,4000,2000,0,40000,162,0,162);
 
+#endif
+
+#ifdef MakeTimeStampHistogram
+    hTimestamps = new TH1D("hTimestamps","hTimestamps",1e6,0,1000);
 #endif
 
 #ifdef Histogram_Digital_Probes
@@ -136,10 +142,113 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
     hDigital_Probe2_ID->Write();
 #endif
 
+#ifdef MakeTimeStampHistogram
+    hTimestamps->Write();
+#endif
+
     hScalers->Write();
   }
   
   DANCE_Success("Unpacker","Wrote Unpacker Histograms");
+  return 0;
+}
+
+int Reset_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
+  
+  fout->cd();
+
+  if(input_params.Read_Binary==0) {
+#ifdef Histogram_Waveforms
+    for(int eye=0; eye<20; eye++){
+      hWaveforms[eye]->Reset("ICES");
+    }
+    
+    hWaveform_ID->Reset("ICES");
+    hWaveform_ID_NR->Reset("ICES");
+ hWaveform_T0->Reset("ICES");
+    hWaveform_Li6->Reset("ICES");
+    hWaveform_U235->Reset("ICES");
+    hWaveform_Bkg->Reset("ICES");
+    hWaveform_He3->Reset("ICES");
+    hID_vs_WFRatio->Reset("ICES");
+    hID_vs_WFInt_vs_Islow->Reset("ICES");
+#endif
+
+#ifdef Histogram_Digital_Probes
+    hDigital_Probe1_ID->Reset("ICES");
+    hDigital_Probe2_ID->Reset("ICES");
+#endif
+
+#ifdef MakeTimeStampHistogram
+    hTimestamps->Reset("ICES");
+#endif
+
+    hScalers->Reset("ICES");
+  }
+
+  return 0;
+}
+
+int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis_params){
+  //oputput the rootfile
+  //Name of the output root file
+  stringstream rootfilename;
+  rootfilename.str();
+  
+  //stage 0
+  if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
+    rootfilename << "./stage0_root/Stage0_Histograms_Run_";
+    rootfilename << input_params.RunNumber;
+    if (input_params.SubRunNumber >= 0){
+      rootfilename << "_";
+      rootfilename << input_params.SubRunNumber;
+    }
+  }
+  //stage 1
+  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==0) {
+    rootfilename << "./stage1_root/Stage1_Histograms_Run_";
+    rootfilename << input_params.RunNumber;
+    if (input_params.NumSubRun > 0){
+      rootfilename << "_";
+      rootfilename << input_params.SubRunNumber;
+    }
+  }
+  //simulation
+  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==1) {
+    rootfilename << "./stage1_root/Stage1_Histograms_";
+    rootfilename << input_params.Simulation_File_Name;
+  }
+  else {
+    DANCE_Error("Unpacker","Cannot understand options for making rootfile. Exiting!");
+    return -1;
+  }
+    
+  //make the root file  
+  TFile *fout;
+
+
+  //Make the file
+  fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),
+                        (int)input_params.Coincidence_Window,
+                        (int)input_params.Crystal_Blocking_Time,
+                        (int)input_params.DEvent_Blocking_Time),"RECREATE");
+  
+  DANCE_Success("Unpacker","Rootfile Created");
+  
+  //Write histograms
+  Write_Unpacker_Histograms(fout, input_params);
+  Write_PI_Gates(fout);
+  Write_Eventbuilder_Histograms(fout, input_params, analysis_params);
+  Write_Analyzer_Histograms(fout, input_params);
+
+  //Write the root file
+  fout->Write();
+  DANCE_Success("Unpacker","Rootfile Written");
+
+  Reset_Unpacker_Histograms(fout, input_params);
+  Reset_Eventbuilder_Histograms(fout, input_params, analysis_params);
+  Reset_Analyzer_Histograms(fout, input_params);
+
   return 0;
 }
 
@@ -157,7 +266,7 @@ int Make_DANCE_Map() {
       map>>m1>>m2>>m3;
       MapID[m2][m1]=m3;
       if(map.eof()) {
-	break;
+        break;
       }
     }
     map.close();
@@ -182,7 +291,8 @@ int Make_Output_Diagnostics_File(int RunNumber) {
   
   outfilename << DIAGNOSTICS;
   outfilename <<"/diagnostics_run";
-  outfilename << RunNumber << ".txt";
+  outfilename << RunNumber;
+  outfilename << ".txt";
   
   outputdiagnosticsfile.open(outfilename.str().c_str(), ios::out);
   
@@ -227,11 +337,11 @@ int Read_TimeDeviations(Input_Parameters input_params) {
       int tempid;
       double tempoffset;
       while(!fdata.eof()) {
-	fdata >> tempid >> tempoffset; 
-	TimeDeviations[tempid] = tempoffset;
-	if(fdata.eof()) {
-	  break;
-	}
+        fdata >> tempid >> tempoffset; 
+        TimeDeviations[tempid] = tempoffset;
+        if(fdata.eof()) {
+          break;
+        }
       }
       
       stringstream umsg;
@@ -245,7 +355,7 @@ int Read_TimeDeviations(Input_Parameters input_params) {
 
       stringstream umsg;
       umsg.str("");
-      umsg<<"Faild to Read Time Deviations From: "<<fname.str();
+      umsg<<"Failed to Read Time Deviations From: "<<fname.str();
       DANCE_Error("Unpacker",umsg.str()); 
     }
   }
@@ -260,7 +370,7 @@ double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_
   double sigmin=1e9;
   double frac=0.04;
   double base=0;
-  uint32_t NNN=4;
+  uint32_t NNN=4; 
   
   //fraction
   frac=0.2;
@@ -271,7 +381,7 @@ double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_
     //calculate the baseline 
     if(kay<NNN) {
       base+=(1.*waveform[kay]);
-    }		  
+    }                  
    
     //locate the minimum in the waveform (negative polarity so this is the max)
     if((1.*waveform[kay])<sigmin) {
@@ -304,28 +414,28 @@ double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_
       
       //When there is no dual trace there is 
       if(!dual_trace && model == 730) {
-	if(dSig!=0) dT=(1.*waveform[kay-1]-thr)/dSig*2.+(kay-1)*2.;  // this is in ns
-	else dT=(kay-1)*2.;
+        if(dSig!=0) dT=(1.*waveform[kay-1]-thr)/dSig*2.+(kay-1)*2.;  // this is in ns
+        else dT=(kay-1)*2.;
       }
       //When dual trace is on there is 4 ns between samples
-      else if((!dual_trace && model == 725) || (dual_trace && model ==730)) {	      
-	if(dSig!=0) dT=(1.*waveform[kay-1]-thr)/dSig*4.+(kay-1)*4.;  // this is in ns
-	else dT=(kay-1)*4.;
+      else if((!dual_trace && model == 725) || (dual_trace && model ==730)) {              
+        if(dSig!=0) dT=(1.*waveform[kay-1]-thr)/dSig*4.+(kay-1)*4.;  // this is in ns
+        else dT=(kay-1)*4.;
       }
       else if(dual_trace && model == 725) {
-	if(dSig!=0) dT=(1.*waveform[kay-1]-thr)/dSig*8.+(kay-1)*8.;  // this is in ns
-	else dT=(kay-1)*8.;
+        if(dSig!=0) dT=(1.*waveform[kay-1]-thr)/dSig*8.+(kay-1)*8.;  // this is in ns
+        else dT=(kay-1)*8.;
       }
       else {
-	stringstream umsg;
-	umsg.str("");
-	umsg<<"Not sure what to do with dual trace: "<<dual_trace<<"  and model: "<<model;
-	DANCE_Error("Unpacker",umsg.str());
+        stringstream umsg;
+        umsg.str("");
+        umsg<<"Not sure what to do with dual trace: "<<dual_trace<<"  and model: "<<model;
+        DANCE_Error("Unpacker",umsg.str());
 
-	return -1;
+        return -1;
       }
       iLD=kay;
-    }		
+    }                
   }      
 
   //Use dT to calculate the integral of the end of the waveform
@@ -342,8 +452,9 @@ double Calculate_Fractional_Time(uint16_t waveform[], uint32_t Ns, uint8_t dual_
   return dT;
 }
 
-int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Analysis_Parameters *analysis_params) {
+int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_params, Analysis_Parameters *analysis_params) {
 
+  gzFile gz_in=gz_queue.front();
   ofstream faillog;
   faillog.open("Readout_Status_Failures.txt", ios::app);
 
@@ -396,7 +507,7 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
   Sclr_Rates_t sclr_rates;      //Scaler Rates
   
   //time profiling for performance
-  struct timeval tv;   	   //Real time  
+  struct timeval tv;              //Real time  
   double time_elapsed;     //Elapsed time
   double time_elapsed_old; //Previous elapsed time
   
@@ -419,1773 +530,1747 @@ int Unpack_Data(gzFile &gz_in, double begin, Input_Parameters input_params, Anal
   double unpack_begin = tv.tv_sec+(tv.tv_usec/1000000.0);
 
   DANCE_Info("Unpacker","Started Unpacking");
-    
-  //Stage 0 unpacking
-  if(input_params.Read_Binary==0 && input_params.Read_Simulation==0) {
-
-
-    stringstream umsg;
-    umsg.str("");
-    umsg<<"Data Format: "<<input_params.DataFormat;
-    DANCE_Info("Unpacker",umsg.str());
-    
-    while(run) {
-     
-      if(analysis_params->entries_unpacked > EventLimit) {
-	run=false;
-      }
-      
-      //Progess indicator
-      if(analysis_params->entries_unpacked > progresscounter*ProgressInterval) {
-	progresscounter++;
-	cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
-	if(datadeque.size()>0) {
-	  cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
-	  cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
-	}	
-	
-	cout<<analysis_params->entries_unpacked<<" Entries Unpacked "<<endl;
-	cout<<analysis_params->entries_awaiting_timesort<<" Entries Awaiting timesort"<<endl;
-	cout<<datadeque.size()<<" Entries Sorted and in the Buffer"<<endl;
-#ifdef CheckBufferDepth
-	if(analysis_params->max_buffer_utilization < 0.75) {
-	  cout<<GREEN<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
-	}
-	else if(analysis_params->max_buffer_utilization < 0.90) {
-	  cout<<YELLOW<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
-	}
-	else {
-	  cout<<RED<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
-	}
-#endif
-	cout<<analysis_params->entries_written_to_binary<<" Entries Written to Binary"<<endl;
-	cout<<analysis_params->entries_invalid<<" Entries Invalid ("<<100.0*analysis_params->entries_invalid/analysis_params->entries_processed<<" %)"<<endl;
-	cout<<analysis_params->entries_built<<" Entries Built into "<<analysis_params->events_built<<" Events"<<endl;
-	cout<<"Analyzed "<<analysis_params->entries_analyzed<<" Entries from "<<analysis_params->events_analyzed<<" Events"<<endl;
-
-	cout<<setw(20)<<left<<"Breakdown:"<<setw(12)<<left<<"DANCE"<<setw(12)<<left<<"T0"<<setw(12)<<left<<"Li6"<<setw(12)<<left<<"U235"<<setw(12)<<left<<"He3"<<setw(12)<<left<<"Background"<<setw(12)<<left<<"Unknown"<<setw(12)<<left<<endl;
-
-	cout<<setw(20)<<left<<"Entries:"<<setw(12)<<left<<analysis_params->DANCE_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->T0_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Li6_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->U235_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->He3_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Bkg_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Unknown_entries<<endl;
-
-	cout<<setw(20)<<left<<"Events:"<<setw(12)<<left<<analysis_params->DANCE_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->T0_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Li6_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->U235_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->He3_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Bkg_events_analyzed<<endl;
-
-	if(analysis_params->DANCE_events_analyzed > 0) {
-	  cout<<setw(20)<<left<<"Average Mult:"<<setw(12)<<left<<(1.0*analysis_params->DANCE_entries_analyzed)/(1.0*analysis_params->DANCE_events_analyzed)<<endl;
-	}
-	cout<<endl;
-
-	gettimeofday(&tv,NULL); 
-	time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
-      
-	cout << "Average Entry Processing Rate: "<<(double)analysis_params->entries_unpacked/(time_elapsed-unpack_begin)<<" Entries per second "<<endl;
-	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
-	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl<<endl;
-
-	BYTES_READ=0;
-	time_elapsed_old = time_elapsed;
-      }
-    
-
-      //This is the unpacker for the caen2015 data format
-      if(strcmp(input_params.DataFormat.c_str(),"caen2015") == 0) {
-
-	//Read in the event header
-	gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
-      
-	//As long as gzread reads something start doing unpacking
-	if(gzret!=0) {
-	
-	  TotalDataSize = head.fDataSize;
-	  BYTES_READ += TotalDataSize;
-	  TOTAL_BYTES += TotalDataSize;
-
-#ifdef Unpacker_Verbose
-	  cout<<"Type: "<<head.fEventId<<endl;
-	  cout<<"Size: "<<head.fDataSize<<endl;     ///< event size in bytes
-	  cout<<"TimeStamp "<<head.fTimeStamp<<endl;    ///< event timestamp in seconds
-#endif
-	  //Data
-	  if(head.fEventId==1){
-	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));	
-	
-#ifdef Unpacker_Verbose
-	    cout << "Bank_HEADER " << endl;
-	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	    cout << dec << bhead.fFlags << endl;
-#endif
-	
-	    TotalBankSize = bhead.fDataSize;
-	
-	    while(TotalBankSize>0) {
-	      gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-	      TotalBankSize-=sizeof(Bank32_t);
-#ifdef Unpacker_Verbose
-	      cout << "BANK " << endl;
-	      cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
-	      cout << dec << bank32.fType << endl;
-	      cout << dec << bank32.fDataSize << endl;
-#endif
-	      EventBankSize = bank32.fDataSize;
-	      if (bank32.fName[0]=='C' && bank32.fName[1]=='E') {	// name starts as CE VT_BANK
-		int EVTS_batch=0;
-	    
-		evaggr->N = 0; // reset how many events we've processed this event
-	    
-		int number_cevt_events = bank32.fDataSize/sizeof(CEVT_BANK);
-	    
-		for (int eye = 0; eye < number_cevt_events; ++eye) {
-		  gzret=gzread(gz_in,evinfo,sizeof(CEVT_BANK));
-		  gzseek(gz_in,devt_padding,SEEK_CUR);
-
-#ifdef Unpacker_Verbose 
-		  cout<<"cevt event number: "<<eye<<endl;
-		  cout<<"position: "<<evinfo->position<<endl;
-		  cout<<"extras: "<<evinfo->extras<<endl;
-		  cout<<"width: "<<evinfo->width<<endl;
-		  cout<<"detector_id: "<<evinfo->detector_id<<endl;
-		  cout<<evinfo->integral[0]<<"  "<<evinfo->integral[1]<<endl;
-		  cout<<"padding: "<<devt_padding<<endl<<endl;;
-#endif
-		  TotalBankSize-=sizeof(CEVT_BANK)+devt_padding;
-		  EventBankSize-=sizeof(CEVT_BANK)+devt_padding;	  
-	      
-		  evaggr->P[evaggr->N] = *evinfo;
-		  evaggr->N++;
-		  EVTS_batch += 1;
-	      
-#ifdef Unpacker_Verbose 
-		  cout << "evaggr->N: " << evaggr->N << endl;
-#endif
-		}
-	    	    
-		// snag the trig bank
-		gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-		TotalBankSize-=sizeof(Bank32_t);
-		EventBankSize = bank32.fDataSize;
-	    
-		char *fData;
-		fData=(char*)malloc(bank32.fDataSize);
-		gzret=gzread(gz_in,fData,bank32.fDataSize);
-		TotalBankSize -= EventBankSize;
-		free (fData);	
-            
-#ifdef Unpacker_Verbose 
-		cout<<"Before trig bank"<<endl;
-#endif
-
-		// begin funny place between peaks and cpu
-		while (true) {
-		  // the peaks bank should be here
-		  gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-		  TotalBankSize-=sizeof(Bank32_t);
-		  EventBankSize = bank32.fDataSize;
-
-#ifdef Unpacker_Verbose 
-		  cout<<"Peak bank"<<endl;
-		  cout<<"Name: "<<bank32.fName[0]<<"  Total Bank Size: "<<TotalBankSize<<"  EventBankSize: "<<EventBankSize<<endl;
-#endif
-	      
-		  if(bank32.fName[0]=='p') {
-		    int whichpeak = atoi(&bank32.fName[1]);
-#ifdef Unpacker_Verbose 
-		    cout << "whichpeak: " << whichpeak << endl;
-#endif
-		    gzret=gzread(gz_in,imported_peaks[whichpeak],bank32.fDataSize);
-#ifdef Unpacker_Verbose 
-		    cout<<"After Read"<<endl;
-#endif
-		    //gzread(in,waveform,bank32.fDataSize);
-		    TotalBankSize -= EventBankSize;
-		  } 
-		  else {
-#ifdef Unpacker_Verbose 
-		    cout<<"CPU Bank"<<endl;
-#endif
-		    // get the cpu bank information
-		    char *fData=(char*)malloc(bank32.fDataSize);
-		    gzret=gzread(gz_in,fData,bank32.fDataSize);
-		    TotalBankSize -= EventBankSize;
-		    free (fData);	
-		    break; // you break here because the cpu comes last
-		  }
-		}
-#ifdef Unpacker_Verbose 
-		cout<<"After trig bank"<<endl;
-#endif
-
-		int last_detnum = evaggr->P[0].detector_id;
-		int where_in_peakbank = 0;
-		for (uint32_t evtnum=0;evtnum<evaggr->N;++evtnum) {
-		  int current_detnum = evaggr->P[evtnum].detector_id;
-		  if (current_detnum != last_detnum) {
-		    where_in_peakbank = 0;
-		  }
-		  uint32_t wflen = evaggr->P[evtnum].width;	// CEVT_BANK variable
-              
-		  for (uint wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex) {
-		    // at this point we have reserved onkly 40 samples in db_arr waveform !!
-		    evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
-		  }        
-		  where_in_peakbank += wflen;
-		  last_detnum = current_detnum;
-	      
-		  uint64_t timestamp_raw = (evaggr->P[evtnum].position & 0x7FFFFFFFFFFF);                // 47 bits for timestamp
-
-#ifdef Unpacker_Verbose 
-		  cout<<"timestamp_raw: "<<timestamp_raw<<endl;
-#endif
-	      	      
-		  db_arr[EVTS].timestamp	= (double)(timestamp_raw);                                     //Digitizer timestamp
-		  db_arr[EVTS].TOF       	= (double)(timestamp_raw);                                     //Time of Flight (Currently in 2ns incriments)
-		  db_arr[EVTS].Ns		= evaggr->P[evtnum].width;                                     //Number of samples of the waveform
-		  db_arr[EVTS].Ifast	= evaggr->P[evtnum].integral[0];                               //Fast integral
-		  db_arr[EVTS].Islow	= evaggr->P[evtnum].integral[1]-evaggr->P[evtnum].integral[0]; //Slow integral
-		  db_arr[EVTS].board	= (int)((1.*((int)evaggr->P[evtnum].detector_id)-1)/16.);      //Board number
-		  db_arr[EVTS].channel	= (1*evaggr->P[evtnum].detector_id-1)-16*db_arr[EVTS].board;   //Channel number
-		  db_arr[EVTS].ID     	= MapID[db_arr[EVTS].channel][db_arr[EVTS].board];             //ID from DANCE map
-		  db_arr[EVTS].Valid = 1;                                                                //Everything starts valid     
-		  db_arr[EVTS].InvalidReason = 0;                                                            
-
-
-#ifdef Unpacker_Verbose 
-		  cout<<(int)db_arr[EVTS].board<<"  "<<(int)db_arr[EVTS].channel<<endl;
-#endif
-		  // CALCULATE THE LEADING EDGE using constant fraction "frac"
-		  int imin=0;
-		  double sigmin=1e9;
-		  double frac=0.04;
-		  double base=0;
-		  double secmom=0.;	
-		  int NNN=10;
-		  // int id=db_arr[EVTS].ID;
-
-		  double dT = 0;
-		  
-		  //Beam monitor waveforms for caen2015 data are ostensibly useless
-		  if(db_arr[EVTS].ID <= 200) { 
-		    if(db_arr[EVTS].ID<162) frac=0.04;
-		    else frac=0.1;
-		    
-		    frac=0.2;
-		    
-		    for(int i=0;i<db_arr[EVTS].Ns;i++) {
-		      wf1[i]=evaggr->wavelets[evtnum][i]+8192;
-		      
-		      if(i<NNN) {
-			base+=(1.*wf1[i]);
-			secmom+=(1.*wf1[i]*1.*wf1[i]);
-		      }		  
-		      if((1.*wf1[i])<sigmin) {
-			sigmin=1.*wf1[i];
-			imin=i;
-		      }
-		    }
-		    
-		    double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
-		    int iLD=0;
-		    for(int i=imin;i>1;i--){
-		      if((1.*wf1[i])<thr && (1.*wf1[i-1])>thr){
-			double dSig=(1.*wf1[i-1]-1.*wf1[i]);
-			if(dSig!=0) dT=(1.*wf1[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
-			else dT=(i-1)*2.;
-			iLD=i;
-		      }		
-		    }
-		  } //end loop over ID <= 200
-		  
-		  //Fill raw IDs
-
-#ifdef Histogram_Waveforms
-
-		  //Fill waveform histogram
-		  if(input_params.Read_Binary==0) {
-		    if(db_arr[EVTS].ID<162) {
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-			hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
-		      }
-		    } 
-		    
-		    if(db_arr[EVTS].ID == 241) {
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-			hWaveform_He3->Fill(i,wf1[i]);
-		      }			  
-		    } 
-		    if(db_arr[EVTS].ID == 242) {
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-			hWaveform_Bkg->Fill(i,wf1[i]);
-		      } 
-		    }
-		    if(db_arr[EVTS].ID == 243) {
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-			hWaveform_U235->Fill(i,wf1[i]);
-		      }
-		    } 
-		    if(db_arr[EVTS].ID == 244) {
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-			hWaveform_Li6->Fill(i,wf1[i]);
-		      } 
-		    }
-		    if(db_arr[EVTS].ID == 200) {
-		      for(int i=0;i<db_arr[EVTS].Ns;i++) {
-			hWaveform_T0->Fill(i,wf1[i]);
-		      } 
-		    }
-		  }
-#endif
-
-		  db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
-		  db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
-		  	     
-		
-		  if(input_params.Analysis_Stage > 0) {
-		    //need to add the time deviations before time sorting
-		    if(db_arr[EVTS].ID < 200) {
-		      db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
-		    }
-		    
-		    //Add the DANCE delay
-		    if(db_arr[EVTS].ID < 162) {
-		      db_arr[EVTS].timestamp += DANCE_Delay;
-		    }
-		    
-		    //Add the He3 delay
-		    if(db_arr[EVTS].ID == 241) {
-		      db_arr[EVTS].timestamp += He3_Delay;
-		    } 
-		    
-		    //Add the U235 delay
-		    if(db_arr[EVTS].ID == 243) {
-		      db_arr[EVTS].timestamp += U235_Delay;
-		    } 
-		    
-		    //Add the Li6 delay
-		    if(db_arr[EVTS].ID == 244) {
-		      db_arr[EVTS].timestamp += Li6_Delay;
-		    }
-		  }
-
-		  db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //Start with TOF as Full timestamp in ns + time dev
-
-		  
-		  //keep track of the smallest timestamp
-		  if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
-		    analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
-		  }    
-		  //keep track of the largest timestamp
-		  if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
-		    analysis_params->largest_timestamp=db_arr[EVTS].TOF;
-		  }  
-		  
-		  EVTS++;
-	  
-		  analysis_params->entries_unpacked++;
-		  analysis_params->entries_awaiting_timesort++;
-
-		  
-#ifdef Unpacker_Verbose 
-		  cout<<EVTS<<"  "<<analysis_params->entries_unpacked<<endl;
-#endif
-		}	 //End of loop on eventnum			    
-	      }  //End of if on CEVT bank
-	      break;
-	    } //End of loop on EventBankSize
-	 
-	  } //End of event type 1
-	  
-
-	  
-	  //Scalers
-	  else if(head.fEventId==2) {
-	      
-	    TotalBankSize  = head.fDataSize;
-
-#ifdef Scaler_Verbose
-	    cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
-#endif
-	    gzread(gz_in,&bhead,sizeof(BankHeader_t));
-	    TotalBankSize -= sizeof( BankHeader_t );
-	    
-#ifdef Scaler_Verbose
-	    cout << "Bank_HEADER " << endl;
-	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	    cout << dec << bhead.fFlags << endl;
-#endif
-	    while (TotalBankSize > 0) {
-
-	      //MLTM
-	      gzread( gz_in, &bank32, sizeof( Bank32_t ) );
-	      TotalBankSize -= sizeof( Bank32_t );
-
-#ifdef Scaler_Verbose
-	      cout << "BANK " << endl;
-	      cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
-	      cout << dec << bank32.fType << endl;
-	      cout << "Size: "<<dec << bank32.fDataSize << endl;
-#endif
-	      //see if data is on an 8-byte boundary
-	      bool readextra = false;
-	      if(bank32.fDataSize%8 !=0) {
-		readextra = true; 
-	      }
-	      
-	      if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
-		
-		uint32_t time_seconds;
-		gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
-		TotalBankSize-=sizeof(time_seconds);
-
-#ifdef Scaler_Verbose
-		cout << time_seconds<<"\n";
-#endif
-	      }
-	      if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
-
-		gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
-		TotalBankSize-=sizeof(sclr_totals);
-	
-		for(int kay=0; kay<N_SCLR; kay++) {
-		  hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
-#ifdef Scaler_Verbose
-		  cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
-#endif
-		}
-	      }
-	      
-	      if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
-	       
-		gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
-		TotalBankSize-=sizeof(sclr_rates);
-
-#ifdef Scaler_Verbose
-		for(int kay=0; kay<N_SCLR; kay++) {
-		  cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
-		}
-#endif
-	      }
-	      
-	      if(readextra) {
-		uint32_t extra = 0;
-		gzret=gzread(gz_in,&extra,sizeof(extra));
-		TotalBankSize -= sizeof(extra);
-	      }	
-	      
-#ifdef Scaler_Verbose
-	      cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
-#endif
-
-	    } //End of while(TotalBankSize > 0)
-	  
-	  } //end of scalers
-
-	  else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
-
-	    //End of Run
-	    if(head.fEventId==0x8001)  {
-	      run=false;
-	      break;
-	    }
-	
-	    char *fData;
-	    fData=(char*)malloc(head.fDataSize);
-	    gzret=gzread(gz_in,fData,head.fDataSize);	
-	    free (fData);	
-	  }
-	  
-	  else { // other crap
-	    char *fData;
-	    fData=(char*)malloc(head.fDataSize);
-	    gzret=gzread(gz_in,fData,head.fDataSize);
-	    free (fData);
-	  } //end of crap
-	}  //checking to see if gzret > 0
-      }
-
-      else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
-
-	//variables
-	bool readextra = false;
-	
-	//counters
-	uint32_t dataword =0;
-	uint32_t BytesRead =0;
-	uint32_t wordstoread = 0;
-	uint32_t chaggcounter = 0;
-	uint32_t chaggwordstoread = 0;
-
-	//Start reading the file
-	gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
-	
-	if(gzret!=0) {
-	  
-	  TotalDataSize=head.fDataSize;
-	  
-	  BYTES_READ += head.fDataSize;
-	  TOTAL_BYTES += head.fDataSize;
-	  
-#ifdef Unpacker_Verbose
-	  cout<<"Type: "<<head.fEventId<<"  TotalDataSize  "<<TotalDataSize<<endl;
-#endif
-       	         
-	  //Data
-	  if(head.fEventId==1){
-	    
-	    TotalBankSize=0;
-	    EventBankSize=0;
-	    
-	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
-#ifdef Unpacker_Verbose
-	    cout<<"Event Data"<<endl;
-	    cout << "Bank_HEADER " << endl;
-	    cout <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	    cout << bhead.fFlags << endl;
-#endif
-	    
-	    TotalBankSize = bhead.fDataSize;
-	    
-	    while(TotalBankSize>0) {
-	      
-	      gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
-	      TotalBankSize -= sizeof(Bank32_t);
-	      
-#ifdef Unpacker_Verbose
-	      cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;    
-	      cout << "BANK  " << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
-	      cout << dec << bank32.fType << endl;
-	      cout << dec << bank32.fDataSize << endl;
-#endif
-	
-	      EventBankSize = bank32.fDataSize;
-	      
-	      //the data lie on 8 byte boundaries so there will be an extra 4 bytes at the end of the data that is "unaccounted" for in the header
-	      readextra = false;
-	      if(EventBankSize%8 !=0) {
-		readextra = true; 
-	      }
-	      
-	      //Read the firmware version and board ID
-	      gzret=gzread(gz_in,&dataword,sizeof(dataword));
-	      TotalBankSize -= sizeof(dataword);
-	      EventBankSize -=  sizeof(dataword);
-
-	      user_data.fw_majrev = (dataword & MAJREV_MASK);
-	      user_data.fw_minrev = (dataword & MINREV_MASK) >> 8;
-	      user_data.modtype = (dataword & MODTYPE_MASK) >> 14;
-	      user_data.modtype = 730;
-	      user_data.boardid = (dataword & BOARDID_MASK) >> 26;
-	      	      
-	      //Read the user extras word
-	      gzret=gzread(gz_in,&dataword,sizeof(dataword));
-	      TotalBankSize -= sizeof(dataword);
-	      EventBankSize -=  sizeof(dataword);
-
-	      user_data.user_extra = dataword;
-	      
-#ifdef Unpacker_Verbose
-	      cout<< "board: "<< (int)user_data.boardid <<" is a "<< (int)user_data.modtype <<" with Firmware: "<<(int)user_data.fw_majrev<< "."<<(int)user_data.fw_minrev<<"  "<<user_data.user_extra<<endl;
-#endif
-	      
-	      while(EventBankSize>0) {
-		
-		BytesRead =0;
-		
-		//Make sure its a Vx725 or Vx730 
-	       	if(user_data.modtype == 725 || user_data.modtype == 730) {
-
-		  //Read in the Vx725_Vx730 header
-		  gzret=gzread(gz_in,&v1730_header,sizeof(v1730_header));
-   		  BytesRead += gzret;
-
-		  //Unpack the header information
-		  func_ret = unpack_vx725_vx730_board_data(&v1730_header, &vx725_vx730_board_data);
-		  
-#ifdef Unpacker_Verbose
-		  cout<<"header: "<<(int)vx725_vx730_board_data.header<<"  ";
-		  cout<<"nwords: "<<vx725_vx730_board_data.boardaggsize<<"  ";
-		  cout<<"boardid: "<<(int)vx725_vx730_board_data.boardid<<"  ";
-		  cout<<"pattern: "<<vx725_vx730_board_data.pattern<<"  ";
-		  cout<<"channelmask: "<<(int)vx725_vx730_board_data.channelmask<<"  ";
-		  cout<<"boardaggcounter: "<<vx725_vx730_board_data.boardaggcounter<<"  ";
-		  cout<<"boardaggtime: "<<vx725_vx730_board_data.boardaggtime<<endl;
-#endif
-
-		  //Make sure the board header ID is 10 before proceeding
-		  if(vx725_vx730_board_data.header != 10) {
-		    cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<endl;
-		    cout<<"Entries: "<<EVTS<<" Total Entries: "<<analysis_params->entries_unpacked<<endl;
-		    cout<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
-		    run = false;
-		    return -1;
-		    break;
-		  }
-		  
-		  //interpret the channel mask 
-		  channels.clear();
-		  for(int m=0; m<8; m++) {
-#ifdef Unpacker_Verbose
-		    cout<<m<<"  "<<(( vx725_vx730_board_data.channelmask >> m) & 0x1)<<endl;
-#endif
-		    if((( vx725_vx730_board_data.channelmask >> m) & 0x1)) {
-		      channels.push_back(2*m);
-		    }
-		  }
-		  
-		  //Number of words left in the CAEN data 
-		  wordstoread = vx725_vx730_board_data.boardaggsize-4;
-		  
-		  //Number of channel aggregates unpacked
-		  chaggcounter = 0;
-		  
-		  while (wordstoread>0) {
-
-		    //Read the Vx725_Vx730 channel aggregate header
-		    gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
-		    BytesRead += gzret;
-		    wordstoread -= 2;	    
-		    
-		    
-		    //************  PSD ************//
-		    if(user_data.fw_majrev == 136) {
-		      
-		      func_ret = unpack_vx725_vx730_psd_chagg_header(&v1730_chagg_header, &vx725_vx730_psd_data);
-		      
-#ifdef Unpacker_Verbose
-		      cout<<"PSD   DT: "<<(int)vx725_vx730_psd_data.dual_trace<<"  ";
-		      cout<<"EQ: "<<(int)vx725_vx730_psd_data.charge_enabled<<"  ";
-		      cout<<"ET: "<<(int)vx725_vx730_psd_data.time_enabled<<"  ";
-		      cout<<"EE: "<<(int)vx725_vx730_psd_data.extras_enabled<<"  ";
-		      cout<<"ES: "<<(int)vx725_vx730_psd_data.waveform_enabled<<"  ";
-		      cout<<"EX Opt: "<<(int)vx725_vx730_psd_data.extras_option<<"  ";
-		      cout<<"AP: "<<(int)vx725_vx730_psd_data.ap<<"  ";
-		      cout<<"DP1: "<<(int)vx725_vx730_psd_data.dp1<<"  ";
-		      cout<<"DP2: "<<(int)vx725_vx730_psd_data.dp2<<"  ";
-		      cout<<"NSDB8: "<<vx725_vx730_psd_data.nsdb8<<endl;
-#endif
-		      
-		      //Number of words in the channel aggregate left to read
-		      chaggwordstoread = vx725_vx730_psd_data.chagg_size - 2;
-
-		      //Unpack the channel aggreate
-		      while (chaggwordstoread>0) {
-
-			//Read the Vx725_Vx730 PSD channel aggregate
-			gzret=gzread(gz_in,&v1730_chagg_data,vx725_vx730_psd_data.individual_chagg_size*sizeof(uint32_t));
-			BytesRead += gzret;
-			wordstoread -= vx725_vx730_psd_data.individual_chagg_size;
-			chaggwordstoread -= vx725_vx730_psd_data.individual_chagg_size;
-
-			//unpack the channel agregate
-			func_ret = unpack_vx725_vx730_psd_chagg(v1730_chagg_data, &vx725_vx730_psd_data);
-
-			//Set the remaining analysis variables
-			db_arr[EVTS].Valid = 1;                                                             //Everything starts valid
-			db_arr[EVTS].board = user_data.boardid;                                             //Board ID
-			db_arr[EVTS].channel = vx725_vx730_psd_data.channel + channels[chaggcounter];       //Channel ID
-			db_arr[EVTS].Ifast =  vx725_vx730_psd_data.qshort;                                  //Fast Integral
-			db_arr[EVTS].Islow =  vx725_vx730_psd_data.qlong - vx725_vx730_psd_data.qshort;     //Slow Integral (minus the fast)
-			db_arr[EVTS].InvalidReason = 0;                                                         
-
-			//Map it
-			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];  
-
-	     		//Do waveform analysis and calculate times
-			if(vx725_vx730_psd_data.dual_trace) {
-			  db_arr[EVTS].Ns = 4.0*vx725_vx730_psd_data.nsdb8;                                  //Dual trace effectively reduces the sampling frequency
-			}
-			else {
-			  db_arr[EVTS].Ns = 8.0*vx725_vx730_psd_data.nsdb8;                                 
-			}
-			
-			double dT=0;
-			
-			analysis_params->wf_integral=0;
-
-			//If the detector is not a DANCE crystal or the use fine time is off
-                        if ( ! input_params.Use_Firmware_FineTime || db_arr[EVTS].ID >= 162) {
-			  dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                 //Function that calculates the fine time stamp
-			  			         db_arr[EVTS].Ns, 
-						         vx725_vx730_psd_data.dual_trace, 
-						         user_data.modtype,
-							 analysis_params);
-                        }
-                        else {
-                          dT = 2.* vx725_vx730_psd_data.fine_time_stamp/1024.;
-                        }
-			 
-			//Set the timestamps
-			db_arr[EVTS].timestamp = vx725_vx730_psd_data.trigger_time_tag;                       //31-bit time in clock ticks
-			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_psd_data.extended_time_stamp;        //16-bit extended time in clock ticks
-			db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
-			db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
-
-			//	if((analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < 0.04 && analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > -0.005) || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > 0.11 ) {
-			if(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < 0.05 || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > 0.1 ) {
-			  db_arr[EVTS].pileup_detected=1;                                                         //Full timestamp in ns
-			} 
-			else {
-			  db_arr[EVTS].pileup_detected=0;                                                         //Full timestamp in ns
-			}
-			
-			if(input_params.Analysis_Stage > 0) {
-			  //need to add the time deviations before time sorting
-			  if(db_arr[EVTS].ID < 200) {
-			    db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
-			  }
-			  
-			  //Add the DANCE delay
-			  if(db_arr[EVTS].ID < 162) {
-			    db_arr[EVTS].timestamp += DANCE_Delay;
-			  }
-			  
-			  //Add the He3 delay
-			  if(db_arr[EVTS].ID == 241) {
-			    db_arr[EVTS].timestamp += He3_Delay;
-			  } 
-			  
-			  //Add the U235 delay
-			  if(db_arr[EVTS].ID == 243) {
-			    db_arr[EVTS].timestamp += U235_Delay;
-			  } 
-			  
-			  //Add the Li6 delay
-			  if(db_arr[EVTS].ID == 244) {
-			    db_arr[EVTS].timestamp += Li6_Delay;
-			  }
-			}
-
-			db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //TOF start as Full timestamp in ns
-
-	      	
-	       
-
-#ifdef Unpacker_Verbose
-			cout<<"Valid: "<<(int)db_arr[EVTS].Valid<<"  ";
-			cout<<"Board: "<<(int)db_arr[EVTS].board<<"  ";
-			cout<<"Channel: "<<(int)db_arr[EVTS].channel<<"  ";
-			cout<<"NS: "<<db_arr[EVTS].Ns<<"  ";
-			cout<<"Timestamp: "<<db_arr[EVTS].timestamp<<"  ";
-			cout<<"TOF: "<<db_arr[EVTS].TOF<<"  ";
-			cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ";
-			cout<<"ISlow: "<<db_arr[EVTS].Islow<<endl;
-#endif
-
-	   						
-#ifdef Histogram_Digital_Probes
-			//Fill probe histograms
-			if(input_params.Read_Binary==0) {
-			  if(db_arr[EVTS].ID<256) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      //digital probes
-			      hDigital_Probe1_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_psd_data.digital_probe1[kay]);
-			      hDigital_Probe2_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_psd_data.digital_probe2[kay]);
-			    }
-			  }
-			}
-#endif
-			
-#ifdef Histogram_Waveforms
-
-			//Fill waveform histograms
-			if(input_params.Read_Binary==0) {
-			  if(db_arr[EVTS].ID<162) {
-
-			hID_vs_WFRatio->Fill(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow),db_arr[EVTS].ID);
-
-			hID_vs_WFInt_vs_Islow->Fill(analysis_params->wf_integral,db_arr[EVTS].Islow,db_arr[EVTS].ID);
-
-
-			//	cout<<db_arr[EVTS].ID<<"  "<<analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow)<<endl;
-
-			    if(waveform_counter < 20) {
-			      if(db_arr[EVTS].Islow > 5000 && db_arr[EVTS].Ifast >500 && db_arr[EVTS].Ifast <1000) {
-				for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
-				  hWaveforms[waveform_counter]->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
-				}
-				waveform_counter++;
-			      }
-			    }
-			 
-			    if(analysis_params->wf_integral<0) {
-			      for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
-				hWaveform_ID_NR->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
-			      }			      
-			    }
-			    else {
-			      for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
-				hWaveform_ID->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
-			      }
-			    }
-			    
-			  }			
-			  
-			  if(db_arr[EVTS].ID == 241) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_He3->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
-			    } 
-			  }
-			  if(db_arr[EVTS].ID == 242) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_Bkg->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
-			    }
-			  } 
-			  if(db_arr[EVTS].ID == 243) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_U235->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
-			    } 
-			  }
-			  if(db_arr[EVTS].ID == 244) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_Li6->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
-			    } 
-			  }
-			  
-			  if(db_arr[EVTS].ID==200) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_T0->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
-			    }
-			  }
-			}
-#endif
-
-	
-			//keep track of the smallest timestamp
-			if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
-			  analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
-			}    
-			//keep track of the largest timestamp
-			if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
-			  analysis_params->largest_timestamp=db_arr[EVTS].TOF;
-			}  
-		    
-			EVTS++;
-		
-			analysis_params->entries_unpacked++;
-			analysis_params->entries_awaiting_timesort++;
-
-		     
-			
-#ifdef Unpacker_Verbose
-			cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
-#endif
-		      } //End of check on chagg words to read
-		      
-		      //incriment the chagg counter
-		      chaggcounter++;
-
-		    } //End of check on PSD
-		    
-
-		    //*********** PHA ***********//
-		    else if(user_data.fw_majrev == 139) {
-		      
-		      func_ret = unpack_vx725_vx730_pha_chagg_header(&v1730_chagg_header, &vx725_vx730_pha_data);
-		      
-#ifdef Unpacker_Verbose
-		      cout<<"PHA   DT: "<<(int)vx725_vx730_pha_data.dual_trace<<"  ";
-		      cout<<"EE: "<<(int)vx725_vx730_pha_data.energy_enabled<<"  ";
-		      cout<<"ET: "<<(int)vx725_vx730_pha_data.time_enabled<<"  ";
-		      cout<<"E2: "<<(int)vx725_vx730_pha_data.extras2_enabled<<"  ";
-		      cout<<"ES: "<<(int)vx725_vx730_pha_data.waveform_enabled<<"  ";
-		      cout<<"EX Opt: "<<(int)vx725_vx730_pha_data.extras2_option<<"  ";
-		      cout<<"AP1: "<<(int)vx725_vx730_pha_data.ap1<<"  ";
-		      cout<<"AP2: "<<(int)vx725_vx730_pha_data.ap2<<"  ";
-		      cout<<"DP: "<<(int)vx725_vx730_pha_data.dp<<"  ";
-		      cout<<"NSDB8: "<<vx725_vx730_pha_data.nsdb8<<endl;
-#endif
-		      
-		      
-		      //Number of words in the channel aggregate left to read
-		      chaggwordstoread = vx725_vx730_pha_data.chagg_size - 2;
-
-		      //Unpack the channel aggreate
-		      while (chaggwordstoread>0) {
-			
-			//Read the Vx725_Vx730 PSD channel aggregate
-			gzret=gzread(gz_in,&v1730_chagg_data,vx725_vx730_pha_data.individual_chagg_size*sizeof(uint32_t));
-			BytesRead += gzret;
-			wordstoread -= vx725_vx730_pha_data.individual_chagg_size;
-			chaggwordstoread -= vx725_vx730_pha_data.individual_chagg_size;
-
-			//unpack the channel agregate
-			func_ret = unpack_vx725_vx730_pha_chagg(v1730_chagg_data, &vx725_vx730_pha_data);
-			
-			//Set the remaining analysis variables
-			db_arr[EVTS].Valid = 1;
-			db_arr[EVTS].board = user_data.boardid;
-			db_arr[EVTS].channel = vx725_vx730_pha_data.channel + channels[chaggcounter];
-			db_arr[EVTS].Ifast =  vx725_vx730_pha_data.energy;
-			db_arr[EVTS].Islow =  vx725_vx730_pha_data.energy;		
-			db_arr[EVTS].InvalidReason = 0;
-
-			//Map it
-			db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board]; 
-
-			
-			//Do waveform analysis and calculate times
-			if(vx725_vx730_pha_data.dual_trace) {
-			  db_arr[EVTS].Ns = 4.0*vx725_vx730_pha_data.nsdb8;
-			}
-			else {
-			  db_arr[EVTS].Ns = 8.0*vx725_vx730_pha_data.nsdb8;
-			}
-			
-			double dT=0;
-                        if ( ! input_params.Use_Firmware_FineTime ) {
-			  dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
-							 db_arr[EVTS].Ns, 
-							 vx725_vx730_pha_data.dual_trace, 
-							 user_data.modtype,
-							 analysis_params);
-                        }
-                        else {
-                          dT = 2.*vx725_vx730_pha_data.fine_time_stamp/65356.;
-                        }
-						  
-			db_arr[EVTS].timestamp = vx725_vx730_pha_data.trigger_time_tag;                       //31-bit time in clock ticks
-			db_arr[EVTS].timestamp += 2147483648*vx725_vx730_pha_data.extended_time_stamp;        //16-bit extended time in clock ticks
-			db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
-			db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
-			
-
-			if(input_params.Analysis_Stage > 0) {
-			  //need to add the time deviations before time sorting
-			  if(db_arr[EVTS].ID < 200) {
-			    db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
-			  }
-			  
-			  //Add the DANCE delay
-			  if(db_arr[EVTS].ID < 162) {
-			    db_arr[EVTS].timestamp += DANCE_Delay;
-			  }
-			  
-			  //Add the He3 delay
-			  if(db_arr[EVTS].ID == 241) {
-			    db_arr[EVTS].timestamp += He3_Delay;
-			  } 
-			  
-			  //Add the U235 delay
-			  if(db_arr[EVTS].ID == 243) {
-			    db_arr[EVTS].timestamp += U235_Delay;
-			  } 
-			  
-			  //Add the Li6 delay
-			  if(db_arr[EVTS].ID == 244) {
-			    db_arr[EVTS].timestamp += Li6_Delay;
-			  }
-			}
-
-			db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //Start with TOF as Full timestamp in ns
-
-#ifdef Unpacker_Verbose
-			cout<<"Valid: "<<(int)db_arr[EVTS].Valid<<"  ";
-			cout<<"Board: "<<(int)db_arr[EVTS].board<<"  ";
-			cout<<"Channel: "<<(int)db_arr[EVTS].channel<<"  ";
-			cout<<"NS: "<<db_arr[EVTS].Ns<<"  ";
-			cout<<"Timestamp: "<<db_arr[EVTS].timestamp<<"  ";
-			cout<<"TOF: "<<db_arr[EVTS].TOF<<"  ";
-			cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ";
-			cout<<"ISlow: "<<db_arr[EVTS].Islow<<endl;
-#endif
-			
-
-	
-#ifdef Histogram_Digital_Probes
-			//Fill probe histograms
-			if(input_params.Read_Binary==0) {
-			  if(db_arr[EVTS].ID<256) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      //digital probes
-			      hDigital_Probe1_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_pha_data.digital_probe1[kay]);
-			      hDigital_Probe2_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_pha_data.digital_probe2[kay]);
-			    }
-			  }
-			}
-#endif
-			
-#ifdef Histogram_Waveforms
-			//Fill waveform histograms
-			if(input_params.Read_Binary==0) {
-			  if(db_arr[EVTS].ID<162) {
-			    for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
-			      hWaveform_ID->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay],db_arr[EVTS].ID);
-			    }
-			  }			
-			  
-			  if(db_arr[EVTS].ID == 241) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_He3->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
-			    } 
-			  }
-			  if(db_arr[EVTS].ID == 242) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_Bkg->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
-			    }
-			  } 
-			  if(db_arr[EVTS].ID == 243) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_U235->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
-			    } 
-			  }
-			  if(db_arr[EVTS].ID == 244) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_Li6->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
-			    } 
-			  }
-			  
-			  if(db_arr[EVTS].ID==200) {
-			    for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
-			      hWaveform_T0->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
-			    }
-			  }
-			}
-#endif
-
-
-			//keep track of the smallest timestamp
-			if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
-			 analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
-			}    
-			//keep track of the largest timestamp
-			if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
-			  analysis_params->largest_timestamp=db_arr[EVTS].TOF;
-			}  
-		    
-			EVTS++;
-	  
-			analysis_params->entries_unpacked++;
-			analysis_params->entries_awaiting_timesort++;
-
-
-			
-#ifdef Unpacker_Verbose
-			cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
-#endif
-		      } //End of check on chagg words to read
-		      
-		      //incriment the chagg counter
-		      chaggcounter++;
-
-		    } //End of check on PHA
-
-
-		  } //End of wordstoread > 0 
-		  
-#ifdef Unpacker_Verbose
- 		  cout<<EventBankSize<<"  "<<BytesRead<<endl;
-#endif
   
-		  EventBankSize -= BytesRead;
-		  TotalBankSize -= BytesRead;
-		  // BytesRead = 0;
-		  
-		} //End of check on 725 or 730
-	      } //End of check on event bank size
-
-	      if(readextra) {
-		uint32_t extra = 0;
-		gzret=gzread(gz_in,&extra,sizeof(extra));
-		TotalBankSize -= sizeof(extra);
-	      } //End of read extra
-	    } //End of check  on total bank size
-	  }  //Endf of EventID 1 (Data)
-
-	  else if(head.fEventId==8){
-	    
-	    // this is scaler data
-	    gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));	
-	    
-#ifdef Diagnostic_Verbose
-	    cout << "SCALER " << endl;
-	    cout << "Bank_HEADER " << endl;
-	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	    cout << dec << bhead.fFlags << endl;
-#endif    
-	  
-	    TotalBankSize = bhead.fDataSize;
-
-	    //This is the numbef of active boards
-	    int nactiveboards = 0;
-	    
-	    while(TotalBankSize > 0) {
-
-	      gzret=gzread(gz_in,&bank,sizeof(BankHeader_t));	
-	      TotalBankSize-=sizeof(Bank_t);
-	      
-#ifdef Diagnostic_Verbose
-	      cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
-	      cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
-	      cout << dec << bank.fType << endl;
-	      cout << dec << bank.fDataSize << endl;
-#endif
-	      //see if data is on an 8-byte boundary
-	      bool readextra = false;
-	      if(bank.fDataSize%8 !=0) {
-		readextra = true; 
-	      }
-	      
-	      //This is the time struct
-	      if (bank.fName[0]=='T' && bank.fName[1]=='I' && bank.fName[2]== 'M' && bank.fName[3]=='E') {
-		outputdiagnosticsfile << "TIME\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Time"<<endl;
-#endif
-		gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
-		TotalBankSize-=sizeof(timevalue);
-
-		outputdiagnosticsfile << timevalue.tv_sec<<"  "<<timevalue.tv_usec<<"\n";
-	      }
-	      
-	      //These are the Digitizer Rates
-	      if (bank.fName[0]=='S' && bank.fName[1]=='C' && bank.fName[2]== 'L' && bank.fName[3]=='R') {
-		
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		outputdiagnosticsfile << "SCLR  "<<nactiveboards<<"\n";
-
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Digitizer Rates"<<endl;
-#endif
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  gzret=gzread(gz_in,&Digitizer_Rates[eye],sizeof(uint32_t));
-#ifdef Diagnostic_Verbose
-		  cout<<eye<<"  "<<Digitizer_Rates[eye]<<endl;
-#endif
-		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Digitizer_Rates[eye]<<"\n";
-		}
-	      }
-
-	      //These are the Acquisition Status
-	      if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Acquisition Status"<<endl;
-#endif
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  gzret=gzread(gz_in,&Acquisition_Status[eye],sizeof(uint32_t));
-#ifdef Diagnostic_Verbose
-		  cout<<eye<<"  "<<Acquisition_Status[eye]<<endl;
-#endif
-		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Acquisition_Status[eye]<<"\n";
-		}
-	      }
-
-	      //These are the Failure Status
-	      if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Failure Status"<<endl;
-#endif
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
-
-		  if(Failure_Status[eye] != 0) {
-		    faillog<<"Run: "<<input_params.RunNumber<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
-		  }
-#ifdef Diagnostic_Verbose
-		  cout<<eye<<"  "<<Failure_Status[eye]<<endl;
-#endif
-		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Failure_Status[eye]<<"\n";
-		}
-	      }
-
-	      //These are the Readout Status
-	      if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Readout Status"<<endl;
-#endif
-		nactiveboards = bank.fDataSize/sizeof(uint32_t);
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  gzret=gzread(gz_in,&Readout_Status[eye],sizeof(uint32_t));
-#ifdef Diagnostic_Verbose
-		  cout<<eye<<"  "<<Readout_Status[eye]<<endl;
-#endif
-		  TotalBankSize-=sizeof(uint32_t);
-		  outputdiagnosticsfile << Readout_Status[eye]<<"\n";
-		}
-	      }
-
-	      //These are the 8500 + 4n register values
-	      if (bank.fName[0]=='D' && bank.fName[1]=='I' && bank.fName[2]== 'A' && bank.fName[3]=='G') {
-		outputdiagnosticsfile << "DIAG  "<<nactiveboards<<"\n";
-
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"0x8500 + 4n Diagnostics"<<endl;
-#endif
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  for(int jay=0; jay<8; jay++) {
-		    gzret=gzread(gz_in,&Register_0x8504n[eye][jay],sizeof(uint32_t));
-		    TotalBankSize-=sizeof(uint32_t);
-		    outputdiagnosticsfile << Register_0x8504n[eye][jay]<<"  ";
-		  }
-		  outputdiagnosticsfile <<"\n";
-
-		}
-	      
-#ifdef Diagnostic_Verbose
-		for(int eye=0; eye<8; eye++) {
-		  for(int jay=0; jay<nactiveboards; jay++) {
-		    cout<<Register_0x8504n[jay][eye]<<"  ";
-		  }
-		  cout<<endl;
-		}
-#endif
-	      }
-
-	      //These are the ADC Temps
-	      if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
-		outputdiagnosticsfile << "TEMP  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"ADC Temps"<<endl;
-#endif
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  for(int jay=0; jay<16; jay++) {
-		    gzret=gzread(gz_in,&ADC_Temp[eye][jay],sizeof(uint16_t));
-		    TotalBankSize-=sizeof(uint16_t);
-		    outputdiagnosticsfile << ADC_Temp[eye][jay]<<"  ";
-		  }
-		  outputdiagnosticsfile <<"\n";
-		}
-	      
-#ifdef Diagnostic_Verbose
-		for(int eye=0; eye<16; eye++) {
-		  for(int jay=0; jay<nactiveboards; jay++) {
-		    cout<<ADC_Temp[jay][eye]<<"  ";
-		  }
-		  cout<<endl;
-		}
-#endif
-	      }
-
-	      //These are the 0x1n2C values
-	      if (bank.fName[0]=='1' && bank.fName[1]=='n' && bank.fName[2]== '2' && bank.fName[3]=='C') {
-		outputdiagnosticsfile << "1n2C  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Register 0x1n2C"<<endl;
-#endif
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  for(int jay=0; jay<16; jay++) {
-		    gzret=gzread(gz_in,&Register_0x1n2C[eye][jay],sizeof(uint32_t));
-		    TotalBankSize-=sizeof(uint32_t);
-		    outputdiagnosticsfile << Register_0x1n2C[eye][jay]<<"  ";
-		  }
-		  outputdiagnosticsfile <<"\n";
-		}
-	      
-#ifdef Diagnostic_Verbose
-		for(int eye=0; eye<16; eye++) {
-		  for(int jay=0; jay<nactiveboards; jay++) {
-		    cout<<Register_0x1n2C[jay][eye]<<"  ";
-		  }
-		  cout<<endl;
-		}
-#endif
-	      }
-	      
-	      //These are the Channel Status
-	      if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
-		outputdiagnosticsfile << "CHST  "<<nactiveboards<<"\n";
-#ifdef Diagnostic_Verbose
-		cout<<endl<<"Channel Status"<<endl;
-#endif
-		for(int eye=0; eye<nactiveboards; eye++) {
-		  for(int jay=0; jay<16; jay++) {
-		    gzret=gzread(gz_in,&Channel_Status[eye][jay],sizeof(uint32_t));
-		    TotalBankSize-=sizeof(uint32_t);
-		    outputdiagnosticsfile << Channel_Status[eye][jay]<<"  ";
-		  }
-		  outputdiagnosticsfile <<"\n";
-		}
-	      
-#ifdef Diagnostic_Verbose
-		for(int eye=0; eye<16; eye++) {
-		  for(int jay=0; jay<nactiveboards; jay++) {
-		    cout<<Channel_Status[jay][eye]<<"  ";
-		  }
-		  cout<<endl;
-		}
-#endif
-	      }
-	      
-	      if(readextra) {
-		uint32_t extra = 0;
-		gzret=gzread(gz_in,&extra,sizeof(extra));
-		TotalBankSize -= sizeof(extra);
-	      }	      
-	    }
-#ifdef Diagnostic_Verbose
-	    cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
-#endif
-	  }  //End of Event ID 8 (Diagnostics)
-
-
-	  //Scalers
-	  else if(head.fEventId==2) {
-	      
-	    TotalBankSize  = head.fDataSize;
-
-#ifdef Scaler_Verbose
-	    cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
-#endif
-	    gzread(gz_in,&bhead,sizeof(BankHeader_t));
-	    TotalBankSize -= sizeof( BankHeader_t );
-	    
-#ifdef Scaler_Verbose
-	    cout << "Bank_HEADER " << endl;
-	    cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
-	    cout << dec << bhead.fFlags << endl;
-#endif
-	    while (TotalBankSize > 0) {
-
-	      //MLTM
-	      gzread( gz_in, &bank32, sizeof( Bank32_t ) );
-	      TotalBankSize -= sizeof( Bank32_t );
-
-#ifdef Scaler_Verbose
-	      cout << "BANK " << endl;
-	      cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
-	      cout << dec << bank32.fType << endl;
-	      cout << "Size: "<<dec << bank32.fDataSize << endl;
-#endif
-	      //see if data is on an 8-byte boundary
-	      bool readextra = false;
-	      if(bank32.fDataSize%8 !=0) {
-		readextra = true; 
-	      }
-	      
-	      if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
-		
-		uint32_t time_seconds;
-		gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
-		TotalBankSize-=sizeof(time_seconds);
-
-#ifdef Scaler_Verbose
-		cout << time_seconds<<"\n";
-#endif
-	      }
-	      if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
-
-		gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
-		TotalBankSize-=sizeof(sclr_totals);
-	
-		for(int kay=0; kay<N_SCLR; kay++) {
-		  hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
-#ifdef Scaler_Verbose
-		  cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
-#endif
-		}
-	      }
-	      
-	      if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
-	       
-		gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
-		TotalBankSize-=sizeof(sclr_rates);
-
-#ifdef Scaler_Verbose
-		for(int kay=0; kay<N_SCLR; kay++) {
-		  cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
-		}
-#endif
-	      }
-	      
-	      if(readextra) {
-		uint32_t extra = 0;
-		gzret=gzread(gz_in,&extra,sizeof(extra));
-		TotalBankSize -= sizeof(extra);
-	      }	
-	      
-#ifdef Scaler_Verbose
-	      cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
-#endif
-
-	    } //End of while(TotalBankSize > 0)
-	  
-	  } // End of Event ID 2 (Scalers)
-
-	  // 0x8000 is a begin of run
-	  // 0x8001 is an end of run
-	  // 0x8002 is an ASCII message created by the logger 
-	
-	  else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 || head.fEventId == 9 ) {
-	    //see if its the end of run
-	    if(head.fEventId==0x8001) {
-	      run=false;
-	      break;
-	    }
-	    
-	    char *fData;
-	    fData=(char*)malloc(head.fDataSize);
-	    gzret=gzread(gz_in,fData,head.fDataSize);
-	    free (fData);	
-	  }
-		  
-	  else {
-	    // cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
-
-	    TotalBankSize=TotalDataSize;
-	    
-	    uint32_t garbage;
-	    while(TotalBankSize > 0) {
-	      gzret = gzread(gz_in,&garbage, sizeof(garbage));
-	      TotalBankSize -= sizeof(garbage);
-	      //cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
-	    }	    
-
-	  }  //End of catchall   
-	}  //End of EventHeader gzret > 0	
-      } //End of caen2018 format check
-      else {
-	cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<input_params.DataFormat<<RESET<<endl;
-	return -1;
-      }
-
-      //At this point we need to start ordering and eventbuilding
-      if(EVTS >= BlockBufferSize) {
-	
-	//Sort this block of data
-	func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
-	if(func_ret) {
-	  cout<<RED<<"Problem with sort_array in the MIDAS Reader"<<RESET<<endl;
-	  return -1;
-	}
-		
-	//Eventbuild
-	func_ret = Build_Events(datadeque,input_params,analysis_params);
-	if(func_ret) {
-	  cout<<RED<<"Problem with build_events in the MIDAS Reader"<<RESET<<endl;
-	  return -1;
-	}
-
-	//Reset the event counter and smallest timestamp
-	EVTS=0;
-	analysis_params->entries_awaiting_timesort=0;
-	analysis_params->smallest_timestamp=2.814749767e14;
-	
-      } //end check on block buffer size and eventbuild	
-    }  //end of while run
-
-    cout<<"Unpacker [INFO]: Run Length: "<<analysis_params->largest_timestamp/1000000000.0<<" seconds"<<endl;
-
-    //Now that we are done sorting we need to empty the buffer
-    cout<<GREEN<<"Unpacker [INFO]: Finsihed Unpacking Data"<<RESET<<endl;
-  
-    //see if anything is left in the unsorted part
-    if(EVTS>0) {
-
+  while (!gz_queue.empty()) { 
+    //Stage 0 unpacking
+    if(input_params.Read_Binary==0 && input_params.Read_Simulation==0) {
+ 
+ 
+      stringstream umsg;
       umsg.str("");
-      umsg<<"Unpacker [INFO]: There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer";
+      umsg<<"Data Format: "<<input_params.DataFormat;
       DANCE_Info("Unpacker",umsg.str());
       
-      //Sort this block of data
-      func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
-      if(func_ret) {
-	cout<<RED<<"Problem with sort_array in the empty stage of the MIDAS Reader"<<RESET<<endl;
-	return -1;
-      }
-
-      EVTS=0;
-      analysis_params->entries_awaiting_timesort=0;
-
-    }
-  
-    if(datadeque.size()>0) {
-
-      //need to set the buffer depth to zero
-      input_params.Buffer_Depth = 0;
-
-      //Eventbuild
-      func_ret = Build_Events(datadeque,input_params,analysis_params);
-      if(func_ret) {
-	cout<<RED<<"Problem with build_events in the empty stage of the MIDAS Reader"<<RESET<<endl;
-	return -1;
-      }
-
-      if(datadeque.size()==0) {
-	cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
-      }
-    } //end check on timesort and datadeque
-
-  } // END OF MIDAS READER
-
-
-  //Stage 1 unpacker
-  if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
-
-    while(run) {
-      
-      //Event limit control
-      if(analysis_params->entries_unpacked > EventLimit) {
-	run=false;
-      }
-      
-      //Progress indicator
-      if(analysis_params->entries_unpacked > progresscounter*ProgressInterval) {
-	progresscounter++;
-	if(input_params.Read_Simulation == 0) {
-	  cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
-	}
-	else {
-	  cout<<"Processing Simulated Data"<<endl;
-	}
-
-	cout<<analysis_params->entries_unpacked<<" Entries Unpacked "<<endl;
-	cout<<analysis_params->entries_awaiting_timesort<<" Entries Awaiting timesort"<<endl;
-	cout<<datadeque.size()<<" Entries Sorted and in the Buffer"<<endl;
-#ifdef CheckBufferDepth
-	if(analysis_params->max_buffer_utilization < 0.75) {
-	  cout<<GREEN<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
-	}
-	else if(analysis_params->max_buffer_utilization < 0.90) {
-	  cout<<YELLOW<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
-	}
-	else {
-	  cout<<RED<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
-	}
-#endif
-	cout<<analysis_params->entries_written_to_binary<<" Entries Written to Binary"<<endl;
-	cout<<analysis_params->entries_invalid<<" Entries Invalid ("<<100.0*analysis_params->entries_invalid/analysis_params->entries_processed<<" %)"<<endl;
-	cout<<analysis_params->entries_built<<" Entries Built into "<<analysis_params->events_built<<" Events"<<endl;
-	cout<<"Analyzed "<<analysis_params->entries_analyzed<<" Entries from "<<analysis_params->events_analyzed<<" Events"<<endl;
-
-	cout<<setw(20)<<left<<"Breakdown:"<<setw(12)<<left<<"DANCE"<<setw(12)<<left<<"T0"<<setw(12)<<left<<"Li6"<<setw(12)<<left<<"U235"<<setw(12)<<left<<"He3"<<setw(12)<<left<<"Background"<<setw(12)<<left<<"Unknown"<<setw(12)<<left<<endl;
-
-	cout<<setw(20)<<left<<"Entries:"<<setw(12)<<left<<analysis_params->DANCE_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->T0_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Li6_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->U235_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->He3_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Bkg_entries_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Unknown_entries<<endl;
-
-	cout<<setw(20)<<left<<"Events:"<<setw(12)<<left<<analysis_params->DANCE_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->T0_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Li6_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->U235_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->He3_events_analyzed;
-	cout<<setw(12)<<left<<analysis_params->Bkg_events_analyzed<<endl;
-
-	if(analysis_params->DANCE_events_analyzed > 0) {
-	  cout<<setw(20)<<left<<"Average Mult:"<<setw(12)<<left<<(1.0*analysis_params->DANCE_entries_analyzed)/(1.0*analysis_params->DANCE_events_analyzed)<<endl;
-	}
-	cout<<endl;
-
-	gettimeofday(&tv,NULL); 
-	time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
-      
-	cout << "Average Entry Processing Rate: "<<(double)analysis_params->entries_unpacked/(time_elapsed-unpack_begin)<<" Entries per second "<<endl;
-	cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
-	cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
-	cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl<<endl;
-	
-	BYTES_READ=0;
-	time_elapsed_old = time_elapsed;
-      }
-      
-      gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
-      // gzseek(gz_in,devt_padding,SEEK_CUR);
-      
-      if(gzret!=0) {
-	
-	BYTES_READ += gzret;
-	TOTAL_BYTES += gzret;
-	
-	//Fill the array
-	db_arr[EVTS].timestamp = devt_stage1.timestamp;
-	db_arr[EVTS].Ifast = devt_stage1.Ifast;
-	db_arr[EVTS].Islow = devt_stage1.Islow;
-	db_arr[EVTS].ID = devt_stage1.ID;
-	db_arr[EVTS].Valid = 1; //Everything starts valid
-	db_arr[EVTS].InvalidReason = 0; //Everything starts valid
-
-	//Time Deviations
-	if(input_params.Analysis_Stage > 0) {
-	  //need to add the time deviations before time sorting
-	  if(db_arr[EVTS].ID < 200) {
-	    db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
-	  }
-	  
-	  //Add the DANCE delay
-	  if(db_arr[EVTS].ID < 162) {
-	    db_arr[EVTS].timestamp += DANCE_Delay;
-	  }
-	  
-	  //Add the He3 delay
-	  if(db_arr[EVTS].ID == 241) {
-	    db_arr[EVTS].timestamp += He3_Delay;
-	  } 
-	  
-	  //Add the U235 delay
-	  if(db_arr[EVTS].ID == 243) {
-	    db_arr[EVTS].timestamp += U235_Delay;
-	  } 
-	  
-	  //Add the Li6 delay
-	  if(db_arr[EVTS].ID == 244) {
-	    db_arr[EVTS].timestamp += Li6_Delay;
-	  }
-	}
-
-	db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //Start with TOF as Full timestamp in ns
-
-
-	//keep track of the smallest timestamp
-	if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
-	  analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
-	}    
-	//keep track of the largest timestamp
-	if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
-	  analysis_params->largest_timestamp=db_arr[EVTS].TOF;
-	}  
-	  
-	EVTS++; 	  
-
-	analysis_params->entries_unpacked++;
-	analysis_params->entries_awaiting_timesort++;
-
-      }
-      else {
-	run=false;
-	break;
-      }
-
-      //At this point we need to start ordering and eventbuilding
-      if(EVTS >= BlockBufferSize) {
-	
-	//sort this block of data
-	func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
-	if(func_ret) {
-	  cout<<RED<<"Problem with sort_array in the Binary Reader"<<RESET<<endl;
-	  return -1;
-	}
-
-	//Eventbuild
-	func_ret = Build_Events(datadeque,input_params, analysis_params);
-	if(func_ret) {
-	  cout<<RED<<"Problem with build_events in the Binary Reader"<<RESET<<endl;
-	  return -1;
-	}
-	
-	//Reset the event counter and smallest timestamp
-	EVTS=0;
-	analysis_params->entries_awaiting_timesort=0;
-	analysis_params->smallest_timestamp=2.814749767e14;
-		
-      }	
-    }  //end of while(run)
-
-    umsg.str("");
-    umsg<<"Run Length: "<<analysis_params->largest_timestamp/1000000000.0<<" seconds";
-    DANCE_Info("Unpacker",umsg.str());
-
-    //Now that we are done sorting we need to empty the buffer
-    DANCE_Info("Unpacker","Finished unpacking data");
-  
-    //see if anything is left in the unsorted part
-    if(EVTS>0) {
-      umsg.str("");
-      umsg<<"There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer";
-      DANCE_Info("Unpacker",umsg.str());
-
-      //Sort this block of data
-      func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
-      if(func_ret) {
-	DANCE_Error("Unpacker","Problem with sort_array in the empty stage of the Binary Reader");
-	return -1;
-      }
-      
-      EVTS=0;
-      analysis_params->entries_awaiting_timesort=0;
-
-    }
-  
-    if(datadeque.size()>0) {
-
-      //need to set the buffer depth to zero
-      input_params.Buffer_Depth = 0;
-
-      //Eventbuild
-      func_ret = Build_Events(datadeque,input_params, analysis_params);
-      if(func_ret) {
-	DANCE_Error("Unpacker","Problem with build_events in the empty stage of the Binary Reader");
-	return -1;
-      }
+      while(run) {
        
-      if(datadeque.size()==0) {
-	DANCE_Success("Unpacker","Buffer empty, unpacking complete.");
+        if(analysis_params->entries_unpacked > EventLimit) {
+          run=false;
+        }
+        
+        //Progess indicator
+        if(analysis_params->entries_unpacked > progresscounter*ProgressInterval) {
+          progresscounter++;
+          cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
+          if(datadeque.size()>0) {
+            cout<<"Oldest Time in the Buffer: "<<datadeque[0].TOF<<endl;
+            cout<<"Newest Time in the Buffer: "<<datadeque[datadeque.size()-1].TOF<<endl;
+          }
+          
+          cout<<analysis_params->entries_unpacked<<" Entries Unpacked "<<endl;
+          cout<<analysis_params->entries_awaiting_timesort<<" Entries Awaiting timesort"<<endl;
+          cout<<datadeque.size()<<" Entries Sorted and in the Buffer"<<endl;
+#ifdef CheckBufferDepth
+          if(analysis_params->max_buffer_utilization < 0.75) {
+            cout<<GREEN<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
+          }
+          else if(analysis_params->max_buffer_utilization < 0.90) {
+            cout<<YELLOW<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
+          }
+          else {
+            cout<<RED<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
+          }
+#endif
+          cout<<analysis_params->entries_written_to_binary<<" Entries Written to Binary"<<endl;
+          cout<<analysis_params->entries_invalid<<" Entries Invalid ("<<100.0*analysis_params->entries_invalid/analysis_params->entries_processed<<" %)"<<endl;
+          cout<<analysis_params->entries_built<<" Entries Built into "<<analysis_params->events_built<<" Events"<<endl;
+          cout<<"Analyzed "<<analysis_params->entries_analyzed<<" Entries from "<<analysis_params->events_analyzed<<" Events"<<endl;
+ 
+          cout<<setw(20)<<left<<"Breakdown:"<<setw(12)<<left<<"DANCE"<<setw(12)<<left<<"T0"<<setw(12)<<left<<"Li6"<<setw(12)<<left<<"U235"<<setw(12)<<left<<"He3"<<setw(12)<<left<<"Background"<<setw(12)<<left<<"Unknown"<<setw(12)<<left<<endl;
+ 
+          cout<<setw(20)<<left<<"Entries:"<<setw(12)<<left<<analysis_params->DANCE_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->T0_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Li6_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->U235_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->He3_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Bkg_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Unknown_entries<<endl;
+ 
+          cout<<setw(20)<<left<<"Events:"<<setw(12)<<left<<analysis_params->DANCE_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->T0_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Li6_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->U235_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->He3_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Bkg_events_analyzed<<endl;
+ 
+          if(analysis_params->DANCE_events_analyzed > 0) {
+            cout<<setw(20)<<left<<"Average Mult:"<<setw(12)<<left<<(1.0*analysis_params->DANCE_entries_analyzed)/(1.0*analysis_params->DANCE_events_analyzed)<<endl;
+          }
+          cout<<endl;
+ 
+          gettimeofday(&tv,NULL); 
+          time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
+        
+          cout << "Average Entry Processing Rate: "<<(double)analysis_params->entries_unpacked/(time_elapsed-unpack_begin)<<" Entries per second "<<endl;
+          cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+          cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+          cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl<<endl;
+ 
+          BYTES_READ=0;
+          time_elapsed_old = time_elapsed;
+        } //end progress indicator
+      
+ 
+        //This is the unpacker for the caen2015 data format
+        if(strcmp(input_params.DataFormat.c_str(),"caen2015") == 0) {
+ 
+          //Read in the event header
+          gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
+        
+          //As long as gzread reads something start doing unpacking
+          if(gzret!=0) {
+          
+            TotalDataSize = head.fDataSize;
+            BYTES_READ += TotalDataSize;
+            TOTAL_BYTES += TotalDataSize;
+ 
+#ifdef Unpacker_Verbose
+            cout<<"Type: "<<head.fEventId<<endl;
+            cout<<"Size: "<<head.fDataSize<<endl;     ///< event size in bytes
+            cout<<"TimeStamp "<<head.fTimeStamp<<endl;    ///< event timestamp in nseconds
+#endif
+ 
+           cout << head.fTimeStamp << endl;
+             //Data
+            if(head.fEventId==1){
+              gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));        
+          
+#ifdef Unpacker_Verbose
+              cout << "Bank_HEADER " << endl;
+              cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+              cout << dec << bhead.fFlags << endl;
+#endif
+          
+              TotalBankSize = bhead.fDataSize;
+          
+              while(TotalBankSize>0) {
+                gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+                TotalBankSize-=sizeof(Bank32_t);
+#ifdef Unpacker_Verbose
+                cout << "BANK " << endl;
+                cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+                cout << dec << bank32.fType << endl;
+                cout << dec << bank32.fDataSize << endl;
+#endif
+                EventBankSize = bank32.fDataSize;
+                if (bank32.fName[0]=='C' && bank32.fName[1]=='E') {        // name starts as CE VT_BANK
+                  int EVTS_batch=0;
+              
+                  evaggr->N = 0; // reset how many events we've processed this event
+              
+                  int number_cevt_events = bank32.fDataSize/sizeof(CEVT_BANK);
+              
+                  for (int eye = 0; eye < number_cevt_events; ++eye) {
+                    gzret=gzread(gz_in,evinfo,sizeof(CEVT_BANK));
+                    gzseek(gz_in,devt_padding,SEEK_CUR);
+ 
+#ifdef Unpacker_Verbose 
+                    cout<<"cevt event number: "<<eye<<endl;
+                    cout<<"position: "<<evinfo->position<<endl;
+                    cout<<"extras: "<<evinfo->extras<<endl;
+                    cout<<"width: "<<evinfo->width<<endl;
+                    cout<<"detector_id: "<<evinfo->detector_id<<endl;
+                    cout<<evinfo->integral[0]<<"  "<<evinfo->integral[1]<<endl;
+                    cout<<"padding: "<<devt_padding<<endl<<endl;;
+#endif
+                    TotalBankSize-=sizeof(CEVT_BANK)+devt_padding;
+                    EventBankSize-=sizeof(CEVT_BANK)+devt_padding;          
+                
+                    evaggr->P[evaggr->N] = *evinfo;
+                    evaggr->N++;
+                    EVTS_batch += 1;
+                
+#ifdef Unpacker_Verbose 
+                    cout << "evaggr->N: " << evaggr->N << endl;
+#endif
+                  }
+                          
+                  // snag the trig bank
+                  gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+                  TotalBankSize-=sizeof(Bank32_t);
+                  EventBankSize = bank32.fDataSize;
+              
+                  char *fData;
+                  fData=(char*)malloc(bank32.fDataSize);
+                  gzret=gzread(gz_in,fData,bank32.fDataSize);
+                  TotalBankSize -= EventBankSize;
+                  free (fData);        
+              
+#ifdef Unpacker_Verbose 
+                  cout<<"Before trig bank"<<endl;
+#endif
+ 
+                  // begin funny place between peaks and cpu
+                  while (true) {
+                    // the peaks bank should be here
+                    gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+                    TotalBankSize-=sizeof(Bank32_t);
+                    EventBankSize = bank32.fDataSize;
+ 
+#ifdef Unpacker_Verbose 
+                    cout<<"Peak bank"<<endl;
+                    cout<<"Name: "<<bank32.fName[0]<<"  Total Bank Size: "<<TotalBankSize<<"  EventBankSize: "<<EventBankSize<<endl;
+#endif
+                
+                    if(bank32.fName[0]=='p') {
+                      int whichpeak = atoi(&bank32.fName[1]);
+#ifdef Unpacker_Verbose 
+                      cout << "whichpeak: " << whichpeak << endl;
+#endif
+                      gzret=gzread(gz_in,imported_peaks[whichpeak],bank32.fDataSize);
+#ifdef Unpacker_Verbose 
+                      cout<<"After Read"<<endl;
+#endif
+                      //gzread(in,waveform,bank32.fDataSize);
+                      TotalBankSize -= EventBankSize;
+                    } 
+                    else {
+#ifdef Unpacker_Verbose 
+                      cout<<"CPU Bank"<<endl;
+#endif
+                      // get the cpu bank information
+                      char *fData=(char*)malloc(bank32.fDataSize);
+                      gzret=gzread(gz_in,fData,bank32.fDataSize);
+                      TotalBankSize -= EventBankSize;
+                      free (fData);
+                      break; // you break here because the cpu comes last
+                    }
+                  }
+#ifdef Unpacker_Verbose 
+                  cout<<"After trig bank"<<endl;
+#endif
+ 
+                  int last_detnum = evaggr->P[0].detector_id;
+                  int where_in_peakbank = 0;
+                  for (uint32_t evtnum=0;evtnum<evaggr->N;++evtnum) {
+                    int current_detnum = evaggr->P[evtnum].detector_id;
+                    if (current_detnum != last_detnum) {
+                      where_in_peakbank = 0;
+                    }
+                    uint32_t wflen = evaggr->P[evtnum].width;        // CEVT_BANK variable
+                
+                    for (uint wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex) {
+                      // at this point we have reserved only 40 samples in db_arr waveform !!
+                      evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
+                    }        
+                    where_in_peakbank += wflen;
+                    last_detnum = current_detnum;
+                
+                    uint64_t timestamp_raw = (evaggr->P[evtnum].position & 0x7FFFFFFFFFFF);                // 47 bits for timestamp
+ 
+#ifdef Unpacker_Verbose 
+                    cout<<"timestamp_raw: "<<timestamp_raw<<endl;
+#endif
+                              
+                    db_arr[EVTS].timestamp        = (double)(timestamp_raw);                                     //Digitizer timestamp
+                    db_arr[EVTS].TOF               = (double)(timestamp_raw);                                     //Time of Flight (Currently in 2ns increments)
+                    db_arr[EVTS].Ns                = evaggr->P[evtnum].width;                                     //Number of samples of the waveform
+                    db_arr[EVTS].Ifast        = evaggr->P[evtnum].integral[0];                               //Fast integral
+                    db_arr[EVTS].Islow        = evaggr->P[evtnum].integral[1]-evaggr->P[evtnum].integral[0]; //Slow integral
+                    db_arr[EVTS].board        = (int)((1.*((int)evaggr->P[evtnum].detector_id)-1)/16.);      //Board number
+                    db_arr[EVTS].channel        = (1*evaggr->P[evtnum].detector_id-1)-16*db_arr[EVTS].board;   //Channel number
+                    db_arr[EVTS].ID             = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];             //ID from DANCE map
+                    db_arr[EVTS].Valid = 1;                                                                //Everything starts valid     
+                    db_arr[EVTS].InvalidReason = 0;                                                            
+ 
+ 
+#ifdef Unpacker_Verbose 
+                    cout<<(int)db_arr[EVTS].board<<"  "<<(int)db_arr[EVTS].channel<<endl;
+#endif
+                    // CALCULATE THE LEADING EDGE using constant fraction "frac"
+                    int imin=0;
+                    double sigmin=1e9;
+                    double frac=0.04;
+                    double base=0;
+                    double secmom=0.;        
+                    int NNN=10;
+                    // int id=db_arr[EVTS].ID;
+ 
+                    double dT = 0;
+                    
+                    //Beam monitor waveforms for caen2015 data are ostensibly useless
+                    if(db_arr[EVTS].ID <= 200) { 
+                      if(db_arr[EVTS].ID<162) frac=0.04;
+                      else frac=0.1;
+                      
+                      frac=0.2;
+                      
+                      for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                        wf1[i]=evaggr->wavelets[evtnum][i]+8192;
+                        
+                        if(i<NNN) {
+                          base+=(1.*wf1[i]);
+                          secmom+=(1.*wf1[i]*1.*wf1[i]);
+                        }                  
+                        if((1.*wf1[i])<sigmin) {
+                          sigmin=1.*wf1[i];
+                          imin=i;
+                        }
+                      }
+                      
+                      double thr=(sigmin-base/(1.*NNN))*frac+base/(1.*NNN);
+                      int iLD=0;
+                      for(int i=imin;i>1;i--){
+                        if((1.*wf1[i])<thr && (1.*wf1[i-1])>thr){
+                          double dSig=(1.*wf1[i-1]-1.*wf1[i]);
+                          if(dSig!=0) dT=(1.*wf1[i-1]-thr)/dSig*2.+(i-1)*2.;  // this is in ns
+                          else dT=(i-1)*2.;
+                          iLD=i;
+                        }                
+                      }
+                    } //end loop over ID <= 200
+                    
+                    //Fill raw IDs
+ 
+#ifdef Histogram_Waveforms
+ 
+                    //Fill waveform histogram
+                    if(input_params.Read_Binary==0) {
+                      if(db_arr[EVTS].ID<162) {
+                        for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                          hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
+                        }
+                      } 
+                      //changed IDs to those in global.h
+                      if(db_arr[EVTS].ID == He3_ID) {
+                        for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                          hWaveform_He3->Fill(i,wf1[i]);
+                        }                          
+                      } 
+                      if(db_arr[EVTS].ID == Bkg_ID) {
+                        for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                          hWaveform_Bkg->Fill(i,wf1[i]);
+                        } 
+                      }
+                      if(db_arr[EVTS].ID == U235_ID) {
+                        for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                          hWaveform_U235->Fill(i,wf1[i]);
+                        }
+                      } 
+                      if(db_arr[EVTS].ID == Li6_ID) {
+                        for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                          hWaveform_Li6->Fill(i,wf1[i]);
+                        } 
+                      }
+                      if(db_arr[EVTS].ID == T0_ID) {
+                        for(int i=0;i<db_arr[EVTS].Ns;i++) {
+                          hWaveform_T0->Fill(i,wf1[i]);
+                        } 
+                      }
+                    }
+#endif
+ 
+                    db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
+                    db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
+ 
+                  
+                    if(input_params.Analysis_Stage > 0) {
+                      //need to add the time deviations before time sorting
+                      if(db_arr[EVTS].ID < 200) {
+                        db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
+                      }
+                      
+                      //Add the DANCE delay
+                      if(db_arr[EVTS].ID < 162) {
+                        db_arr[EVTS].timestamp += DANCE_Delay;
+                      }
+                      //changed hard coded IDs to those defined in global.h
+                      //Add the He3 delay
+                      if(db_arr[EVTS].ID == He3_ID) {
+                        db_arr[EVTS].timestamp += He3_Delay;
+                      } 
+                      
+                      //Add the U235 delay
+                      if(db_arr[EVTS].ID == U235_ID) {
+                        db_arr[EVTS].timestamp += U235_Delay;
+                      } 
+                      
+                      //Add the Li6 delay
+                      if(db_arr[EVTS].ID == Li6_ID) {
+                        db_arr[EVTS].timestamp += Li6_Delay;
+                      }
+                    }
+ 
+                    db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //Start with TOF as Full timestamp in ns + time dev
+ 
+                    
+                    //keep track of the smallest timestamp
+                    if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
+                      analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
+                    }    
+                    //keep track of the largest timestamp
+                    if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
+                      analysis_params->largest_timestamp=db_arr[EVTS].TOF;
+                    }  
+                    
+                    EVTS++;
+            
+                    analysis_params->entries_unpacked++;
+                    analysis_params->entries_awaiting_timesort++;
+ 
+                    
+#ifdef Unpacker_Verbose 
+                    cout<<EVTS<<"  "<<analysis_params->entries_unpacked<<endl;
+#endif
+                  }         //End of loop on eventnum                            
+                }  //End of if on CEVT bank
+                break;
+              } //End of loop on EventBankSize
+           
+            } //End of event type 1
+            
+ 
+            
+            //Scalers
+            else if(head.fEventId==2) {
+                
+              TotalBankSize  = head.fDataSize;
+ 
+#ifdef Scaler_Verbose
+              cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+              gzread(gz_in,&bhead,sizeof(BankHeader_t));
+              TotalBankSize -= sizeof( BankHeader_t );
+              
+#ifdef Scaler_Verbose
+              cout << "Bank_HEADER " << endl;
+              cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+              cout << dec << bhead.fFlags << endl;
+#endif
+              while (TotalBankSize > 0) {
+ 
+                //MLTM
+                gzread( gz_in, &bank32, sizeof( Bank32_t ) );
+                TotalBankSize -= sizeof( Bank32_t );
+ 
+#ifdef Scaler_Verbose
+                cout << "BANK " << endl;
+                cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+                cout << dec << bank32.fType << endl;
+                cout << "Size: "<<dec << bank32.fDataSize << endl;
+#endif
+                //see if data is on an 8-byte boundary
+                bool readextra = false;
+                if(bank32.fDataSize%8 !=0) {
+                  readextra = true; 
+                }
+                
+                if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
+                  
+                  uint32_t time_seconds;
+                  gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
+                  TotalBankSize-=sizeof(time_seconds);
+ 
+#ifdef Scaler_Verbose
+                  cout << time_seconds<<"\n";
+#endif
+                }
+                if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
+ 
+                  gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
+                  TotalBankSize-=sizeof(sclr_totals);
+          
+                  for(int kay=0; kay<N_SCLR; kay++) {
+                    hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
+#ifdef Scaler_Verbose
+                    cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
+#endif
+                  }
+                }
+                
+                if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
+                 
+                  gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
+                  TotalBankSize-=sizeof(sclr_rates);
+ 
+#ifdef Scaler_Verbose
+                  for(int kay=0; kay<N_SCLR; kay++) {
+                    cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
+                  }
+#endif
+                }
+                
+                if(readextra) {
+                  uint32_t extra = 0;
+                  gzret=gzread(gz_in,&extra,sizeof(extra));
+                  TotalBankSize -= sizeof(extra);
+                }        
+                
+#ifdef Scaler_Verbose
+                cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+ 
+              } //End of while(TotalBankSize > 0)
+            
+            } //end of scalers
+ 
+            else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 ){
+ 
+              //End of Run
+              if(head.fEventId==0x8001)  {
+                run=false;
+                break;
+              }
+          
+              char *fData;
+              fData=(char*)malloc(head.fDataSize);
+              gzret=gzread(gz_in,fData,head.fDataSize);        
+              free (fData);        
+            }
+            
+            else { // other crap
+              char *fData;
+              fData=(char*)malloc(head.fDataSize);
+              gzret=gzread(gz_in,fData,head.fDataSize);
+              free (fData);
+            } //end of crap
+          }  //checking to see if gzret > 0
+        } //end of caen2015
+ 
+        else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
+ 
+          //variables
+          bool readextra = false;
+          
+          //counters
+          uint32_t dataword =0;
+          uint32_t BytesRead =0;
+          uint32_t wordstoread = 0;
+          uint32_t chaggcounter = 0;
+          uint32_t chaggwordstoread = 0;
+ 
+          //Start reading the file
+          gzret=gzread(gz_in,&head,sizeof(EventHeader_t));
+          
+          if(gzret!=0) {
+            
+            TotalDataSize=head.fDataSize;
+            
+            BYTES_READ += head.fDataSize;
+            TOTAL_BYTES += head.fDataSize;
+            
+#ifdef Unpacker_Verbose
+            cout<<"Type: "<<head.fEventId<<"  TotalDataSize  "<<TotalDataSize<<endl;
+#endif
+                          
+            //Data
+            if(head.fEventId==1){
+              
+              TotalBankSize=0;
+              EventBankSize=0;
+              
+              gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));
+#ifdef Unpacker_Verbose
+              cout<<"Event Data"<<endl;
+              cout << "Bank_HEADER " << endl;
+              cout <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+              cout << bhead.fFlags << endl;
+#endif
+              
+              TotalBankSize = bhead.fDataSize;
+              
+              while(TotalBankSize>0) {
+                
+                gzret=gzread(gz_in,&bank32,sizeof(Bank32_t));
+                TotalBankSize -= sizeof(Bank32_t);
+                
+#ifdef Unpacker_Verbose
+                cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;    
+                cout << "BANK  " << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+                cout << dec << bank32.fType << endl;
+                cout << dec << bank32.fDataSize << endl;
+#endif
+          
+                EventBankSize = bank32.fDataSize;
+                
+                //the data lie on 8 byte boundaries so there will be an extra 4 bytes at the end of the data that is "unaccounted" for in the header
+                readextra = false;
+                if(EventBankSize%8 !=0) {
+                  readextra = true; 
+                }
+                
+                //Read the firmware version and board ID
+                gzret=gzread(gz_in,&dataword,sizeof(dataword));
+                TotalBankSize -= sizeof(dataword);
+                EventBankSize -=  sizeof(dataword);
+                user_data.fw_majrev = (dataword & MAJREV_MASK);
+                user_data.fw_minrev = (dataword & MINREV_MASK) >> 8;
+                user_data.modtype = (dataword & MODTYPE_MASK) >> 14;
+                user_data.modtype = 730;
+                user_data.boardid = (dataword & BOARDID_MASK) >> 26;
+                              
+                //Read the user extras word
+                gzret=gzread(gz_in,&dataword,sizeof(dataword));
+                TotalBankSize -= sizeof(dataword);
+                EventBankSize -=  sizeof(dataword);
+ 
+                user_data.user_extra = dataword;
+                
+#ifdef Unpacker_Verbose
+                cout<< "board: "<< (int)user_data.boardid <<" is a "<< (int)user_data.modtype <<" with Firmware: "<<(int)user_data.fw_majrev<< "."<<(int)user_data.fw_minrev<<"  "<<user_data.user_extra<<endl;
+#endif
+                
+                while(EventBankSize>0) {
+                  
+                  BytesRead =0;
+                  
+                  //Make sure its a Vx725 or Vx730 
+                  if(user_data.modtype == 725 || user_data.modtype == 730) {
+ 
+                    //Read in the Vx725_Vx730 header
+                    gzret=gzread(gz_in,&v1730_header,sizeof(v1730_header));
+                    BytesRead += gzret;
+ 
+                    //Unpack the header information
+                    func_ret = unpack_vx725_vx730_board_data(&v1730_header, &vx725_vx730_board_data);
+                    
+#ifdef Unpacker_Verbose
+                    cout<<"header: "<<(int)vx725_vx730_board_data.header<<"  ";
+                    cout<<"nwords: "<<vx725_vx730_board_data.boardaggsize<<"  ";
+                    cout<<"boardid: "<<(int)vx725_vx730_board_data.boardid<<"  ";
+                    cout<<"pattern: "<<vx725_vx730_board_data.pattern<<"  ";
+                    cout<<"channelmask: "<<(int)vx725_vx730_board_data.channelmask<<"  ";
+                    cout<<"boardaggcounter: "<<vx725_vx730_board_data.boardaggcounter<<"  ";
+                    cout<<"boardaggtime: "<<vx725_vx730_board_data.boardaggtime<<endl;
+#endif
+ 
+                    //Make sure the board header ID is 10 before proceeding
+                    if(vx725_vx730_board_data.header != 10) {
+                      cout<<RED<<"Unpacker [ERROR] CAEN Data Header is NOT 10!"<<endl;
+                      cout<<"Entries: "<<EVTS<<" Total Entries: "<<analysis_params->entries_unpacked<<endl;
+                      cout<<"Unpacker [ERROR] Data beyond this point would be corrupt and thus I am exiting to analysis!"<<RESET<<endl;
+                      run = false;
+                      return -1;
+                      break;
+                    }
+                    
+                    //interpret the channel mask 
+                    channels.clear();
+                    for(int m=0; m<8; m++) {
+#ifdef Unpacker_Verbose
+                      cout<<m<<"  "<<(( vx725_vx730_board_data.channelmask >> m) & 0x1)<<endl;
+#endif
+                      if((( vx725_vx730_board_data.channelmask >> m) & 0x1)) {
+                        channels.push_back(2*m);
+                      }
+                    }
+                    
+                    //Number of words left in the CAEN data 
+                    wordstoread = vx725_vx730_board_data.boardaggsize-4;
+                    
+                    //Number of channel aggregates unpacked
+                    chaggcounter = 0;
+                    
+                    while (wordstoread>0) {
+ 
+                      //Read the Vx725_Vx730 channel aggregate header
+                      gzret=gzread(gz_in,&v1730_chagg_header,sizeof(v1730_chagg_header));
+                      BytesRead += gzret;
+                      wordstoread -= 2;            
+                      
+                      
+                      //************  PSD ************//
+                      if(user_data.fw_majrev == 136) {
+                        
+                        func_ret = unpack_vx725_vx730_psd_chagg_header(&v1730_chagg_header, &vx725_vx730_psd_data);
+                        
+#ifdef Unpacker_Verbose
+                        cout<<"PSD   DT: "<<(int)vx725_vx730_psd_data.dual_trace<<"  ";
+                        cout<<"EQ: "<<(int)vx725_vx730_psd_data.charge_enabled<<"  ";
+                        cout<<"ET: "<<(int)vx725_vx730_psd_data.time_enabled<<"  ";
+                        cout<<"EE: "<<(int)vx725_vx730_psd_data.extras_enabled<<"  ";
+                        cout<<"ES: "<<(int)vx725_vx730_psd_data.waveform_enabled<<"  ";
+                        cout<<"EX Opt: "<<(int)vx725_vx730_psd_data.extras_option<<"  ";
+                        cout<<"AP: "<<(int)vx725_vx730_psd_data.ap<<"  ";
+                        cout<<"DP1: "<<(int)vx725_vx730_psd_data.dp1<<"  ";
+                        cout<<"DP2: "<<(int)vx725_vx730_psd_data.dp2<<"  ";
+                        cout<<"NSDB8: "<<vx725_vx730_psd_data.nsdb8<<endl;
+#endif
+                        
+                        //Number of words in the channel aggregate left to read
+                        chaggwordstoread = vx725_vx730_psd_data.chagg_size - 2;
+ 
+                        //Unpack the channel aggregate
+                        while (chaggwordstoread>0) {
+ 
+                          //Read the Vx725_Vx730 PSD channel aggregate
+                          gzret=gzread(gz_in,&v1730_chagg_data,vx725_vx730_psd_data.individual_chagg_size*sizeof(uint32_t));
+                          BytesRead += gzret;
+                          wordstoread -= vx725_vx730_psd_data.individual_chagg_size;
+                          chaggwordstoread -= vx725_vx730_psd_data.individual_chagg_size;
+			 
+                          //unpack the channel agregate
+                          func_ret = unpack_vx725_vx730_psd_chagg(v1730_chagg_data, &vx725_vx730_psd_data);
+ 
+                          //Set the remaining analysis variables
+                          db_arr[EVTS].Valid = 1;                                                             //Everything starts valid
+                          db_arr[EVTS].board = user_data.boardid;                                             //Board ID
+                          db_arr[EVTS].channel = vx725_vx730_psd_data.channel + channels[chaggcounter];       //Channel ID
+                          db_arr[EVTS].Ifast =  vx725_vx730_psd_data.qshort;                                  //Fast Integral
+                          db_arr[EVTS].Islow =  vx725_vx730_psd_data.qlong - vx725_vx730_psd_data.qshort;     //Slow Integral (minus the fast)
+                          db_arr[EVTS].InvalidReason = 0;                                                         
+			 
+                          //Map it
+                          db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board];  
+				
+                               //Do waveform analysis and calculate times
+                          if(vx725_vx730_psd_data.dual_trace) {
+                            db_arr[EVTS].Ns = 4.0*vx725_vx730_psd_data.nsdb8;                                  //Dual trace effectively reduces the sampling frequency
+                          }
+                          else {
+                            db_arr[EVTS].Ns = 8.0*vx725_vx730_psd_data.nsdb8;                                 
+                          }
+                          
+                          double dT=0;
+                          
+                          analysis_params->wf_integral=0;
+ 
+                          //If the detector is not a DANCE crystal or the use fine time is off
+                          if ( ! input_params.Use_Firmware_FineTime || db_arr[EVTS].ID >= 162) {
+                            dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                 //Function that calculates the fine time stamp
+                                                             db_arr[EVTS].Ns, 
+                                                           vx725_vx730_psd_data.dual_trace, 
+                                                           user_data.modtype,
+                                                           analysis_params);
+                          }
+                          else {
+                            dT = 2.* vx725_vx730_psd_data.fine_time_stamp/1024.;
+                          }
+                           
+                          //Set the timestamps
+                          db_arr[EVTS].timestamp = vx725_vx730_psd_data.trigger_time_tag;                       //31-bit time in clock ticks
+                          db_arr[EVTS].timestamp += 2147483648*vx725_vx730_psd_data.extended_time_stamp;        //16-bit extended time in clock ticks
+                          db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
+                          db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
+ 
+                          if(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < 0.05 || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > 0.1 ) {
+                            db_arr[EVTS].pileup_detected=1;                                                         //Full timestamp in ns
+                          } 
+                          else {
+                            db_arr[EVTS].pileup_detected=0;                                                         //Full timestamp in ns
+                          }
+                          
+                          if(input_params.Analysis_Stage > 0) {
+                            //need to add the time deviations before time sorting
+                            if(db_arr[EVTS].ID < 200) {
+                              db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
+                            }
+                            
+                            //Add the DANCE delay
+                            if(db_arr[EVTS].ID < 162) {
+                              db_arr[EVTS].timestamp += DANCE_Delay;
+                            }
+                            //changed IDs to those in global.h
+                            //Add the He3 delay
+                            if(db_arr[EVTS].ID == He3_ID) {
+                              db_arr[EVTS].timestamp += He3_Delay;
+                            } 
+                            
+                            //Add the U235 delay
+                            if(db_arr[EVTS].ID == U235_ID) {
+                              db_arr[EVTS].timestamp += U235_Delay;
+                            } 
+                            
+                            //Add the Li6 delay
+                            if(db_arr[EVTS].ID == Li6_ID) {
+                              db_arr[EVTS].timestamp += Li6_Delay;
+                            }
+                          }
+ 
+                          db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //TOF start as Full timestamp in ns
+ 
+                        
+                 
+ 
+#ifdef Unpacker_Verbose
+                          cout<<"Valid: "<<(int)db_arr[EVTS].Valid<<"  ";
+                          cout<<"Board: "<<(int)db_arr[EVTS].board<<"  ";
+                          cout<<"Channel: "<<(int)db_arr[EVTS].channel<<"  ";
+                          cout<<"NS: "<<db_arr[EVTS].Ns<<"  ";
+                          cout<<"Timestamp: "<<db_arr[EVTS].timestamp<<"  ";
+                          cout<<"TOF: "<<db_arr[EVTS].TOF<<"  ";
+                          cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ";
+                          cout<<"ISlow: "<<db_arr[EVTS].Islow<<endl;
+#endif
+ 
+#ifdef MakeTimeStampHistogram
+                          if (db_arr[EVTS].ID<162){
+                            hTimestamps->Fill(db_arr[EVTS].timestamp*1.0e-9);
+                          }
+#endif                           
+                                  
+#ifdef Histogram_Digital_Probes
+                          //Fill probe histograms
+                          if(input_params.Read_Binary==0) {
+                            if(db_arr[EVTS].ID<256) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                //digital probes
+                                hDigital_Probe1_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_psd_data.digital_probe1[kay]);
+                                hDigital_Probe2_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_psd_data.digital_probe2[kay]);
+                              }
+                            }
+                          }
+#endif
+                          
+#ifdef Histogram_Waveforms
+ 
+                          //Fill waveform histograms
+                          if(input_params.Read_Binary==0) {
+                            if(db_arr[EVTS].ID<162) {
+ 
+                          hID_vs_WFRatio->Fill(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow),db_arr[EVTS].ID);
+ 
+                          hID_vs_WFInt_vs_Islow->Fill(analysis_params->wf_integral,db_arr[EVTS].Islow,db_arr[EVTS].ID);
+ 
+ 
+                          //        cout<<db_arr[EVTS].ID<<"  "<<analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow)<<endl;
+ 
+                              if(waveform_counter < 20) {
+                                if(db_arr[EVTS].Islow > 5000 && db_arr[EVTS].Ifast >500 && db_arr[EVTS].Ifast <1000) {
+                                  for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+                                    hWaveforms[waveform_counter]->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+                                  }
+                                  waveform_counter++;
+                                }
+                              }
+                           
+                              if(analysis_params->wf_integral<0) {
+                                for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+                                  hWaveform_ID_NR->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
+                                }                              
+                              }
+                              else {
+                                for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+                                  hWaveform_ID->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay],db_arr[EVTS].ID);
+                                }
+                              }
+                              
+                            }                        
+                           //changed hard coded IDs to definitions in global.h 
+                            if(db_arr[EVTS].ID == He3_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_He3->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+                              } 
+                            }
+                            if(db_arr[EVTS].ID == Bkg_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_Bkg->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+                              }
+                            } 
+                            if(db_arr[EVTS].ID == U235_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_U235->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+                              } 
+                            }
+                            if(db_arr[EVTS].ID == Li6_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_Li6->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+                              } 
+                            }
+                            
+                            if(db_arr[EVTS].ID==T0_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_T0->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
+                              }
+                            }
+                          }
+#endif
+ 
+          
+                          //keep track of the smallest timestamp
+                          if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
+                            analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
+                          }    
+                          //keep track of the largest timestamp
+                          if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
+                            analysis_params->largest_timestamp=db_arr[EVTS].TOF;
+                          }  
+                      
+                          EVTS++;
+                  
+                          analysis_params->entries_unpacked++;
+                          analysis_params->entries_awaiting_timesort++;
+ 
+                       
+                          
+#ifdef Unpacker_Verbose
+                          cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
+#endif
+                        } //End of check on chagg words to read
+                        
+                        //increment the chagg counter
+                        chaggcounter++;
+ 
+                      } //End of check on PSD
+                      
+ 
+                      //*********** PHA ***********//
+                      else if(user_data.fw_majrev == 139) {
+                        
+                        func_ret = unpack_vx725_vx730_pha_chagg_header(&v1730_chagg_header, &vx725_vx730_pha_data);
+                        
+#ifdef Unpacker_Verbose
+                        cout<<"PHA   DT: "<<(int)vx725_vx730_pha_data.dual_trace<<"  ";
+                        cout<<"EE: "<<(int)vx725_vx730_pha_data.energy_enabled<<"  ";
+                        cout<<"ET: "<<(int)vx725_vx730_pha_data.time_enabled<<"  ";
+                        cout<<"E2: "<<(int)vx725_vx730_pha_data.extras2_enabled<<"  ";
+                        cout<<"ES: "<<(int)vx725_vx730_pha_data.waveform_enabled<<"  ";
+                        cout<<"EX Opt: "<<(int)vx725_vx730_pha_data.extras2_option<<"  ";
+                        cout<<"AP1: "<<(int)vx725_vx730_pha_data.ap1<<"  ";
+                        cout<<"AP2: "<<(int)vx725_vx730_pha_data.ap2<<"  ";
+                        cout<<"DP: "<<(int)vx725_vx730_pha_data.dp<<"  ";
+                        cout<<"NSDB8: "<<vx725_vx730_pha_data.nsdb8<<endl;
+#endif
+                        
+                        
+                        //Number of words in the channel aggregate left to read
+                        chaggwordstoread = vx725_vx730_pha_data.chagg_size - 2;
+ 
+                        //Unpack the channel aggreate
+                        while (chaggwordstoread>0) {
+                          
+                          //Read the Vx725_Vx730 PSD channel aggregate
+                          gzret=gzread(gz_in,&v1730_chagg_data,vx725_vx730_pha_data.individual_chagg_size*sizeof(uint32_t));
+                          BytesRead += gzret;
+                          wordstoread -= vx725_vx730_pha_data.individual_chagg_size;
+                          chaggwordstoread -= vx725_vx730_pha_data.individual_chagg_size;
+ 
+                          //unpack the channel agregate
+                          func_ret = unpack_vx725_vx730_pha_chagg(v1730_chagg_data, &vx725_vx730_pha_data);
+                          
+                          //Set the remaining analysis variables
+                          db_arr[EVTS].Valid = 1;
+                          db_arr[EVTS].board = user_data.boardid;
+                          db_arr[EVTS].channel = vx725_vx730_pha_data.channel + channels[chaggcounter];
+                          db_arr[EVTS].Ifast =  vx725_vx730_pha_data.energy;
+                          db_arr[EVTS].Islow =  vx725_vx730_pha_data.energy;                
+                          db_arr[EVTS].InvalidReason = 0;
+ 
+                          //Map it
+                          db_arr[EVTS].ID = MapID[db_arr[EVTS].channel][db_arr[EVTS].board]; 
+ 
+                          
+                          //Do waveform analysis and calculate times
+                          if(vx725_vx730_pha_data.dual_trace) {
+                            db_arr[EVTS].Ns = 4.0*vx725_vx730_pha_data.nsdb8;
+                          }
+                          else {
+                            db_arr[EVTS].Ns = 8.0*vx725_vx730_pha_data.nsdb8;
+                          }
+                          
+                          double dT=0;
+                          if ( ! input_params.Use_Firmware_FineTime ) {
+                            dT = Calculate_Fractional_Time(vx725_vx730_pha_data.analog_probe1,
+                                                           db_arr[EVTS].Ns, 
+                                                           vx725_vx730_pha_data.dual_trace, 
+                                                           user_data.modtype,
+                                                           analysis_params);
+                          }
+                          else {
+                            dT = 2.*vx725_vx730_pha_data.fine_time_stamp/65356.;
+                          }
+                                                    
+                          db_arr[EVTS].timestamp = vx725_vx730_pha_data.trigger_time_tag;                       //31-bit time in clock ticks
+                          db_arr[EVTS].timestamp += 2147483648*vx725_vx730_pha_data.extended_time_stamp;        //16-bit extended time in clock ticks
+                          db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
+                          db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
+                          
+ 
+                          if(input_params.Analysis_Stage > 0) {
+                            //need to add the time deviations before time sorting
+                            if(db_arr[EVTS].ID < 200) {
+                              db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
+                            }
+                            
+                            //Add the DANCE delay
+                            if(db_arr[EVTS].ID < 162) {
+                              db_arr[EVTS].timestamp += DANCE_Delay;
+                            }
+                            //changed IDs to those in global.h
+                            //Add the He3 delay
+                            if(db_arr[EVTS].ID == He3_ID) {
+                              db_arr[EVTS].timestamp += He3_Delay;
+                            } 
+                            
+                            //Add the U235 delay
+                            if(db_arr[EVTS].ID == U235_ID) {
+                              db_arr[EVTS].timestamp += U235_Delay;
+                            } 
+                            
+                            //Add the Li6 delay
+                            if(db_arr[EVTS].ID == Li6_ID) {
+                              db_arr[EVTS].timestamp += Li6_Delay;
+                            }
+                          }
+ 
+                          db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //Start with TOF as Full timestamp in ns
+ 
+#ifdef Unpacker_Verbose
+                          cout<<"Valid: "<<(int)db_arr[EVTS].Valid<<"  ";
+                          cout<<"Board: "<<(int)db_arr[EVTS].board<<"  ";
+                          cout<<"Channel: "<<(int)db_arr[EVTS].channel<<"  ";
+                          cout<<"NS: "<<db_arr[EVTS].Ns<<"  ";
+                          cout<<"Timestamp: "<<db_arr[EVTS].timestamp<<"  ";
+                          cout<<"TOF: "<<db_arr[EVTS].TOF<<"  ";
+                          cout<<"Ifast: "<<db_arr[EVTS].Ifast<<"  ";
+                          cout<<"ISlow: "<<db_arr[EVTS].Islow<<endl;
+#endif
+                          
+ 
+          
+#ifdef Histogram_Digital_Probes
+                          //Fill probe histograms
+                          if(input_params.Read_Binary==0) {
+                            if(db_arr[EVTS].ID<256) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                //digital probes
+                                hDigital_Probe1_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_pha_data.digital_probe1[kay]);
+                                hDigital_Probe2_ID->Fill(kay,db_arr[EVTS].ID,vx725_vx730_pha_data.digital_probe2[kay]);
+                              }
+                            }
+                          }
+#endif
+                          
+#ifdef Histogram_Waveforms
+                          //Fill waveform histograms
+                          if(input_params.Read_Binary==0) {
+                            if(db_arr[EVTS].ID<162) {
+                              for(int kay=0; kay<db_arr[EVTS].Ns; kay++) {
+                                hWaveform_ID->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay],db_arr[EVTS].ID);
+                              }
+                            }                        
+                            // changed to IDs defined in global.h
+                            if(db_arr[EVTS].ID == He3_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_He3->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
+                              } 
+                            }
+                            if(db_arr[EVTS].ID == Bkg_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_Bkg->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
+                              }
+                            } 
+                            if(db_arr[EVTS].ID == U235_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_U235->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
+                              } 
+                            }
+                            if(db_arr[EVTS].ID == Li6_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_Li6->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
+                              } 
+                            }
+                            
+                            if(db_arr[EVTS].ID == T0_ID) {
+                              for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
+                                hWaveform_T0->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
+                              }
+                            }
+                          }
+#endif
+ 
+ 
+                          //keep track of the smallest timestamp
+                          if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
+                           analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
+                          }    
+                          //keep track of the largest timestamp
+                          if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
+                            analysis_params->largest_timestamp=db_arr[EVTS].TOF;
+                          }  
+                      
+                          EVTS++;
+            
+                          analysis_params->entries_unpacked++;
+                          analysis_params->entries_awaiting_timesort++;
+ 
+ 
+                          
+#ifdef Unpacker_Verbose
+                          cout<<"chaggwordstoread: "<<chaggwordstoread<<"  wordstoread: "<<wordstoread<<endl;
+#endif
+                        } //End of check on chagg words to read
+                        
+                        //increment the chagg counter
+                        chaggcounter++;
+ 
+                      } //End of check on PHA
+ 
+ 
+                    } //End of wordstoread > 0 
+                    
+#ifdef Unpacker_Verbose
+                     cout<<EventBankSize<<"  "<<BytesRead<<endl;
+#endif
+    
+                    EventBankSize -= BytesRead;
+                    TotalBankSize -= BytesRead;
+                    // BytesRead = 0;
+                    
+                  } //End of check on 725 or 730
+                } //End of check on event bank size
+ 
+                if(readextra) {
+                  uint32_t extra = 0;
+                  gzret=gzread(gz_in,&extra,sizeof(extra));
+                  TotalBankSize -= sizeof(extra);
+                } //End of read extra
+              } //End of check  on total bank size
+            }  //Endf of EventID 1 (Data)
+ 
+            else if(head.fEventId==8){
+              
+              // this is scaler data
+              gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));        
+              
+#ifdef Diagnostic_Verbose
+              cout << "SCALER " << endl;
+              cout << "Bank_HEADER " << endl;
+              cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+              cout << dec << bhead.fFlags << endl;
+#endif    
+            
+              TotalBankSize = bhead.fDataSize;
+ 
+              //This is the numbef of active boards
+              int nactiveboards = 0;
+              
+              while(TotalBankSize > 0) {
+ 
+                gzret=gzread(gz_in,&bank,sizeof(BankHeader_t));        
+                TotalBankSize-=sizeof(Bank_t);
+                
+#ifdef Diagnostic_Verbose
+                cout<<"TotalBankSize after Bank Header Read "<<TotalBankSize<<endl;
+                cout << bank.fName[0] << bank.fName[1] << bank.fName[2]<< bank.fName[3] << endl;
+                cout << dec << bank.fType << endl;
+                cout << dec << bank.fDataSize << endl;
+#endif
+                //see if data is on an 8-byte boundary
+                bool readextra = false;
+                if(bank.fDataSize%8 !=0) {
+                  readextra = true; 
+                }
+                
+                //This is the time struct
+                if (bank.fName[0]=='T' && bank.fName[1]=='I' && bank.fName[2]== 'M' && bank.fName[3]=='E') {
+                  outputdiagnosticsfile << "TIME\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Time"<<endl;
+#endif
+                  gzret=gzread(gz_in,&timevalue,sizeof(timevalue));
+                  TotalBankSize-=sizeof(timevalue);
+ 
+                  outputdiagnosticsfile << timevalue.tv_sec<<"  "<<timevalue.tv_usec<<"\n";
+                }
+                
+                //These are the Digitizer Rates
+                if (bank.fName[0]=='S' && bank.fName[1]=='C' && bank.fName[2]== 'L' && bank.fName[3]=='R') {
+                  
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  outputdiagnosticsfile << "SCLR  "<<nactiveboards<<"\n";
+ 
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Digitizer Rates"<<endl;
+#endif
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    gzret=gzread(gz_in,&Digitizer_Rates[eye],sizeof(uint32_t));
+#ifdef Diagnostic_Verbose
+                    cout<<eye<<"  "<<Digitizer_Rates[eye]<<endl;
+#endif
+                    TotalBankSize-=sizeof(uint32_t);
+                    outputdiagnosticsfile << Digitizer_Rates[eye]<<"\n";
+                  }
+                }
+ 
+                //These are the Acquisition Status
+                if (bank.fName[0]=='A' && bank.fName[1]=='C' && bank.fName[2]== 'Q' && bank.fName[3]=='S') {
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  outputdiagnosticsfile << "ACQS  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Acquisition Status"<<endl;
+#endif
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    gzret=gzread(gz_in,&Acquisition_Status[eye],sizeof(uint32_t));
+#ifdef Diagnostic_Verbose
+                    cout<<eye<<"  "<<Acquisition_Status[eye]<<endl;
+#endif
+                    TotalBankSize-=sizeof(uint32_t);
+                    outputdiagnosticsfile << Acquisition_Status[eye]<<"\n";
+                  }
+                }
+ 
+                //These are the Failure Status
+                if (bank.fName[0]=='F' && bank.fName[1]=='A' && bank.fName[2]== 'I' && bank.fName[3]=='L') {
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  outputdiagnosticsfile << "FAIL  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Failure Status"<<endl;
+#endif
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    gzret=gzread(gz_in,&Failure_Status[eye],sizeof(uint32_t));
+ 
+                    if(Failure_Status[eye] != 0) {
+                      faillog<<"Run: "<<input_params.RunNumber<<"  Board: "<<eye<<" Failure_Status: "<<Failure_Status[eye]<<endl;
+                    }
+#ifdef Diagnostic_Verbose
+                    cout<<eye<<"  "<<Failure_Status[eye]<<endl;
+#endif
+                    TotalBankSize-=sizeof(uint32_t);
+                    outputdiagnosticsfile << Failure_Status[eye]<<"\n";
+                  }
+                }
+ 
+                //These are the Readout Status
+                if (bank.fName[0]=='R' && bank.fName[1]=='E' && bank.fName[2]== 'A' && bank.fName[3]=='D') {
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  outputdiagnosticsfile << "READ  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Readout Status"<<endl;
+#endif
+                  nactiveboards = bank.fDataSize/sizeof(uint32_t);
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    gzret=gzread(gz_in,&Readout_Status[eye],sizeof(uint32_t));
+#ifdef Diagnostic_Verbose
+                    cout<<eye<<"  "<<Readout_Status[eye]<<endl;
+#endif
+                    TotalBankSize-=sizeof(uint32_t);
+                    outputdiagnosticsfile << Readout_Status[eye]<<"\n";
+                  }
+                }
+ 
+                //These are the 8500 + 4n register values
+                if (bank.fName[0]=='D' && bank.fName[1]=='I' && bank.fName[2]== 'A' && bank.fName[3]=='G') {
+                  outputdiagnosticsfile << "DIAG  "<<nactiveboards<<"\n";
+ 
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"0x8500 + 4n Diagnostics"<<endl;
+#endif
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    for(int jay=0; jay<8; jay++) {
+                      gzret=gzread(gz_in,&Register_0x8504n[eye][jay],sizeof(uint32_t));
+                      TotalBankSize-=sizeof(uint32_t);
+                      outputdiagnosticsfile << Register_0x8504n[eye][jay]<<"  ";
+                    }
+                    outputdiagnosticsfile <<"\n";
+ 
+                  }
+                
+#ifdef Diagnostic_Verbose
+                  for(int eye=0; eye<8; eye++) {
+                    for(int jay=0; jay<nactiveboards; jay++) {
+                      cout<<Register_0x8504n[jay][eye]<<"  ";
+                    }
+                    cout<<endl;
+                  }
+#endif
+                }
+ 
+                //These are the ADC Temps
+                if (bank.fName[0]=='T' && bank.fName[1]=='E' && bank.fName[2]== 'M' && bank.fName[3]=='P') {
+                  outputdiagnosticsfile << "TEMP  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"ADC Temps"<<endl;
+#endif
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    for(int jay=0; jay<16; jay++) {
+                      gzret=gzread(gz_in,&ADC_Temp[eye][jay],sizeof(uint16_t));
+                      TotalBankSize-=sizeof(uint16_t);
+                      outputdiagnosticsfile << ADC_Temp[eye][jay]<<"  ";
+                    }
+                    outputdiagnosticsfile <<"\n";
+                  }
+                
+#ifdef Diagnostic_Verbose
+                  for(int eye=0; eye<16; eye++) {
+                    for(int jay=0; jay<nactiveboards; jay++) {
+                      cout<<ADC_Temp[jay][eye]<<"  ";
+                    }
+                    cout<<endl;
+                  }
+#endif
+                }
+ 
+                //These are the 0x1n2C values
+                if (bank.fName[0]=='1' && bank.fName[1]=='n' && bank.fName[2]== '2' && bank.fName[3]=='C') {
+                  outputdiagnosticsfile << "1n2C  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Register 0x1n2C"<<endl;
+#endif
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    for(int jay=0; jay<16; jay++) {
+                      gzret=gzread(gz_in,&Register_0x1n2C[eye][jay],sizeof(uint32_t));
+                      TotalBankSize-=sizeof(uint32_t);
+                      outputdiagnosticsfile << Register_0x1n2C[eye][jay]<<"  ";
+                    }
+                    outputdiagnosticsfile <<"\n";
+                  }
+                
+#ifdef Diagnostic_Verbose
+                  for(int eye=0; eye<16; eye++) {
+                    for(int jay=0; jay<nactiveboards; jay++) {
+                      cout<<Register_0x1n2C[jay][eye]<<"  ";
+                    }
+                    cout<<endl;
+                  }
+#endif
+                }
+                
+                //These are the Channel Status
+                if (bank.fName[0]=='C' && bank.fName[1]=='H' && bank.fName[2]== 'S' && bank.fName[3]=='T') {
+                  outputdiagnosticsfile << "CHST  "<<nactiveboards<<"\n";
+#ifdef Diagnostic_Verbose
+                  cout<<endl<<"Channel Status"<<endl;
+#endif
+                  for(int eye=0; eye<nactiveboards; eye++) {
+                    for(int jay=0; jay<16; jay++) {
+                      gzret=gzread(gz_in,&Channel_Status[eye][jay],sizeof(uint32_t));
+                      TotalBankSize-=sizeof(uint32_t);
+                      outputdiagnosticsfile << Channel_Status[eye][jay]<<"  ";
+                    }
+                    outputdiagnosticsfile <<"\n";
+                  }
+                
+#ifdef Diagnostic_Verbose
+                  for(int eye=0; eye<16; eye++) {
+                    for(int jay=0; jay<nactiveboards; jay++) {
+                      cout<<Channel_Status[jay][eye]<<"  ";
+                    }
+                    cout<<endl;
+                  }
+#endif
+                }
+                
+                if(readextra) {
+                  uint32_t extra = 0;
+                  gzret=gzread(gz_in,&extra,sizeof(extra));
+                  TotalBankSize -= sizeof(extra);
+                }              
+              }
+#ifdef Diagnostic_Verbose
+              cout<<"Done with Scalers. Total Bank Size: "<<TotalBankSize<<endl;
+#endif
+            }  //End of Event ID 8 (Diagnostics)
+ 
+ 
+            //Scalers
+            else if(head.fEventId==2) {
+                
+              TotalBankSize  = head.fDataSize;
+ 
+#ifdef Scaler_Verbose
+              cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+              gzread(gz_in,&bhead,sizeof(BankHeader_t));
+              TotalBankSize -= sizeof( BankHeader_t );
+              
+#ifdef Scaler_Verbose
+              cout << "Bank_HEADER " << endl;
+              cout << dec <<"TotalBankSize (bytes): " << bhead.fDataSize << endl;
+              cout << dec << bhead.fFlags << endl;
+#endif
+              while (TotalBankSize > 0) {
+ 
+                //MLTM
+                gzread( gz_in, &bank32, sizeof( Bank32_t ) );
+                TotalBankSize -= sizeof( Bank32_t );
+ 
+#ifdef Scaler_Verbose
+                cout << "BANK " << endl;
+                cout << bank32.fName[0] << bank32.fName[1] << bank32.fName[2]<< bank32.fName[3] << endl;
+                cout << dec << bank32.fType << endl;
+                cout << "Size: "<<dec << bank32.fDataSize << endl;
+#endif
+                //see if data is on an 8-byte boundary
+                bool readextra = false;
+                if(bank32.fDataSize%8 !=0) {
+                  readextra = true; 
+                }
+                
+                if (bank32.fName[0]=='M' && bank32.fName[1]=='L' && bank32.fName[2]== 'T' && bank32.fName[3]=='M') {
+                  
+                  uint32_t time_seconds;
+                  gzret=gzread(gz_in,&time_seconds,sizeof(time_seconds));
+                  TotalBankSize-=sizeof(time_seconds);
+ 
+#ifdef Scaler_Verbose
+                  cout << time_seconds<<"\n";
+#endif
+                }
+                if (bank32.fName[0]=='S' && bank32.fName[1]=='C' && bank32.fName[2]== 'L' && bank32.fName[3]=='R') {
+ 
+                  gzret=gzread(gz_in,&sclr_totals,sizeof(sclr_totals));
+                  TotalBankSize-=sizeof(sclr_totals);
+          
+                  for(int kay=0; kay<N_SCLR; kay++) {
+                    hScalers->SetBinContent(kay+1,sclr_totals.totals[kay]);
+#ifdef Scaler_Verbose
+                    cout<<kay<<"  "<<sclr_totals.totals[kay]<<endl;
+#endif
+                  }
+                }
+                
+                if (bank32.fName[0]=='R' && bank32.fName[1]=='A' && bank32.fName[2]== 'T' && bank32.fName[3]=='E') {
+                 
+                  gzret=gzread(gz_in,&sclr_rates,sizeof(sclr_rates));
+                  TotalBankSize-=sizeof(sclr_rates);
+ 
+#ifdef Scaler_Verbose
+                  for(int kay=0; kay<N_SCLR; kay++) {
+                    cout<<kay<<"  "<<sclr_rates.rates[kay]<<endl;
+                  }
+#endif
+                }
+                
+                if(readextra) {
+                  uint32_t extra = 0;
+                  gzret=gzread(gz_in,&extra,sizeof(extra));
+                  TotalBankSize -= sizeof(extra);
+                }        
+                
+#ifdef Scaler_Verbose
+                cout << dec <<"TotalBankSize (bytes): " << TotalBankSize << endl;
+#endif
+ 
+              } //End of while(TotalBankSize > 0)
+            
+            } // End of Event ID 2 (Scalers)
+ 
+            // 0x8000 is a begin of run
+            // 0x8001 is an end of run
+            // 0x8002 is an ASCII message created by the logger 
+          
+            else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 || head.fEventId == 9 ) {
+              //see if its the end of run
+              if(head.fEventId==0x8001) {
+                run=false;
+                break;
+              }
+              
+              char *fData;
+              fData=(char*)malloc(head.fDataSize);
+              gzret=gzread(gz_in,fData,head.fDataSize);
+              free (fData);        
+            }
+                    
+            else {
+              // cout<<"EventID: "<<head.fEventId<<" Unknown"<<endl;
+ 
+              TotalBankSize=TotalDataSize;
+              
+              uint32_t garbage;
+              while(TotalBankSize > 0) {
+                gzret = gzread(gz_in,&garbage, sizeof(garbage));
+                TotalBankSize -= sizeof(garbage);
+                //cout<<"Garbage Total Bank Size: "<<TotalBankSize<<endl;
+              }            
+ 
+            }  //End of catchall   
+          }  //End of EventHeader gzret > 0
+        } //End of caen2018 format check
+        else {
+          cout<<RED<<"Unpacker: [ERROR] I dont understand Data Format "<<input_params.DataFormat<<RESET<<endl;
+          return -1;
+        }
+ 
+        //At this point we need to start ordering and eventbuilding
+        if(EVTS >= BlockBufferSize) {
+          
+          //Sort this block of data
+          func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
+          if(func_ret) {
+            cout<<RED<<"Problem with sort_array in the MIDAS Reader"<<RESET<<endl;
+            return -1;
+          }
+                  
+          //Eventbuild
+          func_ret = Build_Events(datadeque,input_params,analysis_params);
+          if(func_ret) {
+            cout<<RED<<"Problem with build_events in the MIDAS Reader"<<RESET<<endl;
+            return -1;
+          }
+ 
+          //Reset the event counter and smallest timestamp
+          EVTS=0;
+          analysis_params->entries_awaiting_timesort=0;
+          analysis_params->smallest_timestamp=2.814749767e14;
+          
+        } //end check on block buffer size and eventbuild
+      }  //end of while run
+
+      analysis_params->largest_subrun_timestamp=analysis_params->largest_timestamp;
+      
+      if (input_params.NumSubRun>0)
+        cout<<"Unpacker [INFO]: Subrun Length: "<<(analysis_params->largest_subrun_timestamp-analysis_params->last_subrun_timestamp)/1000000000.0<<" seconds"<<endl;
+      cout<<"Unpacker [INFO]: Run Length: "<<analysis_params->largest_timestamp/1000000000.0<<" seconds"<<endl;
+ 
+      //Now that we are done sorting we need to empty the buffer
+      cout<<GREEN<<"Unpacker [INFO]: Finished Unpacking Data"<<RESET<<endl;
+    
+      //see if anything is left in the unsorted part
+      if(EVTS>0) {
+ 
+        umsg.str("");
+        umsg<<"Unpacker [INFO]: There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer";
+        DANCE_Info("Unpacker",umsg.str());
+        
+        //Sort this block of data
+        func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
+        if(func_ret) {
+          cout<<RED<<"Problem with sort_array in the empty stage of the MIDAS Reader"<<RESET<<endl;
+          return -1;
+        }
+ 
+        EVTS=0;
+        analysis_params->entries_awaiting_timesort=0;
+ 
       }
+    
+      if(datadeque.size()>0) {
+ 
+        //need to set the buffer depth to zero
+        input_params.Buffer_Depth = 0;
+ 
+        //Eventbuild
+        func_ret = Build_Events(datadeque,input_params,analysis_params);
+        if(func_ret) {
+          cout<<RED<<"Problem with build_events in the empty stage of the MIDAS Reader"<<RESET<<endl;
+          return -1;
+        }
+ 
+        if(datadeque.size()==0) {
+          cout<<GREEN<<"Unpacker [INFO]: Buffer empty, unpacking complete."<<RESET<<endl;
+        }
+      } //end check on timesort and datadeque
+ 
+    } // END OF MIDAS READER
+ 
+ 
+    //Stage 1 unpacker
+    if(input_params.Read_Binary==1 || input_params.Read_Simulation==1) {
+ 
+      while(run) {
+        
+        //Event limit control
+        if(analysis_params->entries_unpacked > EventLimit) {
+          run=false;
+        }
+        
+        //Progress indicator
+        if(analysis_params->entries_unpacked > progresscounter*ProgressInterval) {
+          progresscounter++;
+          if(input_params.Read_Simulation == 0) {
+            cout<<"Processing Run Number: "<<input_params.RunNumber<<endl;
+          }
+          else {
+            cout<<"Processing Simulated Data"<<endl;
+          }
+ 
+          cout<<analysis_params->entries_unpacked<<" Entries Unpacked "<<endl;
+          cout<<analysis_params->entries_awaiting_timesort<<" Entries Awaiting timesort"<<endl;
+          cout<<datadeque.size()<<" Entries Sorted and in the Buffer"<<endl;
+#ifdef CheckBufferDepth
+          if(analysis_params->max_buffer_utilization < 0.75) {
+            cout<<GREEN<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
+          }
+          else if(analysis_params->max_buffer_utilization < 0.90) {
+            cout<<YELLOW<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
+          }
+          else {
+            cout<<RED<<" Max Buffer Utilization: "<<100.0*analysis_params->max_buffer_utilization<<" %"<<RESET<<endl;
+          }
+#endif
+          cout<<analysis_params->entries_written_to_binary<<" Entries Written to Binary"<<endl;
+          cout<<analysis_params->entries_invalid<<" Entries Invalid ("<<100.0*analysis_params->entries_invalid/analysis_params->entries_processed<<" %)"<<endl;
+          cout<<analysis_params->entries_built<<" Entries Built into "<<analysis_params->events_built<<" Events"<<endl;
+          cout<<"Analyzed "<<analysis_params->entries_analyzed<<" Entries from "<<analysis_params->events_analyzed<<" Events"<<endl;
+ 
+          cout<<setw(20)<<left<<"Breakdown:"<<setw(12)<<left<<"DANCE"<<setw(12)<<left<<"T0"<<setw(12)<<left<<"Li6"<<setw(12)<<left<<"U235"<<setw(12)<<left<<"He3"<<setw(12)<<left<<"Background"<<setw(12)<<left<<"Unknown"<<setw(12)<<left<<endl;
+ 
+          cout<<setw(20)<<left<<"Entries:"<<setw(12)<<left<<analysis_params->DANCE_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->T0_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Li6_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->U235_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->He3_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Bkg_entries_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Unknown_entries<<endl;
+ 
+          cout<<setw(20)<<left<<"Events:"<<setw(12)<<left<<analysis_params->DANCE_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->T0_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Li6_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->U235_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->He3_events_analyzed;
+          cout<<setw(12)<<left<<analysis_params->Bkg_events_analyzed<<endl;
+ 
+          if(analysis_params->DANCE_events_analyzed > 0) {
+            cout<<setw(20)<<left<<"Average Mult:"<<setw(12)<<left<<(1.0*analysis_params->DANCE_entries_analyzed)/(1.0*analysis_params->DANCE_events_analyzed)<<endl;
+          }
+          cout<<endl;
+ 
+          gettimeofday(&tv,NULL); 
+          time_elapsed=tv.tv_sec+(tv.tv_usec/1000000.0);
+        
+          cout << "Average Entry Processing Rate: "<<(double)analysis_params->entries_unpacked/(time_elapsed-unpack_begin)<<" Entries per second "<<endl;
+          cout << "Average Data Read Rate: "<<(double)TOTAL_BYTES/(time_elapsed-unpack_begin)/(1024.0*1024.0)<<" MB/s"<<endl;
+          cout << "Instantaneous Data Read Rate: "<<(double)BYTES_READ/(time_elapsed-time_elapsed_old)/(1024.0*1024.0)<<" MB/s"<<endl;
+          cout << (double)TOTAL_BYTES/(1024.0*1024.0*1024.0)<<" GiB Read"<<endl<<endl<<endl;
+          
+          BYTES_READ=0;
+          time_elapsed_old = time_elapsed;
+        }
+        
+        gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
+        // gzseek(gz_in,devt_padding,SEEK_CUR);
+        
+        if(gzret!=0) {
+          
+          BYTES_READ += gzret;
+          TOTAL_BYTES += gzret;
+          
+          //Fill the array
+          db_arr[EVTS].timestamp = devt_stage1.timestamp;
+          db_arr[EVTS].Ifast = devt_stage1.Ifast;
+          db_arr[EVTS].Islow = devt_stage1.Islow;
+          db_arr[EVTS].ID = devt_stage1.ID;
+          db_arr[EVTS].Valid = 1; //Everything starts valid
+          db_arr[EVTS].InvalidReason = 0; //Everything starts valid
+ 
+          //Time Deviations
+          if(input_params.Analysis_Stage > 0) {
+            //need to add the time deviations before time sorting
+            if(db_arr[EVTS].ID < 200) {
+              db_arr[EVTS].timestamp += TimeDeviations[db_arr[EVTS].ID];
+            }
+            
+            //Add the DANCE delay
+            if(db_arr[EVTS].ID < 162) {
+              db_arr[EVTS].timestamp += DANCE_Delay;
+            }
+           //changed IDs to those in global.h 
+            //Add the He3 delay
+            if(db_arr[EVTS].ID == He3_ID) {
+              db_arr[EVTS].timestamp += He3_Delay;
+            } 
+            
+            //Add the U235 delay
+            if(db_arr[EVTS].ID == U235_ID) {
+              db_arr[EVTS].timestamp += U235_Delay;
+            } 
+            
+            //Add the Li6 delay
+            if(db_arr[EVTS].ID == Li6_ID) {
+              db_arr[EVTS].timestamp += Li6_Delay;
+            }
+          }
+ 
+          db_arr[EVTS].TOF = db_arr[EVTS].timestamp;                                            //Start with TOF as Full timestamp in ns
+ 
+ 
+          //keep track of the smallest timestamp
+          if(db_arr[EVTS].TOF<analysis_params->smallest_timestamp) {
+            analysis_params->smallest_timestamp=db_arr[EVTS].TOF;
+          }    
+          //keep track of the largest timestamp
+          if(db_arr[EVTS].TOF>analysis_params->largest_timestamp) {
+            analysis_params->largest_timestamp=db_arr[EVTS].TOF;
+          }  
+            
+          EVTS++;           
+ 
+          analysis_params->entries_unpacked++;
+          analysis_params->entries_awaiting_timesort++;
+ 
+        }
+        else {
+          run=false;
+          break;
+        }
+ 
+        //At this point we need to start ordering and eventbuilding
+        if(EVTS >= BlockBufferSize) {
+          
+          //sort this block of data
+          func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
+          if(func_ret) {
+            cout<<RED<<"Problem with sort_array in the Binary Reader"<<RESET<<endl;
+            return -1;
+          }
+ 
+          //Eventbuild
+          func_ret = Build_Events(datadeque,input_params, analysis_params);
+          if(func_ret) {
+            cout<<RED<<"Problem with build_events in the Binary Reader"<<RESET<<endl;
+            return -1;
+          }
+          
+          //Reset the event counter and smallest timestamp
+          EVTS=0;
+          analysis_params->entries_awaiting_timesort=0;
+          analysis_params->smallest_timestamp=2.814749767e14;
+                  
+        }        
+      }  //end of while(run)
+ 
+      umsg.str("");
+      umsg<<"Run Length: "<<analysis_params->largest_timestamp/1000000000.0<<" seconds";
+      DANCE_Info("Unpacker",umsg.str());
+ 
+      //Now that we are done sorting we need to empty the buffer
+      DANCE_Info("Unpacker","Finished unpacking data");
+    
+      //see if anything is left in the unsorted part
+      if(EVTS>0) {
+        umsg.str("");
+        umsg<<"There are "<<EVTS<<" Entries left to sort and "<<datadeque.size()<<" Entries left in the Buffer";
+        DANCE_Info("Unpacker",umsg.str());
+ 
+        //Sort this block of data
+        func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
+        if(func_ret) {
+          DANCE_Error("Unpacker","Problem with sort_array in the empty stage of the Binary Reader");
+          return -1;
+        }
+        
+        EVTS=0;
+        analysis_params->entries_awaiting_timesort=0;
+      }
+    
+      if(datadeque.size()>0) {
+ 
+        //need to set the buffer depth to zero
+        input_params.Buffer_Depth = 0;
+ 
+        //Eventbuild
+        func_ret = Build_Events(datadeque,input_params, analysis_params);
+        if(func_ret) {
+          DANCE_Error("Unpacker","Problem with build_events in the empty stage of the Binary Reader");
+          return -1;
+        }
+         
+        if(datadeque.size()==0) {
+          DANCE_Success("Unpacker","Buffer empty, unpacking complete.");
+        }
+      }
+    } //end of if(input_params.Read_Binary==1)
+
+
+    func_ret = Write_Root_File(input_params, analysis_params);
+    if (func_ret) {
+      return -1;
     }
-  } //end of if(input_params.Read_Binary==1)
-  
+    gz_queue.pop();
+    gz_in=gz_queue.front();
+    input_params.SubRunNumber++;
+    run=true;
+    analysis_params->last_subrun_timestamp=analysis_params->largest_subrun_timestamp;
+  } 
   //Make the time deviations if needed (Likely only a stage 0 thing)
   if(input_params.FitTimeDev) {
     Make_Time_Deviations(input_params.RunNumber);
   }
 
-  //oputput the rootfile
-  //Name of the output root file
-  stringstream rootfilename;
-  rootfilename.str();
-  
-  //stage 0
-  if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
-    rootfilename << "./stage0_root/Stage0_Histograms_Run_";
-    rootfilename << input_params.RunNumber;
-  }
-  //stage 1
-  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==0) {
-    rootfilename << "./stage1_root/Stage1_Histograms_Run_";
-    rootfilename << input_params.RunNumber;
-  }
-  //simulation
-  else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==1) {
-    rootfilename << "./stage1_root/Stage1_Histograms_";
-    rootfilename << input_params.Simulation_File_Name;
-  }
-  else {
-    DANCE_Error("Unpacker","Cannot understand options for making rootfile. Exiting!");
-    return -1;
-  }
-    
-  //make the root file  
-  TFile *fout;
-
-
-  //Make the file
-  fout = new TFile(Form("%s_%dns_CW_%dns_CBT_%dns_DEBT.root",rootfilename.str().c_str(),
-			(int)input_params.Coincidence_Window,
-			(int)input_params.Crystal_Blocking_Time,
-			(int)input_params.DEvent_Blocking_Time),"RECREATE");
-  
-  DANCE_Success("Unpacker","Rootfile Created");
-  
-  //Write histograms
-  Write_Unpacker_Histograms(fout, input_params);
-  Write_PI_Gates(fout);
-  Write_Eventbuilder_Histograms(fout, input_params, analysis_params);
-  Write_Analyzer_Histograms(fout, input_params);
-
-  //Write the root file
-  fout->Write();
-  DANCE_Success("Unpacker","Rootfile Written");
 
 
  
@@ -2235,7 +2320,7 @@ int Initialize_Unpacker(Input_Parameters input_params) {
     DANCE_Success("Unpacker","Initialized");
   }
   else {
-    DANCE_Error("Unpacker","Initilization Failed. Exiting!");
+    DANCE_Error("Unpacker","Initialization Failed. Exiting!");
   }
   return func_ret;
 

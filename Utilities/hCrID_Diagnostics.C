@@ -9,12 +9,12 @@ void hCrID_Diagnostics() {
   //Location of stage0 rootfiles
   stringstream fpath;
   fpath.str();
-  fpath << "/home/cprokop/CJP/DANCE_Analysis/stage0_root/";
+  fpath << "/home/cfry/DANCE_Analysis/stage0_root/";
 
  //Location of stage1 rootfiles
   stringstream fpath1;
   fpath1.str();
-  fpath1 << "/home/cprokop/CJP/DANCE_Analysis/stage1_root/";
+  fpath1 << "/home/cfry/DANCE_Analysis/stage1_root/";
 
   //stage0
   int CW = 500;
