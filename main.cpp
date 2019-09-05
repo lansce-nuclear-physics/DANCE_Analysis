@@ -339,13 +339,13 @@ int main(int argc, char *argv[]) {
        
       runname << midassubrunname.str();
       input_params.SubRunNumber=0;
+
       while(gz_in) {
         input_params.NumSubRun++;
         gz_queue.push(gz_in);
         midassubrunname.str("");
         midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
         gz_in=gzopen(midassubrunname.str().c_str(),"rb");
-
       }
     }
     else {
@@ -365,11 +365,12 @@ int main(int argc, char *argv[]) {
 
 	runname << midassubrunname.str();
         input_params.SubRunNumber=0;
+  cout << "found a file " << gz_in << endl;
         while(gz_in) {
           input_params.NumSubRun++;
           gz_queue.push(gz_in);
           midassubrunname.str("");
-          midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
+          midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid.gz";
           gz_in=gzopen(midassubrunname.str().c_str(),"rb");
         }
       }
@@ -576,7 +577,7 @@ int main(int argc, char *argv[]) {
   if(func_ret) {
     return func_ret;
   }
-  //cout << "numSubRun: " << input_params.NumSubRun << "\t subRunNum: "<< input_params.SubRunNumber << endl;
+  cout << "numSubRun: " << input_params.NumSubRun << "\t subRunNum: "<< input_params.SubRunNumber << endl;
   //Launch the unpacker
   int events_analyzed=  Unpack_Data(gz_queue, begin, input_params, &analysis_params);
 

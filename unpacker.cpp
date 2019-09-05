@@ -199,7 +199,7 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
     rootfilename << "./stage0_root/Stage0_Histograms_Run_";
     rootfilename << input_params.RunNumber;
-    if (input_params.SubRunNumber >= 0){
+    if (input_params.NumSubRun > 0){
       rootfilename << "_";
       rootfilename << input_params.SubRunNumber;
     }

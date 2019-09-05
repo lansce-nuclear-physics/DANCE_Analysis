@@ -6,11 +6,7 @@ diagnostics/*
 !diagnostics/.gitkeep
 *.root
 *.d
-subruntiming/*
-platinumAnalysis*
-ratioThresholds*
-misc/*
-*old
-*Old
 hygelac*
 data*
+stage*_bin
+stage*_root
