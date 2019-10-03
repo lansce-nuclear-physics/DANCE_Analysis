@@ -104,7 +104,7 @@ int sort_array(DEVT_BANK db_arr[], deque<DEVT_BANK> &datadeque, uint32_t EVTS, I
 
 #ifdef CheckBufferDepth
       if(EVT_SORT > MaxDEVTArrSize) {
-	DANCE_Error("Unpacker","Size of the buffer has exceeded MAXDEVTArrSize.  Change MAXDEVTArrSiz to a higher value");
+	DANCE_Error("Unpacker","Size of the buffer has exceeded MaxDEVTArrSize.  Change MaxDEVTArrSiz to a higher value");
 	return -1;
       }
       else {
@@ -141,12 +141,12 @@ int sort_array(DEVT_BANK db_arr[], deque<DEVT_BANK> &datadeque, uint32_t EVTS, I
 #ifdef CheckTheDeque
   cout<<"Checking deque"<<endl;
   for(int k=0; k<(int)datadeque.size()-1; k++) {
-    if(datadeque[k+1].TOF < datadeque[k].TOF) {
+    if(datadeque[k+1].timestamp < datadeque[k].timestamp) {
       cout<<"problem with entry "<<k<<endl;
       return -1;
     }
 #ifdef EventSort_Verbose
-    cout<<k<<"  "<<datadeque[k].TOF<<endl;
+    cout<<k<<"  "<<datadeque[k].timestamp<<endl;
 #endif
   }
 #endif

@@ -213,6 +213,7 @@ typedef struct{
   bool Read_Simulation;
   bool HAVE_Threshold;
   bool FitTimeDev;
+  bool SingleSubrun;
   //Strings
   std::string DataFormat;
   std::string Simulation_File_Name;

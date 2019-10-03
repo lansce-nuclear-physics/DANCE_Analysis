@@ -932,12 +932,13 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	for(uint32_t jay=eye+1; jay<eventvector.size(); jay++) {
 	  
 	  int id_jay = eventvector[jay].ID;
+        
 	  
-	  if(id_jay<162) {
+	  if(id_jay<162 && id_jay>=0) {
 
 	    //time difference between crystal jay and eye
 	    double ddT = eventvector[jay].timestamp - eventvector[eye].timestamp;
-	    
+
 	    //Fill the coincidence matrix
 	    hCoinCAEN->Fill(id_eye,id_jay,1);
 	    hCoinCAEN->Fill(id_jay,id_eye,1);

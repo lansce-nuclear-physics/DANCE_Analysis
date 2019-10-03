@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
   input_params.Read_Binary=false;
   input_params.Write_Binary=false;
   input_params.Read_Simulation=false;
+  input_params.SingleSubrun=false;
   input_params.Coincidence_Window=10;
   input_params.HAVE_Threshold=false;
   input_params.Energy_Threshold=0.15; //MeV
@@ -110,6 +111,7 @@ int main(int argc, char *argv[]) {
       
   //Control things
   int RunNum=0;
+  int SubRunNum=0;
   string pathtodata;
   string cfgfile;
   
@@ -122,9 +124,17 @@ int main(int argc, char *argv[]) {
     RunNum = atoi(argv[2]);
     cfgfile = argv[3];
   }
+  else if(argc==5) {
+    pathtodata = argv[1];
+    RunNum = atoi(argv[2]);
+    cfgfile = argv[4];
+    SubRunNum = atoi(argv[3]);
+    input_params.SingleSubrun = true;
+  }
+
   else {
     DANCE_Error("Main","Too many or too few arguments provided.  See README file");
-    DANCE_Error("Main","for Stage 0 and Stage 1: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg");
+    DANCE_Error("Main","for Stage 0 and Stage 1: \"./DANCE_Analysis pathtodata runnumber (optional subrunnumber) cfgfile.cfg");
     DANCE_Error("Main","for Simulations: \"./DANCE_Analysis cfgfile.cfg");
     return -1;
   }
@@ -322,7 +332,14 @@ int main(int argc, char *argv[]) {
     midassubrunname.str();
 
     midasrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << ".mid";
-    midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
+    midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_";
+    if (input_params.SingleSubrun){
+      midassubrunname << std::setw(3) << SubRunNum;
+    }
+    else {
+      midassubrunname << std::setw(3) << 0;
+    } 
+    midassubrunname << ".mid";
 
     mmsg.str("");
     mmsg<<"Checking for: "<<midassubrunname.str();
@@ -332,63 +349,77 @@ int main(int argc, char *argv[]) {
     gz_in=gzopen(midassubrunname.str().c_str(),"rb");
     
     //check to see if its open
-    if(gz_in) {
-      mmsg.str("");
-      mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
-      DANCE_Success("Main",mmsg.str());
-       
-      runname << midassubrunname.str();
-      input_params.SubRunNumber=0;
-
-      while(gz_in) {
-        input_params.NumSubRun++;
-        gz_queue.push(gz_in);
-        midassubrunname.str("");
-        midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
+    if (input_params.SingleSubrun){
+       if(gz_in) {
+         mmsg.str("");
+         mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
+         DANCE_Success("Main",mmsg.str());
+          
+         runname << midassubrunname.str();
+         gz_queue.push(gz_in);
+      }
+      else {
+        midassubrunname << ".gz";         
+        mmsg<<"Checking for: "<<midassubrunname.str();
+        DANCE_Info("Main",mmsg.str());
+        input_params.SubRunNumber=0;
+        
         gz_in=gzopen(midassubrunname.str().c_str(),"rb");
+        if (gz_in) {
+          mmsg.str("");
+          mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
+          DANCE_Success("Main",mmsg.str());
+          
+          runname << midassubrunname.str();
+          gz_queue.push(gz_in);
+        }
       }
     }
-    else {
-      //look for compressed .mid.gz subrun files
-      midassubrunname << ".gz";
-      
-      mmsg.str("");
-      mmsg<<"Checking for: "<<midassubrunname.str();
-      DANCE_Info("Main",mmsg.str());
-      input_params.SubRunNumber=0;
-      
-      gz_in=gzopen(midassubrunname.str().c_str(),"rb");
-      if(gz_in) {
-	mmsg.str("");
-	mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
-	DANCE_Success("Main",mmsg.str());
-
-	runname << midassubrunname.str();
-        input_params.SubRunNumber=0;
-  cout << "found a file " << gz_in << endl;
-        while(gz_in) {
-          input_params.NumSubRun++;
-          gz_queue.push(gz_in);
-          midassubrunname.str("");
-          midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid.gz";
-          gz_in=gzopen(midassubrunname.str().c_str(),"rb");
-        }
-      }
-      else { //look for uncompressed .mid files (no subrun)
-        gz_in=gzopen(midasrunname.str().c_str(),"rb");
-      
+    else { 
         if(gz_in) {
           mmsg.str("");
-          mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+          mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
           DANCE_Success("Main",mmsg.str());
-          runname << midasrunname.str();
-          input_params.SubRunNumber=-1;
-          gz_queue.push(gz_in);
+          
+          runname << midassubrunname.str();
+          input_params.SubRunNumber=0;
+ 
+          while(gz_in) {
+            input_params.NumSubRun++;
+            gz_queue.push(gz_in);
+            midassubrunname.str("");
+            midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid";
+            gz_in=gzopen(midassubrunname.str().c_str(),"rb");
+          }
         }
-        else { //look for .mid.gz files (no subrun)
-          midasrunname << ".gz";
+      else {
+        //look for compressed .mid.gz subrun files
+        midassubrunname << ".gz";
+        
+        mmsg.str("");
+        mmsg<<"Checking for: "<<midassubrunname.str();
+        DANCE_Info("Main",mmsg.str());
+        input_params.SubRunNumber=0;
+        
+        gz_in=gzopen(midassubrunname.str().c_str(),"rb");
+        if(gz_in) {
+          mmsg.str("");
+          mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
+          DANCE_Success("Main",mmsg.str());
+
+          runname << midassubrunname.str();
+          input_params.SubRunNumber=0;
+          while(gz_in) {
+            input_params.NumSubRun++;
+            gz_queue.push(gz_in);
+            midassubrunname.str("");
+            midassubrunname << pathtodata << "/run" << std::setfill('0') << std::setw(6) << RunNum << "_" << std::setw(3) << input_params.NumSubRun << ".mid.gz";
+            gz_in=gzopen(midassubrunname.str().c_str(),"rb");
+          }
+        }
+        else { //look for uncompressed .mid files (no subrun)
           gz_in=gzopen(midasrunname.str().c_str(),"rb");
-      
+        
           if(gz_in) {
             mmsg.str("");
             mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
@@ -397,11 +428,24 @@ int main(int argc, char *argv[]) {
             input_params.SubRunNumber=-1;
             gz_queue.push(gz_in);
           }
+          else { //look for .mid.gz files (no subrun)
+            midasrunname << ".gz";
+            gz_in=gzopen(midasrunname.str().c_str(),"rb");
+          
+            if(gz_in) {
+              mmsg.str("");
+              mmsg<<"File "<<midasrunname.str().c_str()<<" Found";
+              DANCE_Success("Main",mmsg.str());
+              runname << midasrunname.str();
+              input_params.SubRunNumber=-1;
+              gz_queue.push(gz_in);
+            }
+          }
         }
-      }
-    }
-  }
-  
+      } //end .mid.gz
+    } //end not single subrun
+  } //end read midas 
+ 
   //Binary input that is not simulation
   else if(input_params.Read_Binary == 1 && input_params.Read_Simulation == 0) {
     
@@ -577,7 +621,7 @@ int main(int argc, char *argv[]) {
   if(func_ret) {
     return func_ret;
   }
-  cout << "numSubRun: " << input_params.NumSubRun << "\t subRunNum: "<< input_params.SubRunNumber << endl;
+
   //Launch the unpacker
   int events_analyzed=  Unpack_Data(gz_queue, begin, input_params, &analysis_params);
 

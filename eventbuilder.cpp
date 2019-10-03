@@ -11,6 +11,7 @@
 #include "eventbuilder.h"
 #include "validator.h"
 #include "calibrator.h"
+#include<iomanip>
 
 using namespace std;
 
@@ -146,6 +147,9 @@ int Initialize_Eventbuilder(Input_Parameters input_params) {
       outfilename <<"/stage1_run_";
     }
     outfilename << input_params.RunNumber;
+    if (input_params.SingleSubrun){
+      outfilename << "_" << input_params.SubRunNumber; 
+    }
     outfilename << ".bin";
     
     outputbinfile.open(outfilename.str().c_str(), ios::out | ios::binary);
@@ -222,6 +226,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  datadeque[0].TOF_Corr = -1;
 	}
       }
+
       //Calculate corrected U235 TOF
       if(datadeque[0].ID == U235_ID) {
 	//Correct the TOF for moderation time between ~0 and ~10 MeV
@@ -469,16 +474,19 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  //subsequent things are subject to coincidence windows
 	  else{
 	    //In the window
-	    if(datadeque[0].timestamp < (DANCE_eventvector[0].timestamp + input_params.Coincidence_Window)) {
+	    if(datadeque[0].timestamp-DANCE_eventvector[0].timestamp < input_params.Coincidence_Window) {
 	      DANCE_eventvector.push_back(datadeque[0]); //put the first event in the events vector
 	      datadeque.pop_front();  //remove the first entry in the deque     
 	      analysis_params->entries_built++;
+         if (DANCE_eventvector.size()>160) {cout <<setprecision(14)<< datadeque[0].timestamp-DANCE_eventvector[0].timestamp<<" " << DANCE_eventvector.size() << endl;} 
 	    }
 	    //Out of the window
 	    else {
 	      //Analyze
 #ifdef Eventbuilder_Verbose
 	      cout<<"Eventbuilder: Processing DANCE Event with Size: "<<DANCE_eventvector.size()<<"  " <<datadeque.size()<<" Entries in the deque"<<endl;
+
+
 #endif
 	      //Send it to the analyzer
 	      Analyze_Data(DANCE_eventvector, input_params, analysis_params);
@@ -491,9 +499,9 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	      datadeque.pop_front();  //remove the first entry in the deque     
 	      analysis_params->events_built++;
 	      analysis_params->entries_built++;
-	    }
-	  } //End of check on DANCE_eventvector.size
-	
+          
+  	    }
+	  } 	
 	}
 	
 	else if(datadeque[0].ID == Li6_ID || datadeque[0].ID == He3_ID ||  datadeque[0].ID == U235_ID ||  datadeque[0].ID == Bkg_ID) {

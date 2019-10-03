@@ -207,7 +207,7 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
     rootfilename << "./stage0_root/Stage0_Histograms_Run_";
     rootfilename << input_params.RunNumber;
-    if (input_params.SingleSubrun){
+    if (input_params.NumSubRun > 0){
       rootfilename << "_";
       rootfilename << input_params.SubRunNumber;
     }
@@ -468,7 +468,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
 
   //Boolean control variables
   bool run=true; 
-  bool subrun=true;
+
   //Structures to put data in
   deque<DEVT_BANK> datadeque;                         //Storage container for time sorted data
   
@@ -550,7 +550,6 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
       DANCE_Info("Unpacker",umsg.str());
       
       while(run) {
-        while(subrun) {
        
         if(analysis_params->entries_unpacked > EventLimit) {
           run=false;
@@ -1016,7 +1015,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
  
               //End of Run
               if(head.fEventId==0x8001)  {
-                subrun=false;
+                run=false;
                 break;
               }
           
@@ -1960,7 +1959,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
             else if(head.fEventId==0x8000 || head.fEventId==0x8001 || head.fEventId==0x8002 || head.fEventId == 9 ) {
               //see if its the end of run
               if(head.fEventId==0x8001) {
-                subrun=false;
+                run=false;
                 break;
               }
               
@@ -2013,24 +2012,12 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
           analysis_params->smallest_timestamp=2.814749767e14;
           
         } //end check on block buffer size and eventbuild
-        }//end while subrun
-        gz_queue.pop();
-        if (gz_queue.size()>0) {
-          //currently unused
-          analysis_params->largest_subrun_timestamp=analysis_params->largest_timestamp;
-
-          //grab the new subrun
-          gz_in=gz_queue.front();
-          input_params.SubRunNumber++;
-          subrun=true;
-        }
-        else {
-          run=false;
-          break;
-        }
       }  //end of while run
 
-
+      analysis_params->largest_subrun_timestamp=analysis_params->largest_timestamp;
+      
+      if (input_params.NumSubRun>0)
+        cout<<"Unpacker [INFO]: Subrun Length: "<<(analysis_params->largest_subrun_timestamp-analysis_params->last_subrun_timestamp)/1000000000.0<<" seconds"<<endl;
       cout<<"Unpacker [INFO]: Run Length: "<<analysis_params->largest_timestamp/1000000000.0<<" seconds"<<endl;
  
       //Now that we are done sorting we need to empty the buffer
@@ -2287,9 +2274,10 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
     if (func_ret) {
       return -1;
     }
-
- 
-
+    gz_queue.pop();
+    gz_in=gz_queue.front();
+    input_params.SubRunNumber++;
+    run=true;
     analysis_params->last_subrun_timestamp=analysis_params->largest_subrun_timestamp;
   } 
   //Make the time deviations if needed (Likely only a stage 0 thing)
