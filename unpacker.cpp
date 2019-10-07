@@ -2083,6 +2083,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
         //Event limit control
         if(analysis_params->entries_unpacked > EventLimit) {
           run=false;
+          gz_queue.pop();
         }
         
         //Progress indicator
@@ -2212,6 +2213,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
         }
         else {
           run=false;
+          gz_queue.pop();
           break;
         }
  
