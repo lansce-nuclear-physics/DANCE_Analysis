@@ -14,6 +14,9 @@
 #include "validator.h"
 #include "eventbuilder.h"
 
+//Root include
+#include "TROOT.h"
+
 //C/C++ includes
 #include <sys/time.h>
 #include <queue>
@@ -25,6 +28,12 @@ stringstream mmsg;
 int main(int argc, char *argv[]) {
 
   int func_ret=0;
+
+  const char* rootver=gROOT->GetVersion();
+  if (rootver[0]!='5' || rootver[2]=='2' || rootver[3]=='6'){
+       DANCE_Error("Main","Wrong root version, go to 5.34/36, otherwise time deviations won't make correctly");
+    return -1;
+  }
 
   //Read in the version information
   ifstream version_file;

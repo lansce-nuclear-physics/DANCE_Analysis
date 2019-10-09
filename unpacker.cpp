@@ -554,6 +554,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
        
         if(analysis_params->entries_unpacked > EventLimit) {
           run=false;
+          while (!gz_queue.empty()){gz_queue.pop();}
         }
         
         //Progess indicator
@@ -1016,7 +1017,8 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
  
               //End of Run
               if(head.fEventId==0x8001)  {
-                subrun=false;
+                run=false;
+                gz_queue.pop();
                 break;
               }
           
