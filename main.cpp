@@ -29,10 +29,13 @@ int main(int argc, char *argv[]) {
 
   int func_ret=0;
 
-  const char* rootver=gROOT->GetVersion();
-  if (rootver[0]!='5' || rootver[2]=='2'){
-       DANCE_Error("Main","Wrong root version, go to 5.34/36, otherwise time deviations won't make correctly");
-    return -1;
+  const char* rootver="4.34/24";//=gROOT->GetVersion();
+  
+  if (rootver[0]!='6'){
+    if(rootver[0]=='5' && rootver[2]!='3'){
+       DANCE_Error("Main","Wrong root version, go to 5.34/36 or 6, otherwise time deviations won't make correctly");
+       return -1;
+    }
   }
 
   //Read in the version information

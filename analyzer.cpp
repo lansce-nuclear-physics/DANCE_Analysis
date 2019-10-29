@@ -161,7 +161,8 @@ TH1D *esum3;
 TH1D *esum4;
 TH1D *esum5;
 
-
+TH2D* hGamma_Mcr2_1stex;
+TH2D* hGammaCalib_Mcr2_1stex;
 
 
 
@@ -369,6 +370,9 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hGamma_Mcr1 = new TH2D("hGamma_Mcr1","hGamma_Mcr1",3500,0,70000,162,0,162);
   hGammaCalib_Mcr1 = new TH2D("hGammaCalib_Mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
 
+  //Pt stuff
+  hGamma_Mcr2_1stex = new TH2D("hGamma_Mcr2_1stex","hGamma_Mcr2_1stex",3500,0,70000,162,0,162);
+  hGammaCalib_Mcr2_1stex = new TH2D("hGammaCalib_Mcr2_1stex","hGammaCalib_Mcr2_1stex",2000,0.0,20.0,162,0,162);
  
     
   //Physics Histograms
@@ -594,6 +598,8 @@ int Reset_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
  
 
+  hGamma_Mcr2_1stex->Reset("ICES");
+  hGammaCalib_Mcr2_1stex->Reset("ICES");
 
   hGamma_Mcr1->Reset("ICES");
   hGammaCalib_Mcr1->Reset("ICES");
@@ -741,6 +747,8 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     hDANCE_Events_per_T0->Write();
 
+    hGamma_Mcr2_1stex->Write();
+    hGammaCalib_Mcr2_1stex->Write();
     hGamma_Mcr1->Write();
     hGammaCalib_Mcr1->Write();
     hTOF->Write();
@@ -1346,6 +1354,23 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
 	    hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
 	  }
+	  if(devent.Crystal_mult == 2 || devent.Crystal_mult == 3) {
+            if (devent.Ecrystal[0]<0.4 && devent.Ecrystal[0]>0.28){
+	      hGamma_Mcr2_1stex->Fill(devent.Islow[1], devent.Crystal_ID[1],1);
+	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[1],devent.Crystal_ID[1],1);
+            }
+            else if (devent.Ecrystal[1]<0.4 && devent.Ecrystal[1]>0.28){
+	      hGamma_Mcr2_1stex->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
+	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+            }
+            else if (devent.Crystal_mult==3 && devent.Ecrystal[2]<0.4 && devent.Ecrystal[2]>0.28) {
+              hGamma_Mcr2_1stex->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
+	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+	      hGamma_Mcr2_1stex->Fill(devent.Islow[1], devent.Crystal_ID[1],1);
+	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[1],devent.Crystal_ID[1],1);
+            }
+	  }
+
 	
 
 	  

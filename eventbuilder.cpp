@@ -97,9 +97,9 @@ TH2F *hGammaCalib_PU;
 
 //Crystal Diagnostics
 TH2F *hTimeBetweenCrystals;  //time between subsequent hits of the same crystal (ns)
-TH2F *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
-TH2F *hTimeBetweenCrystals_FastEnergyRatio; //ratio of the present and last amplitudes vs time difference between that same cyrstal (ns)
-TH2F *hTimeBetweenCrystals_LongShortRatio; //ratio of the present long/short integrals vs time difference between hits in the same cyrstal (ns)
+TH2F *hTimeBetweenCrystals_EnergyRatio; //ratio of the present and last amplitudes vs time difference between that same crystal (ns)
+TH2F *hTimeBetweenCrystals_FastEnergyRatio; //ratio of the present and last amplitudes vs time difference between that same crystal (ns)
+TH2F *hTimeBetweenCrystals_LongShortRatio; //ratio of the present long/short integrals vs time difference between hits in the same crystal (ns)
   
 TH2F *hFastSlowRatio_ID;   //ID vs Ratio of Fast to Slow component
 
