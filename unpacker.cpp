@@ -67,7 +67,8 @@ TH1I *hScalers;
 
 TH1D* hTimestamps;
 TH1D* hTimestampsT0;
-TH1D* hTimestampsBM; 
+TH1D* hTimestampsBM;
+TH2D* hTimestampsID; 
 
 TH1S *hWaveforms[20];
 int waveform_counter=0;
@@ -100,6 +101,7 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
      hTimestamps = new TH1D("hTimestamps","hTimestamps",1e6,0,4000);
      hTimestampsT0 = new TH1D("hTimestampsT0","hTimestamps",1e6,0,4000);
      hTimestampsBM = new TH1D("hTimestampsBM","hTimestamps",1e6,0,4000);
+     hTimestampsID = new TH2D("hTimestampsID","hTimestamps",4e5,0,1000,162,0,162);
 #endif
 
 #ifdef Histogram_Digital_Probes
@@ -150,6 +152,7 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
      hTimestamps->Write();
      hTimestampsT0->Write();
      hTimestampsBM->Write();
+     hTimestampsID->Write();
 #endif
 
     hScalers->Write();
@@ -189,6 +192,7 @@ int Reset_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
      hTimestamps->Reset("ICES");
      hTimestampsT0->Reset("ICES");
      hTimestampsBM->Reset("ICES");
+     hTimestampsID->Reset("ICES");
 #endif
 
     hScalers->Reset("ICES");
@@ -639,7 +643,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
             cout<<"TimeStamp "<<head.fTimeStamp<<endl;    ///< event timestamp in nseconds
 #endif
  
-           cout << head.fTimeStamp << endl;
+           //cout << head.fTimeStamp << endl;
              //Data
             if(head.fEventId==1){
               gzret=gzread(gz_in,&bhead,sizeof(BankHeader_t));        
@@ -742,6 +746,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                       gzret=gzread(gz_in,fData,bank32.fDataSize);
                       TotalBankSize -= EventBankSize;
                       free (fData);
+                      gz_queue.pop();
                       break; // you break here because the cpu comes last
                     }
                   }
@@ -1035,6 +1040,9 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
               free (fData);
             } //end of crap
           }  //checking to see if gzret > 0
+          else {
+            gz_queue.pop();
+          }
         } //end of caen2015
  
         else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
@@ -1306,6 +1314,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
 #ifdef MakeTimeStampHistogram
                           if (db_arr[EVTS].ID<162){
                             hTimestamps->Fill(db_arr[EVTS].timestamp*1.0e-9);
+                            hTimestampsID->Fill(db_arr[EVTS].timestamp*1.0e-9,db_arr[EVTS].ID);
                           }
                           if (db_arr[EVTS].ID==T0_ID){
                             hTimestampsT0->Fill(db_arr[EVTS].timestamp*1.0e-9);

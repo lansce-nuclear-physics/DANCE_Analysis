@@ -34,13 +34,13 @@ The purpose of this document is to explain how the program works.
 
 FOR STAGE0 and STAGE1 ANALYSIS
 
-   "./DANCE_Analysis /pathtodata runnumber cfgfile.cfg"
+   "./DANCE_Analysis /pathtodata runnumber (optional subrunnumber) cfgfile.cfg"
    
    The argument 'pathtodata' is either a symbolic link to the location or the location of the .mid or .mid.gz files. 
 
    The runnumber is padded with 6 zeros and other padding formats would require a minor change in main.cpp
 
-   The subrunnumber is padded with 3 zeros and other padding formats would require a minor change in main.cpp
+   The subrunnumber is padded with 3 zeros and other padding formats would require a minor change in main.cpp, if a subrunnumber is not specified, all subruns of a run are sorted
 
    Sample .cfg files are included when you clone the package and can be modified thereafter.
 

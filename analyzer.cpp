@@ -75,6 +75,8 @@ TH2D *hTOF_Mcl_Corr;         //MCl vs TOF for dance events
 TH2D *hGamma_Mcr1;
 TH2D *hGammaCalib_Mcr1;
 
+TH2D* ID_TOF;
+
 // QGated spectra
 TH3F *En_Ecl_Mcl_QGated[10]; //Max is 10 QGates. 
 TH3F *En_Ecr_Mcr_QGated[10]; //Max is 10 QGates. 
@@ -370,10 +372,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hGamma_Mcr1 = new TH2D("hGamma_Mcr1","hGamma_Mcr1",3500,0,70000,162,0,162);
   hGammaCalib_Mcr1 = new TH2D("hGammaCalib_Mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
 
-  //Pt stuff
-  hGamma_Mcr2_1stex = new TH2D("hGamma_Mcr2_1stex","hGamma_Mcr2_1stex",3500,0,70000,162,0,162);
-  hGammaCalib_Mcr2_1stex = new TH2D("hGammaCalib_Mcr2_1stex","hGammaCalib_Mcr2_1stex",2000,0.0,20.0,162,0,162);
- 
     
   //Physics Histograms
   double x[5000];
@@ -594,13 +592,6 @@ int Reset_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   hDANCE_Entries_per_T0->Reset("ICES");
   hDANCE_Events_per_T0->Reset("ICES");
 
-
-
- 
-
-  hGamma_Mcr2_1stex->Reset("ICES");
-  hGammaCalib_Mcr2_1stex->Reset("ICES");
-
   hGamma_Mcr1->Reset("ICES");
   hGammaCalib_Mcr1->Reset("ICES");
 
@@ -747,8 +738,6 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     hDANCE_Events_per_T0->Write();
 
-    hGamma_Mcr2_1stex->Write();
-    hGammaCalib_Mcr2_1stex->Write();
     hGamma_Mcr1->Write();
     hGammaCalib_Mcr1->Write();
     hTOF->Write();
@@ -1354,25 +1343,6 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
 	    hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
 	  }
-	  if(devent.Crystal_mult == 2 || devent.Crystal_mult == 3) {
-            if (devent.Ecrystal[0]<0.4 && devent.Ecrystal[0]>0.28){
-	      hGamma_Mcr2_1stex->Fill(devent.Islow[1], devent.Crystal_ID[1],1);
-	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[1],devent.Crystal_ID[1],1);
-            }
-            else if (devent.Ecrystal[1]<0.4 && devent.Ecrystal[1]>0.28){
-	      hGamma_Mcr2_1stex->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
-	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
-            }
-            else if (devent.Crystal_mult==3 && devent.Ecrystal[2]<0.4 && devent.Ecrystal[2]>0.28) {
-              hGamma_Mcr2_1stex->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
-	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
-	      hGamma_Mcr2_1stex->Fill(devent.Islow[1], devent.Crystal_ID[1],1);
-	      hGammaCalib_Mcr2_1stex->Fill(devent.Ecrystal[1],devent.Crystal_ID[1],1);
-            }
-	  }
-
-	
-
 	  
 	  //Loop over the crystal mult
 	  for(int jay=0; jay<devent.Crystal_mult; jay++ )  {

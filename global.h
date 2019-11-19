@@ -18,7 +18,7 @@
 //#define Histogram_Waveforms        //This turns on histogramming of waveforms
 //#define Histogram_Digital_Probes   //This turns on histogramming of digital probes (Not applicable to CAEN2015 format)
 //#define CheckBufferDepth           //This turns on a check of how much of the buffer is being used
-//#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
+#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
 //#define InvalidDetails             // histograms that are separated by event type before the invalid event
 
 //Verbosity
