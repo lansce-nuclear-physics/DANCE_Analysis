@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  global.h               *// 
-//*  Last Edit: 09/04/19    *//  
+//*  Last Edit: 12/10/19    *//  
 //***************************//
 
 #ifndef GLOBAL_H
@@ -18,8 +20,9 @@
 //#define Histogram_Waveforms        //This turns on histogramming of waveforms
 //#define Histogram_Digital_Probes   //This turns on histogramming of digital probes (Not applicable to CAEN2015 format)
 //#define CheckBufferDepth           //This turns on a check of how much of the buffer is being used
-#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
+//#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
 //#define InvalidDetails             // histograms that are separated by event type before the invalid event
+#define HighRateDebug		    // histograms useful for debugging in weird conditions, normally not so useful
 
 //Verbosity
 //#define Calibrator_Verbose       //This turns on the messages from the calibrator
@@ -97,7 +100,7 @@
 
 #define	GammaE_From 0.0 //Gamma energy [MeV] - low limit
 #define	GammaE_To 20.0 //Gamma energy [MeV] - upper limit
-#define	GammaE_NoOfBins 200.0 //Number of bins
+#define	GammaE_NoOfBins 220.0 //Number of bins
 
 
 

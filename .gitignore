@@ -6,7 +6,4 @@ diagnostics/*
 !diagnostics/.gitkeep
 *.root
 *.d
-hygelac*
-data*
-stage*_bin
-stage*_root
+rootlogon.C

@@ -75,10 +75,6 @@ TH2D* hTimestampsID;
 TH1S *hWaveforms[20];
 int waveform_counter=0;
 
-
-
-
-
 //Histograms for Unpacker Things
 int Create_Unpacker_Histograms(Input_Parameters input_params) {
   

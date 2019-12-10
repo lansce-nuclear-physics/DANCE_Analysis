@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  main.cpp               *// 
-//*  Last Edit: 09/08/19    *//  
+//*  Last Edit: 12/04/19    *//  
 //***************************//
 
 //File includes
@@ -370,7 +372,7 @@ int main(int argc, char *argv[]) {
          runname << midassubrunname.str();
          gz_queue.push(gz_in);
       }
-      else {
+      else { //particular subrun gz
         midassubrunname << ".gz";         
         mmsg<<"Checking for: "<<midassubrunname.str();
         DANCE_Info("Main",mmsg.str());
@@ -386,9 +388,9 @@ int main(int argc, char *argv[]) {
           gz_queue.push(gz_in);
         }
       }
-    }
-    else { 
-        if(gz_in) {
+    }//end if single subrun
+    else {//all the subruns in a run 
+        if(gz_in) {//subruns, not zipped
           mmsg.str("");
           mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
           DANCE_Success("Main",mmsg.str());
@@ -404,7 +406,7 @@ int main(int argc, char *argv[]) {
             gz_in=gzopen(midassubrunname.str().c_str(),"rb");
           }
         }
-      else {
+      else {//subruns zipped
         //look for compressed .mid.gz subrun files
         midassubrunname << ".gz";
         

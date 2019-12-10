@@ -1,10 +1,8 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
-//*  Cathleen E. Fry        *//
-//*  cfry@lanl.gov          *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 12/10/19    *//  
+//*  Last Edit: 09/04/19    *//  
 //***************************//
 
 //File includes
@@ -22,7 +20,6 @@
 #include "TH1.h"
 #include "TH2.h"
 #include "TH3.h"
-#include "THnSparse.h"
 #include "TCutG.h"
 #include "TGraph.h"
 #include "TMath.h"
@@ -169,10 +166,7 @@ TH1D *esum5;
 TH2D* hGamma_Mcr2_1stex;
 TH2D* hGammaCalib_Mcr2_1stex;
 
-// HighRateDebug histos
-TH1F* hID_resonancegated;
-TH1F* hID_backgroundgated;
-TH2F* En_ID;
+
 
 /* VARIABLES */
 double last_timestamp_devent[256];        //This keeps track of the last timestamp valid or not
@@ -264,7 +258,7 @@ int Read_DMatrix() {
       matrix_in >> DetMat1[eye];
       matrix_in >> DetMat2[eye];
       matrix_in >> DetMat3[eye];
-     matrix_in >> DetMat4[eye];
+      matrix_in >> DetMat4[eye];
       matrix_in >> DetMat5[eye];
       matrix_in >> DetMat6[eye];
       matrix_in >> DetMat7[eye];
@@ -371,8 +365,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   //2D out to 1 ms
   hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",10000,0,1000000,8,0,8);
 
-
-
   hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
   hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
   
@@ -395,7 +387,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   double *EtotBins=new double[NoOfEnergyBins+1];
   double *Mbins=new double[21];
   double *Tbins=new double[3001];
-  double *IDbins=new double[162];
   
   for(int i=0;i<21;i++){
     Mbins[i]=i;
@@ -413,9 +404,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     EtotBins[i]=GammaE_From+i*DEGamma;
   };
 
-  for (int i=0;i<162;i++){
-    IDbins[i]=i;
-  }
 
 
 
@@ -491,12 +479,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     hCrystal_En_Corr = new TH1D("Crystal_En_Corr","Crystal_En_Corr",NEbins,x);  //Corrected En 
     hECrystal_En_Corr = new TH2D("ECrystal_En_Corr","ECrystal_En_Corr",NEbins,x,NoOfEnergyBins,EtotBins);  //Corrected En vs ECrystal
 
-#ifdef HighRateDebug
-    hID_backgroundgated = new TH1F("hID_gated","hID_gated",162,0,162);
-    hID_resonancegated = new TH1F("hID_gated","hID_gated",162,0,162);
-    En_ID=new TH2F("En_ID","En_ID",NEbins,x,162,IDbins);
-#endif
-
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr_Pileup=new TH3F("En_Etot_Mcr_Pileup","En_Etot_Mcr_Pileup",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
@@ -507,13 +489,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     
     //Make a plot of energy 1 vs energy 2 for mcr==2 as a function of energy
     En_Ecr1_Ecr2_mcr2 = new TH3F("En_Ecr1_Ecr2_mcr2","En_Ecr1_Ecr2_mcr2",NEbins,x,NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins);
-    //look here!
-    //cout << En_Ecr1_Ecr2_mcr2->GetSize() << "\t" << (NEbins+2)*(NoOfEnergyBins+2)*(NoOfEnergyBins+2) << endl;
-    if (En_Ecr1_Ecr2_mcr2->GetSize()*sizeof(float)>1073741822-1041) //is this a root 5 artifact? maybe
-    {
-      DANCE_Error("Analyzer","Too many bins, reduce number of gamma bins, neutron bins per decade, or neutron energy range in global.h");
-      //return -1;  
-    }
     En_Ecr1_mcr1 = new TH2F("En_Ecr1_mcr1","En_Ecr1_mcr1",NEbins,x,NoOfEnergyBins,EtotBins);
 
     hEn_TimeBetweenCrystals_Mcr = new TH3F("En_TimeBetweenCrystals_Mcr","En_TimeBetweenCrystals_Mcr",NEbins,x,3000,Tbins,20,Mbins);
@@ -747,10 +722,12 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   hDANCE_Entries_per_T0->Write();
 
   if(input_params.Analysis_Stage==1 || input_params.Read_Simulation == 1) {
+
     hEventLength->Write();
     hEventLength_Etot->Write();
     hEventLength_MCr->Write();
     hEventTimeDist_Etot->Write();
+
     hTimeBetweenDEvents->Write();
     hTimeBetweenDEvents_ESum_Mcr->Write();
 
@@ -758,40 +735,33 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
     hCrystalTOF_Corr->Write();
     hCrystalIDvsTOF->Write();
     hCrystalTOF->Write();
-    hDANCE_Events_per_T0->Write();
 
-#ifdef HighRateDebug
-    hID_backgroundgated->Write();
-    hID_resonancegated->Write();
-    En_ID->Write();
-#endif
+    hDANCE_Events_per_T0->Write();
 
     hGamma_Mcr1->Write();
     hGammaCalib_Mcr1->Write();
-
     hTOF->Write();
     hTOF_Corr->Write();
     hTOF_Mcl->Write();
     hTOF_Mcl_Corr->Write();
-
     hEn->Write();
     hEn_Corr->Write();
     hCrystal_En_Corr->Write();
     hECrystal_En_Corr->Write();
+      cout <<fout->GetFileBytesWritten()<<"751\n";
     En_Esum_Mcl->Write();
     En_Esum_Mcr->Write();
-
     En_Esum_Mcr_Pileup->Write();
     En_Esum_Mcr_NoPileup->Write();
-
+      cout <<fout->GetFileBytesWritten()<<"756 \n";
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
-
-    En_Ecr1_Ecr2_mcr2->Write();;
+      cout <<fout->GetFileBytesWritten()<<"759 \n";
+    En_Ecr1_Ecr2_mcr2->Write();
     En_Ecr1_mcr1->Write();
-      
+       cout<<fout->GetFileBytesWritten() << "762 \n";
     hEn_TimeBetweenCrystals_Mcr->Write();
-
+       cout << fout->GetFileBytesWritten() << "764 \n";
     hEn_Eg_Mcr->Write();
 
 #ifdef Make_Removed_Spectra
@@ -1198,16 +1168,6 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	  //Fill the 2D spectrum of TOF vs Crystal
 	  hCrystalIDvsTOF->Fill(devent.tof[kay],devent.Crystal_ID[kay],1);
 	  hCrystalTOF->Fill(devent.tof[kay],1);
-
-#ifdef HighRateDebug
-          if (devent.tof[kay]<92000 && devent.tof[kay]>100000 ) {
-            hID_resonancegated->Fill(devent.Crystal_ID[kay]);
-          }
-          if (devent.tof[kay]>30000000 ) {
-            hID_backgroundgated->Fill(devent.Crystal_ID[kay]);
-          }
-          En_ID->Fill(devent.En[kay],devent.Crystal_ID[kay],1);
-#endif
 	
 	  //Fill the 2D spectrum of Corrected TOF vs Crystal
 	  hCrystalIDvsTOF_Corr->Fill(devent.tof_corr[kay],devent.Crystal_ID[kay],1);

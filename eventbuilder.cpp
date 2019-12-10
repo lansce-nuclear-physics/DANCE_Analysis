@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  eventbuilder.cpp       *// 
-//*  Last Edit: 09/04/19    *//  
+//*  Last Edit: 12/10/19    *//  
 //***************************//
 
 //File includes
@@ -103,7 +105,9 @@ TH2F *hTimeBetweenCrystals_LongShortRatio; //ratio of the present long/short int
   
 TH2F *hFastSlowRatio_ID;   //ID vs Ratio of Fast to Slow component
 
-
+// HighRateDebug histos
+TH2F* SlowID;
+TH2F* FastID;
 
 int Initialize_Eventbuilder(Input_Parameters input_params) {
   
@@ -332,6 +336,10 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  //Fill 2D ADC Calib
 	  ADC_calib->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
 	  ADC_raw->Fill(datadeque[0].Islow, datadeque[0].Ifast,1);
+#ifdef HighRateDebug
+          SlowID->Fill(datadeque[0].Islow,datadeque[0].ID,1);
+          FastID->Fill(datadeque[0].Ifast,datadeque[0].ID,1);
+#endif
 	  if(datadeque[0].pileup_detected==1) {
 	    ADC_calib_Pileup->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);
 	  }
@@ -650,6 +658,11 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
     ADC_calib_Pileup = new TH2F("ADC_calib_Pileup","ADC_calib_Pileup",2400,0,24,1000,0,10);
     ADC_calib_Pileup_Removed = new TH2F("ADC_calib_Pileup_Removed","ADC_calib_Pileup_Removed",2400,0,24,1000,0,10);
 
+#ifdef HighRateDebug
+   SlowID = new TH2F("SlowID","SlowID",3500,0,70000,162,0,162);
+   FastID = new TH2F("FastID","FastID",3500,0,70000,162,0,162);
+#endif
+
   //Gamma Histograms
   ADC_gamma = new TH2F("ADC_gamma","ADC_gamma",2400,0,24,1000,0,10);	// JU
   hGamma = new TH2F("hGamma","hGamma",3500,0,70000,162,0,162);
@@ -713,6 +726,11 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   hID_gamma_Invalid->Write();
   hID_alpha_Invalid->Write();
   hID_invalid_Invalid->Write();
+#endif
+
+#ifdef HighRateDebug
+  SlowID->Write();
+  FastID->Write();
 #endif
 
   Energy_raw_ID->Write();
