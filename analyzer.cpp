@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 12/10/19    *//  
+//*  Last Edit: 01/24/20    *//  
 //***************************//
 
 //File includes
@@ -172,7 +172,7 @@ TH2D* hGammaCalib_Mcr2_1stex;
 // HighRateDebug histos
 TH1F* hID_resonancegated;
 TH1F* hID_backgroundgated;
-TH2F* En_ID;
+//TH2F* En_ID;
 
 /* VARIABLES */
 double last_timestamp_devent[256];        //This keeps track of the last timestamp valid or not
@@ -414,7 +414,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   };
 
   for (int i=0;i<162;i++){
-    IDbins[i]=i;
+    IDbins[i]=(double)i;
   }
 
 
@@ -492,9 +492,10 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     hECrystal_En_Corr = new TH2D("ECrystal_En_Corr","ECrystal_En_Corr",NEbins,x,NoOfEnergyBins,EtotBins);  //Corrected En vs ECrystal
 
 #ifdef HighRateDebug
-    hID_backgroundgated = new TH1F("hID_gated","hID_gated",162,0,162);
-    hID_resonancegated = new TH1F("hID_gated","hID_gated",162,0,162);
-    En_ID=new TH2F("En_ID","En_ID",NEbins,x,162,IDbins);
+    hID_backgroundgated = new TH1F("hID_backgroundgated","hID_backgroundgated",162,0,162); 
+    hID_resonancegated = new TH1F("hID_resonancegated","hID_resonancegated",162,0,162);  
+    //En_ID=new TH2F("En_ID","En_ID",NEbins,x,162,IDbins);
+    //this is broken a little and I don't know why 
 #endif
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
@@ -507,7 +508,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     
     //Make a plot of energy 1 vs energy 2 for mcr==2 as a function of energy
     En_Ecr1_Ecr2_mcr2 = new TH3F("En_Ecr1_Ecr2_mcr2","En_Ecr1_Ecr2_mcr2",NEbins,x,NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins);
-    //look here!
+
     //cout << En_Ecr1_Ecr2_mcr2->GetSize() << "\t" << (NEbins+2)*(NoOfEnergyBins+2)*(NoOfEnergyBins+2) << endl;
     if (En_Ecr1_Ecr2_mcr2->GetSize()*sizeof(float)>1073741822-1041) //is this a root 5 artifact? maybe
     {
@@ -594,143 +595,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   
 }
 
-int Reset_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
-  fout->cd();
 
-  hCoinCAEN->Reset("ICES");
-  //hTimeDev_Rel0->Reset("ICES");
-  //hTimeDev->Reset("ICES");
-
-  hEventLength->Reset("ICES");
-  hEventLength_Etot->Reset("ICES");
-  hEventLength_MCr->Reset("ICES");
-  hEventTimeDist_Etot->Reset("ICES");
-
-  hTimeBetweenDEvents->Reset("ICES");
-  hTimeBetweenDEvents_ESum_Mcr->Reset("ICES");
-  hTimeBetweenT0s->Reset("ICES");
-  hCrystalIDvsTOF_Corr->Reset("ICES");
-  hCrystalTOF_Corr->Reset("ICES");
-  hCrystalIDvsTOF->Reset("ICES");
-  hCrystalTOF->Reset("ICES");
-
-  hDANCE_Entries_per_T0->Reset("ICES");
-  hDANCE_Events_per_T0->Reset("ICES");
-
-  hGamma_Mcr1->Reset("ICES");
-  hGammaCalib_Mcr1->Reset("ICES");
-
-
-  if(input_params.Analysis_Stage==1 || input_params.Read_Simulation == 1) {
-    hTOF->Reset("ICES");
-    hTOF_Corr->Reset("ICES");
-    hTOF_Mcl->Reset("ICES");
-    hTOF_Mcl_Corr->Reset("ICES");
-    hEn->Reset("ICES");
-    hEn_Corr->Reset("ICES");
-    hCrystal_En_Corr->Reset("ICES");
-    hECrystal_En_Corr->Reset("ICES");
-
-    En_Esum_Mcl->Reset("ICES");
-    En_Esum_Mcr->Reset("ICES");
-    En_Esum_Mcr_Pileup->Reset("ICES");
-    En_Esum_Mcr_NoPileup->Reset("ICES");
-
-    hTOF_Esum_Mcl->Reset("ICES");
-    hTOF_Esum_Mcr->Reset("ICES");
-
-    En_Ecr1_Ecr2_mcr2->Reset("ICES");
-    En_Ecr1_mcr1->Reset("ICES");
-
-    hEn_TimeBetweenCrystals_Mcr->Reset("ICES");
-
-    hEn_Eg_Mcr->Reset("ICES");
-
-#ifdef Make_Removed_Spectra
-    for(int kay=0; kay<Max_Gamma_Removed; kay++) {
-      hTOF_Esum_Mcr_Removed[kay]->Reset("ICES");
-      hEn_Esum_Mcr_Removed[kay]->Reset("ICES");
-    }
-#endif
-
-    if(input_params.QGatedSpectra) {
-      for (int kay=0; kay<input_params.NQGates; kay++) {
-	En_Ecl_Mcl_QGated[kay]->Reset("ICES");
-      }
-      for (int kay=0; kay<input_params.NQGates; kay++) {
-	En_Ecr_Mcr_QGated[kay]->Reset("ICES");
-      }
-      for (int kay=0; kay<input_params.NQGates; kay++) {
-	ID_Ecr_Mcr_QGated[kay]->Reset("ICES");
-      }
-      for (int kay=0; kay<input_params.NQGates; kay++) {
-	hTOF_Mcl_QGated[kay]->Reset("ICES");
-      }
-    }
-
-    if(input_params.IsomerSpectra) {
-      for (int kay=0; kay<input_params.NIsomers; kay++) {
-	hIsomer_Prompt[kay]->Reset("ICES");
-  	hIsomer_Delayed[kay]->Reset("ICES");
-   	hIsomer_TDiff[kay]->Reset("ICES");
-      }
-    }
-  
-  } //End check for stage 1
-
-
-  //Beam Monitors
-  hU235_TOF->Reset("ICES");  //Raw TOF for U235 Monitor
-  hU235_TOF_Corr->Reset("ICES"); //Corrected TOF for U235 Monitor
-  hU235_PH_TOF->Reset("ICES");
-  hU235_PulseHeight->Reset("ICES");  //Energy for U235 Monitor
-  hU235_En->Reset("ICES");  //Neutron Energy for U235 Monitor 
-  hU235_En_Corr->Reset("ICES");  //Neutron Energy for U235 Monitor (From Corrected TOF)
-  hU235_Time_Between_Events->Reset("ICES");
-  
-  hLi6_TOF->Reset("ICES");  //Raw TOF for Li6 Monitor
-  hLi6_TOF_Corr->Reset("ICES"); //Corrected TOF for Li6 Monitor
-  hLi6_PulseHeight->Reset("ICES");  //Energy for Li6 Monitor
-  hLi6_En->Reset("ICES");  //Neutron Energy for Li6 Monitor 
-  hLi6_En_Corr->Reset("ICES");  //Neutron Energy for Li6 Monitor (From Corrected TOF)
-  hLi6_PSD->Reset("ICES"); 
-  hLi6_Time_Between_Events->Reset("ICES");
-
-  hBkg_TOF->Reset("ICES");  //Raw TOF for Bkg Monitor
-  hBkg_TOF_Corr->Reset("ICES"); //Corrected TOF for Bkg Monitor
-  hBkg_PulseHeight->Reset("ICES");  //Energy for Bkg Monitor
-  hBkg_En->Reset("ICES");  //Neutron Energy for Bkg Monitor 
-  hBkg_En_Corr->Reset("ICES");  //Neutron Energy for Bkg Monitor (From Corrected TOF)
-  hBkg_Time_Between_Events->Reset("ICES");
-
-
-  hHe3_TOF->Reset("ICES");  //Raw TOF for He3 Monitor
-  hHe3_TOF_Corr->Reset("ICES"); //Corrected TOF for He3 Monitor
-  hHe3_PulseHeight->Reset("ICES");  //Energy for He3 Monitor
-  hHe3_En->Reset("ICES");  //Neutron Energy for He3 Monitor 
-  hHe3_En_Corr->Reset("ICES");  //Neutron Energy for He3 Monitor (From Corrected TOF)
-  hHe3_Time_Between_Events->Reset("ICES");
-
-  // JU histos ------
-  hU235_TOF_gated->Reset("ICES");
-  hU235_TOF_long_gated->Reset("ICES");
-  hLi6_TOF_gated->Reset("ICES");
-  hLi6_TOF_long_gated->Reset("ICES");
-  hHe3_TOF_gated->Reset("ICES");
-  hHe3_TOF_long_gated->Reset("ICES");
-  tof_gated_QM->Reset("ICES");
-  tof_gated_BM->Reset("ICES");
-  tof_gated_QM_long->Reset("ICES");
-  tof_gated_BM_long->Reset("ICES");
-  
-  esum->Reset("ICES");
-  esum2->Reset("ICES");
-  esum3->Reset("ICES");
-  esum4->Reset("ICES");
-  esum5->Reset("ICES");
-
-  return 0;
-}
 int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
   
   DANCE_Info("Analyzer","Writing Histograms");
@@ -763,7 +628,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 #ifdef HighRateDebug
     hID_backgroundgated->Write();
     hID_resonancegated->Write();
-    En_ID->Write();
+    //En_ID->Write();
 #endif
 
     hGamma_Mcr1->Write();
@@ -1206,7 +1071,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
           if (devent.tof[kay]>30000000 ) {
             hID_backgroundgated->Fill(devent.Crystal_ID[kay]);
           }
-          En_ID->Fill(devent.En[kay],devent.Crystal_ID[kay],1);
+       //   En_ID->Fill(devent.En[kay],devent.Crystal_ID[kay],1);
 #endif
 	
 	  //Fill the 2D spectrum of Corrected TOF vs Crystal

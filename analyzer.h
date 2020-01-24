@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  analyzer.h             *// 
-//*  Last Edit: 09/04/19    *//  
+//*  Last Edit: 01/22/20    *//  
 //***************************//
 
 #ifndef ANALYZER_H
@@ -28,7 +30,6 @@ int Create_Analyzer_Histograms(Input_Parameters input_params);
 int Analyze_Data(std::vector<DEVT_BANK> eventvector,Input_Parameters input_params,Analysis_Parameters *analysis_params);
 int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params);
 int Reset_Analyzer_Histograms(TFile *fout, Input_Parameters input_params);
-int Read_Energy_Calibrations( Input_Parameters input_params);
 int Make_Time_Deviations(int RunNumber);
 
 #endif

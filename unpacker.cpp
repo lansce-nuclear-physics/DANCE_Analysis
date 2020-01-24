@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 12/04/19    *//  
+//*  Last Edit: 01/24/20    *//  
 //***************************//
 
 //File includes
@@ -75,7 +75,7 @@ TH2D* hTimestampsID;
 TH1S *hWaveforms[20];
 int waveform_counter=0;
 
-
+TH1I *hEventID;
 
 
 
@@ -84,6 +84,8 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
   
   DANCE_Info("Unpacker","Creating Histograms");
   
+  hEventID=new TH1I("hEventID","hEventID",20,0,20);
+
   //Make a histogram for waveforms
   if(input_params.Read_Binary==0) {
     for(int eye=0; eye<20; eye++){
@@ -131,7 +133,7 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
   DANCE_Info("Unpacker","Writing Histograms");
   
   fout->cd();
-
+  hEventID->Write();
   if(input_params.Read_Binary==0) {
 #ifdef Histogram_Waveforms
     for(int eye=0; eye<20; eye++){
@@ -140,7 +142,7 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
     
     hWaveform_ID->Write();
     hWaveform_ID_NR->Write();
- hWaveform_T0->Write();
+    hWaveform_T0->Write();
     hWaveform_Li6->Write();
     hWaveform_U235->Write();
     hWaveform_Bkg->Write();
@@ -165,45 +167,6 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
   }
   
   DANCE_Success("Unpacker","Wrote Unpacker Histograms");
-  return 0;
-}
-
-int Reset_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
-  
-  fout->cd();
-
-  if(input_params.Read_Binary==0) {
-#ifdef Histogram_Waveforms
-    for(int eye=0; eye<20; eye++){
-      hWaveforms[eye]->Reset("ICES");
-    }
-    
-    hWaveform_ID->Reset("ICES");
-    hWaveform_ID_NR->Reset("ICES");
- hWaveform_T0->Reset("ICES");
-    hWaveform_Li6->Reset("ICES");
-    hWaveform_U235->Reset("ICES");
-    hWaveform_Bkg->Reset("ICES");
-    hWaveform_He3->Reset("ICES");
-    hID_vs_WFRatio->Reset("ICES");
-    hID_vs_WFInt_vs_Islow->Reset("ICES");
-#endif
-
-#ifdef Histogram_Digital_Probes
-    hDigital_Probe1_ID->Reset("ICES");
-    hDigital_Probe2_ID->Reset("ICES");
-#endif
-
-#ifdef MakeTimeStampHistogram
-     hTimestamps->Reset("ICES");
-     hTimestampsT0->Reset("ICES");
-     hTimestampsBM->Reset("ICES");
-     hTimestampsID->Reset("ICES");
-#endif
-
-    hScalers->Reset("ICES");
-  }
-
   return 0;
 }
 
@@ -262,11 +225,6 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   //Write the root file
   fout->Write();
   DANCE_Success("Unpacker","Rootfile Written");
-
-  Reset_Unpacker_Histograms(fout, input_params);
-  Reset_Eventbuilder_Histograms(fout, input_params, analysis_params);
-  Reset_Analyzer_Histograms(fout, input_params);
-
   return 0;
 }
 
@@ -550,9 +508,8 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
   DANCE_Info("Unpacker","Started Unpacking");
   
   while (!gz_queue.empty()) { 
-    //Stage 0 unpacking
+    //Stage 0 unpacking/stage 1 from midas
     if(input_params.Read_Binary==0 && input_params.Read_Simulation==0) {
- 
  
       stringstream umsg;
       umsg.str("");
@@ -648,7 +605,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
             cout<<"Size: "<<head.fDataSize<<endl;     ///< event size in bytes
             cout<<"TimeStamp "<<head.fTimeStamp<<endl;    ///< event timestamp in nseconds
 #endif
- 
+           hEventID->Fill(head.fEventId);
            //cout << head.fTimeStamp << endl;
              //Data
             if(head.fEventId==1){
@@ -851,7 +808,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                           hWaveform_ID->Fill(i,wf1[i],db_arr[EVTS].ID);
                         }
                       } 
-                      //changed IDs to those in global.h
+                     
                       if(db_arr[EVTS].ID == He3_ID) {
                         for(int i=0;i<db_arr[EVTS].Ns;i++) {
                           hWaveform_He3->Fill(i,wf1[i]);
@@ -894,7 +851,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                       if(db_arr[EVTS].ID < 162) {
                         db_arr[EVTS].timestamp += DANCE_Delay;
                       }
-                      //changed hard coded IDs to those defined in global.h
+            
                       //Add the He3 delay
                       if(db_arr[EVTS].ID == He3_ID) {
                         db_arr[EVTS].timestamp += He3_Delay;
@@ -1076,7 +1033,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
 #ifdef Unpacker_Verbose
             cout<<"Type: "<<head.fEventId<<"  TotalDataSize  "<<TotalDataSize<<endl;
 #endif
-                          
+           hEventID->Fill(head.fEventId);                          
             //Data
             if(head.fEventId==1){
               
@@ -1267,7 +1224,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                           db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
                           db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
  
-                          if(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < 0.05 || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > 0.1 ) {
+                          if(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < wf_ratio_low || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > wf_ratio_high ) { 
                             db_arr[EVTS].pileup_detected=1;                                                         //Full timestamp in ns
                           } 
                           else {
@@ -1284,7 +1241,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                             if(db_arr[EVTS].ID < 162) {
                               db_arr[EVTS].timestamp += DANCE_Delay;
                             }
-                            //changed IDs to those in global.h
+                
                             //Add the He3 delay
                             if(db_arr[EVTS].ID == He3_ID) {
                               db_arr[EVTS].timestamp += He3_Delay;
@@ -1377,7 +1334,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                               }
                               
                             }                        
-                           //changed hard coded IDs to definitions in global.h 
+     
                             if(db_arr[EVTS].ID == He3_ID) {
                               for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
                                 hWaveform_He3->Fill(kay,vx725_vx730_psd_data.analog_probe1[kay]);
@@ -1517,7 +1474,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                             if(db_arr[EVTS].ID < 162) {
                               db_arr[EVTS].timestamp += DANCE_Delay;
                             }
-                            //changed IDs to those in global.h
+                     
                             //Add the He3 delay
                             if(db_arr[EVTS].ID == He3_ID) {
                               db_arr[EVTS].timestamp += He3_Delay;
@@ -1570,7 +1527,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                                 hWaveform_ID->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay],db_arr[EVTS].ID);
                               }
                             }                        
-                            // changed to IDs defined in global.h
+                 
                             if(db_arr[EVTS].ID == He3_ID) {
                               for(int kay=0;kay<db_arr[EVTS].Ns;kay++) {
                                 hWaveform_He3->Fill(kay,vx725_vx730_pha_data.analog_probe1[kay]);
@@ -1663,7 +1620,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
             
               TotalBankSize = bhead.fDataSize;
  
-              //This is the numbef of active boards
+              //This is the number of active boards
               int nactiveboards = 0;
               
               while(TotalBankSize > 0) {
@@ -2193,7 +2150,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
             if(db_arr[EVTS].ID < 162) {
               db_arr[EVTS].timestamp += DANCE_Delay;
             }
-           //changed IDs to those in global.h 
+ 
             //Add the He3 delay
             if(db_arr[EVTS].ID == He3_ID) {
               db_arr[EVTS].timestamp += He3_Delay;

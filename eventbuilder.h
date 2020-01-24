@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  eventbuilder.h         *// 
-//*  Last Edit: 09/04/19    *//  
+//*  Last Edit: 01/22/20    *//  
 //***************************//
 
 #ifndef EVENTBUILDER_H
@@ -35,7 +37,6 @@ int Build_Events(std::deque<DEVT_BANK> &datadeque, Input_Parameters input_params
 
 int Create_Eventbuilder_Histograms(Input_Parameters input_params);
 int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Analysis_Parameters *analysis_params);
-int Reset_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Analysis_Parameters *analysis_params);
 int Read_Moderation_Time_Graphs();
   
  

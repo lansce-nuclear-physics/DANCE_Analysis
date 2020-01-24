@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  Release_Notes          *// 
-//*  Last Edit: 09/04/19    *//  
+//*  Last Edit: 01/24/20    *//  
 //***************************//
 
 The purpose of this document is to allow users to more efficiently track and understand changes made to the DANCE Analysis software.
@@ -98,4 +98,4 @@ Version 11.1 - This adds some histograms and analysis for the pileup technique p
 
 Version 11.2 - Added subrun capability, ignoring PDG events, timestamp histogram option, and an option for more detailed invalid histograms.  Currently subruns share a calibration file within the run.  Stage 0 root files are produced by subrun, while stage 0 bin is produced for the whole run.  Therefore, stage 1 from binary will include a whole run, stage 1 from midas will currently analyze by subrun, ignoring the details of building across boundaries.
 
-Version 11.3 - All subruns are now by default sorted into a single stage0 bin/root file.  If this behavior is not desired, specify a subrun number after the run number in the argument list.  Stage 1 from midas still currently ignores details at the boundaries, but there are plans to improve this.  Added script to automate creation of necessary symlinks on dance-crunchers and hygelac.
+Version 11.3 - All subruns are now by default sorted into a single stage0 bin/root file.  If this behavior is not desired, specify a subrun number after the run number in the argument list. Added script to automate creation of necessary symlinks on dance-crunchers and hygelac.

@@ -1,8 +1,10 @@
 //***************************//
 //*  Christopher J. Prokop  *//
 //*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
 //*  structures.h           *// 
-//*  Last Edit: 09/04/19    *//  
+//*  Last Edit: 01/24/20    *//  
 //***************************//
 
 #ifndef STRUCTURES_H
@@ -133,6 +135,7 @@ typedef struct {
   uint16_t Islow;            // long integral
   double timestamp;                // Time-Of-Flight in ns
   uint8_t ID;                // ID from DANCE Map 0 to 161 are dance //241 to 244 are beam monitors //200 is t0
+  //put normalized waveform integral in here once I sort that out
 } DEVT_STAGE1;
 
 

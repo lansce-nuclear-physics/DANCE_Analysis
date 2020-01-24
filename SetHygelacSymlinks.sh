@@ -2,13 +2,13 @@
 #if you have directories on multiple volumes and want to specify, pass it as command line arg
 
 UDIR=${HOME#/home/}
-UDIR+="/"
+UDIR=$UDIR"/"
 HYGELAC="/mnt/hygelac-data/"
 DANCE="/dance/"
 
 ISDIR=0
 
-for VOLUME in {"20","10"}; do
+for VOLUME in "20" "10"; do
   if [ -d $HYGELAC$VOLUME$DANCE$UDIR ]; then
     echo "setting up things in volume" $VOLUME
     ISDIR=+1
@@ -38,7 +38,7 @@ R1="stage1_root"
 B1="stage1_bin"
 S0="stage0_simulated"
 
-for DIRECTORY in {$R0,$B0,$R1,$B1,$S0}; do
+for DIRECTORY in  $R0 $B0 $R1 $B1 $S0 ; do
   echo "setting up" $DIRECTORY
   if [ ! -d $HYGELAC$VOLUME$DANCE$UDIR$DIRECTORY ]; then
     mkdir $HYGELAC$VOLUME$DANCE$UDIR$DIRECTORY

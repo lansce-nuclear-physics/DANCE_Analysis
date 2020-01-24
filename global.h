@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  global.h               *// 
-//*  Last Edit: 12/10/19    *//  
+//*  Last Edit: 01/24/20    *//  
 //***************************//
 
 #ifndef GLOBAL_H
@@ -22,7 +22,7 @@
 //#define CheckBufferDepth           //This turns on a check of how much of the buffer is being used
 //#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
 //#define InvalidDetails             // histograms that are separated by event type before the invalid event
-#define HighRateDebug		    // histograms useful for debugging in weird conditions, normally not so useful
+//#define HighRateDebug		    // histograms useful for debugging in weird conditions, normally not so useful
 
 //Verbosity
 //#define Calibrator_Verbose       //This turns on the messages from the calibrator
@@ -77,6 +77,14 @@
 #define ALPHAGATE "Alpha.dat"
 #define RETRIGGERGATE "Retrigger.dat"
 
+//retrigger waveform ratio gates
+#define wf_ratio_low 0.05  //2019
+#define wf_ratio_high 0.09 //2019
+//#define wf_ratio_low 0.06  //2018
+//#define wf_ratio_high 0.1 //2018
+//#define wf_ratio_low 0.01  //Tl 2019
+//#define wf_ratio_high 0.03 //Tl 2019
+
 //Physics Stuff
 #define neutronmass 939.565379e6  //Mass of the neutron in eV/c^2
 #define speedoflight 2.997924589e8  //Speed of light in m/s
@@ -96,7 +104,7 @@
 //Histogramming
 #define	NeutronE_From 0.005 //Neutron energy from [eV]
 #define	NeutronE_To 5e6 //Neutron energy to [eV]
-#define	NeutronE_BinsPerDecade 400.0 // Number of neutron energy bins per decade
+#define	NeutronE_BinsPerDecade 200.0 // Number of neutron energy bins per decade
 
 #define	GammaE_From 0.0 //Gamma energy [MeV] - low limit
 #define	GammaE_To 20.0 //Gamma energy [MeV] - upper limit

@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  eventbuilder.cpp       *// 
-//*  Last Edit: 12/10/19    *//  
+//*  Last Edit: 01/22/20    *//  
 //***************************//
 
 //File includes
@@ -799,59 +799,4 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   return 0;
 }
 
-int Reset_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Analysis_Parameters *analysis_params) {
 
-  fout->cd();
-
-  hInvalid_Reason->Reset("ICES");
-  
-  hID->Reset("ICES");
-  hID_Raw->Reset("ICES");
-  hID_Invalid->Reset("ICES");
-  hID_gamma->Reset("ICES");
-  hID_alpha->Reset("ICES");
-#ifdef InvalidDetails
-  hID_gamma_Invalid->Reset("ICES");
-  hID_alpha_Invalid->Reset("ICES");
-  hID_invalid_Invalid->Reset("ICES");
-#endif
-  Energy_raw_ID->Reset("ICES");
-
-  ADC_calib->Reset("ICES");
-  ADC_raw->Reset("ICES");
-  ADC_calib_Invalid->Reset("ICES");
-      ADC_calib_Pileup->Reset("ICES");
-      ADC_calib_Pileup_Removed->Reset("ICES");
-
-  ADC_raw_ID->Reset("ICES");
-  ADC_calib_ID->Reset("ICES");
-    
-  ADC_alpha -> Reset("ICES");
-  hAlpha->Reset("ICES");
-  hAlphaCalib->Reset("ICES");
-    
-  ADC_gamma -> Reset("ICES");
-  hGamma->Reset("ICES");
-  hGammaCalib->Reset("ICES");
-  hGammaCalib_PU->Reset("ICES");
-
-  hTimeBetweenCrystals->Reset("ICES");
-  hTimeBetweenCrystals_EnergyRatio->Reset("ICES");
-  hTimeBetweenCrystals_FastEnergyRatio->Reset("ICES");
-  hTimeBetweenCrystals_LongShortRatio->Reset("ICES");
-
-  hFastSlowRatio_ID->Reset("ICES");
-
-#ifdef Histogram_DetectorLoad
-
-  if(input_params.Read_Simulation==0) { 
-    
-    hDetectorLoad_perT0->Reset("ICES");
-    hDetectorLoad->Reset("ICES");
-    hDetectorLoad_En_perT0->Reset("ICES");
-    hDetectorLoad_En->Reset("ICES");
-    hEn_BinWidth->Reset("ICES");
-  }
-#endif
-  return 0;
-}

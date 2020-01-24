@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  main.cpp               *// 
-//*  Last Edit: 12/04/19    *//  
+//*  Last Edit: 01/24/20    *//  
 //***************************//
 
 //File includes
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
   int func_ret=0;
 
-  const char* rootver="4.34/24";//=gROOT->GetVersion();
+  const char* rootver=gROOT->GetVersion();
   
   if (rootver[0]!='6'){
     if(rootver[0]=='5' && rootver[2]!='3'){
