@@ -7,3 +7,5 @@ diagnostics/*
 *.root
 *.d
 rootlogon.C
+Failed_Analysis.txt
+Readout_Status_Failures.txt

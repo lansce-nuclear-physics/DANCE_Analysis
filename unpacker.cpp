@@ -139,7 +139,6 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
     for(int eye=0; eye<20; eye++){
       hWaveforms[eye]->Write();
     }
-    
     hWaveform_ID->Write();
     hWaveform_ID_NR->Write();
     hWaveform_T0->Write();
@@ -709,7 +708,9 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                       gzret=gzread(gz_in,fData,bank32.fDataSize);
                       TotalBankSize -= EventBankSize;
                       free (fData);
-                      gz_queue.pop();
+                     // gz_queue.pop();
+                     // subrun=false;
+                     // run=false;
                       break; // you break here because the cpu comes last
                     }
                   }
@@ -725,7 +726,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                       where_in_peakbank = 0;
                     }
                     uint32_t wflen = evaggr->P[evtnum].width;        // CEVT_BANK variable
-                
+                    analysis_params->wf_integral=0; 
                     for (uint wfindex=where_in_peakbank;wfindex<where_in_peakbank+wflen;++wfindex) {
                       // at this point we have reserved only 40 samples in db_arr waveform !!
                       evaggr->wavelets[evtnum][wfindex-where_in_peakbank] = imported_peaks[current_detnum][wfindex];
@@ -800,7 +801,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                     //Fill raw IDs
  
 #ifdef Histogram_Waveforms
- 
+
                     //Fill waveform histogram
                     if(input_params.Read_Binary==0) {
                       if(db_arr[EVTS].ID<162) {
@@ -835,6 +836,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                         } 
                       }
                     }
+
 #endif
  
                     db_arr[EVTS].timestamp *= 2.0;                                                        //timestamp now in ns                 
@@ -986,7 +988,6 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
               //End of Run
               if(head.fEventId==0x8001)  {
                 run=false;
-                gz_queue.pop();
                 break;
               }
           
@@ -1003,9 +1004,9 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
               free (fData);
             } //end of crap
           }  //checking to see if gzret > 0
-          else {
+          /*else {
             gz_queue.pop();
-          }
+          }*/
         } //end of caen2015
  
         else if(strcmp(input_params.DataFormat.c_str(),"caen2018") == 0) {
@@ -1965,29 +1966,30 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
         }
  
         //At this point we need to start ordering and eventbuilding
-        if(EVTS >= BlockBufferSize) {
-          
-          //Sort this block of data
-          func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
-          if(func_ret) {
-            cout<<RED<<"Problem with sort_array in the MIDAS Reader"<<RESET<<endl;
-            return -1;
-          }
-                  
-          //Eventbuild
-          func_ret = Build_Events(datadeque,input_params,analysis_params);
-          if(func_ret) {
-            cout<<RED<<"Problem with build_events in the MIDAS Reader"<<RESET<<endl;
-            return -1;
-          }
- 
-          //Reset the event counter and smallest timestamp
-          EVTS=0;
-          analysis_params->entries_awaiting_timesort=0;
-          analysis_params->smallest_timestamp=2.814749767e14;
-          
-        } //end check on block buffer size and eventbuild
+          if(EVTS >= BlockBufferSize) {
+            
+            //Sort this block of data
+            func_ret = sort_array(db_arr,datadeque,EVTS,input_params,analysis_params);
+            if(func_ret) {
+              cout<<RED<<"Problem with sort_array in the MIDAS Reader"<<RESET<<endl;
+              return -1;
+            }
+                    
+            //Eventbuild
+            func_ret = Build_Events(datadeque,input_params,analysis_params);
+            if(func_ret) {
+              cout<<RED<<"Problem with build_events in the MIDAS Reader"<<RESET<<endl;
+              return -1;
+            }
+  
+            //Reset the event counter and smallest timestamp
+            EVTS=0;
+            analysis_params->entries_awaiting_timesort=0;
+            analysis_params->smallest_timestamp=2.814749767e14;
+            
+          } //end check on block buffer size and eventbuild
         }//end while subrun
+
         gz_queue.pop();
         if (gz_queue.size()>0) {
           //currently unused
@@ -2260,13 +2262,11 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
 
 
     func_ret = Write_Root_File(input_params, analysis_params);
+
     if (func_ret) {
       return -1;
     }
-
- 
-
-    analysis_params->last_subrun_timestamp=analysis_params->largest_subrun_timestamp;
+    if (gz_queue.size()==1){gz_queue.pop();} 
   } 
   //Make the time deviations if needed (Likely only a stage 0 thing)
   if(input_params.FitTimeDev) {
