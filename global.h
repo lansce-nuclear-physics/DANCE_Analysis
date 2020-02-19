@@ -78,10 +78,10 @@
 #define RETRIGGERGATE "Retrigger.dat"
 
 //retrigger waveform ratio gates
-#define wf_ratio_low 0.05  //2019
-#define wf_ratio_high 0.09 //2019
-//#define wf_ratio_low 0.06  //2018
-//#define wf_ratio_high 0.1 //2018
+//#define wf_ratio_low 0.05  //2019
+//#define wf_ratio_high 0.09 //2019
+#define wf_ratio_low 0.06  //2018
+#define wf_ratio_high 0.12 //2018
 //#define wf_ratio_low 0.01  //Tl 2019
 //#define wf_ratio_high 0.03 //Tl 2019
 
