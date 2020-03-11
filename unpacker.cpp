@@ -84,37 +84,37 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
   
   DANCE_Info("Unpacker","Creating Histograms");
   
-  hEventID=new TH1I("hEventID","hEventID",20,0,20);
+  hEventID=new TH1I("EventID","EventID",20,0,20);
 
   //Make a histogram for waveforms
   if(input_params.Read_Binary==0) {
     for(int eye=0; eye<20; eye++){
-      hWaveforms[eye] = new TH1S(Form("hWaveform_%d",eye),Form("hWaveform_%d",eye),80,0,80);
+      hWaveforms[eye] = new TH1S(Form("Waveform%d",eye),Form("Waveform%d",eye),80,0,80);
     }
 
 #ifdef Histogram_Waveforms 
     hWaveform_ID = new TH3S("Waveform_ID","Waveform_ID",40,0,40,2000,0,20000,162,0,162);
     hWaveform_ID_NR = new TH3S("Waveform_ID_NR","Waveform_ID_NR",40,0,40,2000,0,20000,162,0,162);
-    hWaveform_T0 = new TH2S("Waveform_T0","Waveform_T0",200,0,200,2000,0,20000);
-    hWaveform_Li6 = new TH2S("Waveform_Li6","Waveform_Li6",600,0,600,2000,0,20000);
-    hWaveform_U235 = new TH2S("Waveform_U235","Waveform_U235",600,0,600,2000,0,20000);
-    hWaveform_Bkg = new TH2S("Waveform_Bkg","Waveform_Bkg",600,0,600,2000,0,20000);
-    hWaveform_He3 = new TH2S("Waveform_He3","Waveform_He3",600,0,600,2000,0,20000);
-    hID_vs_WFRatio = new TH2F("ID_vs_WFRatio","ID_vs_WFRatio",1000,-0.2,0.8,162,0,162);
-    hID_vs_WFInt_vs_Islow = new TH3F("ID_vs_WFInt_vs_Islow","ID_vs_WFInt_vs_Islow",500,-1000,4000,2000,0,40000,162,0,162);
+    hWaveform_T0 = new TH2S("T0_Waveform","T0_Waveform",200,0,200,2000,0,20000);
+    hWaveform_Li6 = new TH2S("Li6_Waveform","Li6_Waveform",600,0,600,2000,0,20000);
+    hWaveform_U235 = new TH2S("U235_Waveform","U235_Waveform",600,0,600,2000,0,20000);
+    hWaveform_Bkg = new TH2S("Bkg_Waveform","Bkg_Waveform",600,0,600,2000,0,20000);
+    hWaveform_He3 = new TH2S("He3_Waveform","He3_Waveform_He3",600,0,600,2000,0,20000);
+    hID_vs_WFRatio = new TH2F("WFRatio_ID","WFRatio_ID",1000,-0.2,0.8,162,0,162);
+    hID_vs_WFInt_vs_Islow = new TH3F("WFInt_Islow_ID","WFInt_Islow_ID",500,-1000,4000,2000,0,40000,162,0,162);
 
 #endif
 
 #ifdef MakeTimeStampHistogram
-     hTimestamps = new TH1D("hTimestamps","hTimestamps",1e6,0,4000);
-     hTimestampsT0 = new TH1D("hTimestampsT0","hTimestamps",1e6,0,4000);
-     hTimestampsBM = new TH1D("hTimestampsBM","hTimestamps",1e6,0,4000);
-     hTimestampsID = new TH2D("hTimestampsID","hTimestamps",4e5,0,1000,162,0,162);
+     hTimestamps = new TH1D("Timestamps","Timestamps",1e6,0,4000);
+     hTimestampsT0 = new TH1D("T0_TimestampsT0","T0_Timestamps",1e6,0,4000);
+     hTimestampsBM = new TH1D("BM_Timestamps","BM_Timestamps",1e6,0,4000);
+     hTimestampsID = new TH2D("Timestamps_ID","Timestamps_ID",4e5,0,1000,162,0,162);
 #endif
 
 #ifdef Histogram_Digital_Probes
-    hDigital_Probe1_ID = new TH2C("Digital_Probe1_ID","Digital_Probe1_ID",600,0,600,256,0,256);
-    hDigital_Probe2_ID = new TH2C("Digital_Probe2_ID","Digital_Probe2_ID",600,0,600,256,0,256);
+    hDigital_Probe1_ID = new TH2C("ID_DigitalProbe1","ID_DigitalProbe1",600,0,600,256,0,256);
+    hDigital_Probe2_ID = new TH2C("ID_DigitalProbe2","ID_DigitalProbe2",600,0,600,256,0,256);
 #endif
     
     //Scalers

@@ -1,0 +1,186 @@
+For details on the 2020 naming scheme, see bottom of document
+
+
+2019						2020
+
+analyzer
+
+CoinCAEN					CoinCAEN
+TimeDev_Rel0					TimeDev_Rel0
+TimeDev						TimeDev
+EventLength					EventLength
+EventLength_Etot				EventLength_Etot
+EventLength_MCr					EventLength_Mcr
+EventTimeDist_Etot				EventTimeDist_Etot
+TimeBetweenDEvents				TimeBetweenDEvents
+TimeBetweenDEvents_ESum_Mcr			TimeBetweenDEvents_ESum_Mcr
+TimeBetweenT0s					TimeBetweenT0s
+CrystalIDvsTOF					ID_CrystalTOF
+CrystalTOF					CrystalTOF
+TOF						TOF
+Mcl_TOF						Mcl_TOF
+CrystalIDvsTOF_Corrected			ID_CrystalTOF_corr
+CrystalTOF_Corrected				CrystalTOF_corr
+TOF_Corrected					TOF_corr
+Mcl_TOF_Corrected				Mcl_TOF_corr
+DANCE_Entries_per_T0				DEntriesPerT0
+DANCE_Events_per_T0				DEventsPerT0
+hGamma_Mcr1					Gamma_ID_mcr1
+hGammaCalib_Mcr1				GammaCalib_ID_mcr1
+tof						tof			
+tof_gated_QM					tof_gated_QM		
+tof_gated_BM					tof_gated_BM		
+tof_gated_QM_long				tof_gated_QM_long	
+tof_gated_BM_long				tof_gated_BM_long	
+Esum						Esum			
+Esum2						Esum2			
+Esum3						Esum3			
+Esum4						Esum4			
+Esum5						Esum5			
+U235_TOF					U235_TOF
+U235_TOF_Corrected				U235_TOF_corr
+U235_PH_TOF					U235_ISlow_TOF
+U235_PulseHeight				U235_ISlow
+U235_En						U235_En
+U235_En_Corrected				U235_En_corr
+TimeBetweeenU235Events				TimeBetweenU235Events
+He3_TOF						He3_TOF
+He3_TOF_Corrected				He3_TOF_corr
+He3_PulseHeight					He3_ISlow
+He3_En						He3_En
+He3_En_Corrected				He3_En_corr
+Li6_TOF						Li6_TOF
+Li6_TOF_Corrected				Li6_TOF_corr
+Li6_PulseHeight					Li6_ISlow
+Li6_PSD						Li6_ISlow_IFast
+Li6_En						Li6_En
+Li6_En_Corrected				Li6_En_corr
+TimeBetweenLi6Events				TimeBetweenLi6Events
+Bkg_TOF						Bkg_TOF
+Bkg_TOF_Corrected				Bkg_TOF_corr
+Bkg_PulseHeight					Bkg_ISlow
+Bkg_En						Bkg_En
+Bkg_EnCorrected					Bkg_En_corr
+TimeBetweenBkgEvents				TimeBetweenBkgEvents
+En						En
+En_Corr						En_corr
+Crystal_En_Corr					CrystalEn_corr	
+ECrystal_En_Corr				Ecr_En_corr
+hID_backgroundgated				ID_background
+hID_resonancegated				ID_resonance
+En_Etot_Mcl					En_Etot_Mcl
+En_Etot_Mcr					En_Etot_Mcr
+En_Etot_Mcr_Pileup				En_Etot_Mcr_PU
+En_Etot_Mcr_NoPileup				En_Etot_Mcr_noPU
+TOF_Etot_Mcl					TOF_Etot_Mcl
+TOF_Etot_Mcr					TOF_Etot_Mcr
+En_Ecr1_Ecr2_mcr2				En_Ecr1_Ecr2_mcr2
+En_Ecr1_Mcr1					En_Ecr1_mcr1
+En_TimeBetweenCrystals_Mcr			En_TimeBetweenCrystals_Mcr
+En_Eg_Mcr					En_Ecr_Mcr
+TOF_Etot_Mcr_%d_Removed				TOF_Etot_Mcr_%dremoved
+En_Etot_Mcr_%d_Removed				En_Etot_Mcr_%dremoved
+En_Ecl_Mcl_ESum_Gated_%d			En_Ecl_Mcl_esum%d
+En_Ecr_Mcr_ESum_Gated_%d			En_Ecr_Mcr_esum%d
+ID_Ecr_Mcr_ESum_Gated_%d			ID_Ecr_Mcr_esum%d
+Mcl_TOF_ESum_Gated_%d				Mcl_TOF_esum%d
+Isomer_Prompt_%d				Isomer_prompt%d
+Isomer_Delayed_%d				Isomer_delayed%d
+Isomer_TDiff_%d					Isomer_timeDiff%d
+
+eventbuilder
+
+hInvalid_Reason					InvalidReason
+hID						ID
+hID_Raw						ID_raw
+hID_Invalid					ID_invalid
+hID_Gamma					ID_gamma
+hID_Alpha					ID_alpha
+hID_Gamma_Invalid				ID_invalidAfterGamma
+hID_Alpha_Invalid				ID_invalidAfterAlpha
+hID_Invalid_Invalid				ID_invalidAfterInvalid
+Energy_raw_ID					ISlow_ID
+ADC_raw						ISlow_IFast	
+ADC_calib					ESlow_EFast
+ADC_raw_ID					ISlow_IFast_ID
+ADC_calib_ID					ESlow_EFast_ID
+ADC_calib_Invalid				ESlow_EFast
+ADC_calib_Pileup				ESlow_EFast_PU
+ADC_calib_Pileup_Removed			ESlow_EFast_noPU
+SlowID						ISlow_ID
+FastID						IFast_ID
+ADC_gamma					ESlow_EFast_gamma
+hGamma						ISlow_ID_gamma
+hGammaCalib					ESlow_ID_gammaNoPU
+hGammaCalib_PU					ESlow_ID_gammaPU
+ADC_alpha					ESlow_EFast_alpha
+hAlpha						ISlow_ID_alpha
+hAlphaCalib					ESlow_ID_alpha
+TimeBetweenCrystals				TimeBetweenCrystals
+TimeBetweenCrystals_EnergyRatio			TimeBetweenCrystals_SlowRatio
+TimeBetweenCrystals_FastEnergyRatio		TimeBetweenCrystals_FastRatio
+TimeBetweenCrystals_LongShortRatio		TimeBetweenCrystals_SlowFastRatio
+FastSlowRatio_ID				FastSlowRatio_ID
+DetectorLoad					DetectorLoad
+DetectorLoad_perT0				DetectorLoadPerT0
+DetectorLoad_En					DetectorLoad_En
+DetectorLoad_En_perT0				DetectorLoadPerT0_En
+En_BinWidth					EnBinWidth
+
+unpacker
+
+hEventID					EventID
+hWaveform_%d					Waveform%d
+Waveform_ID					Waveform_ID
+Waveform_ID_NR					Waveform_ID_NR
+Waveform_T0					T0_Waveform
+Waveform_Li6					Li6_Waveform
+Waveform_U235					U235_Waveform
+Waveform_Bkg					Bkg_Waveform
+Waveform_He3					He3_Waveform
+ID_vs_WFRatio					WFRatio_ID
+ID_vs_WFInt_vs_Islow				WFInt_Islow_ID
+hTimestamps					Timestamps
+hTimestampsT0					T0_Timestamps
+hTimestampsBM					BM_Timestamps
+hTimestampsID					Timestamps_ID
+Digital_Probe1_ID				ID_DigitalProbe1
+Digital_Probe2_ID				ID_DigitalProbe2
+Scalers						Scalers
+
+
+General format: DetIfNotDANCE_XAxis_YAxis_Zaxis_gate/specifiers
+Current options for other signals: U235, He3, Li6, Bkg, T0; all of these
+together-BM (beam monitors)
+
+misc: CoinCAEN-coincidences between DANCE crystals in an event
+
+Axis definitions:
+DEntry-DANCE entry
+DEvent-DANCE event
+EFast-calibrated fast integral
+ESlow-calibrated slow integral
+Ecl-cluster energy (MeV)
+Ecr1-energy of crystal 1 (MeV)
+En-neutron energy (eV)
+EventLength-length of event (ns)
+EventTimeDist-distribution of times within a single event (ns)
+ID-Detector number (typically DANCE, >162 defined in global.h)
+IFast-uncalibrated fast integral
+ISlow-uncalibrated slow integral
+Mcl-cluster multiplicity
+Mcr-crystal multiplicity
+TimeDev-time deviations
+TimeBetween[detector]Events-time between events of [detector]
+TOF-event time of flight (ns) (CrystalTOF-time for each DANCE hit), assumed to
+be corrected in 3D histograms
+WFInt-waveform integral
+WFRatio-wfint/long integral
+Waveform
+
+Gates/other information:
+corr-time of flight corrected for moderator effects
+mcr1-crystal multiplicity 1
+(no)PU-(no) pileup
+
+histograms beginning with tof and Esum intentionally ignored in this update

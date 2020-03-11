@@ -632,53 +632,53 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
 
   DANCE_Info("Eventbuilder","Creating Histograms");
 
-  hInvalid_Reason = new TH1I("hInvalid_Reason","hInvalid_Reason",64,0,64);
+  hInvalid_Reason = new TH1I("Invalid_Reason","hInvalid_Reason",64,0,64);
 
   //ID
-  hID = new TH1I("hID","hID",256,0,256);
-  hID_Raw = new TH1I("hID_Raw","hID_Raw",256,0,256);
-  hID_Invalid = new TH1I("hID_Invalid","hID_Invalid",256,0,256);
-  hID_gamma = new TH1I("hID_Gamma","hID_Gamma",256,0,256);
-  hID_alpha = new TH1I("hID_Alpha","hID_Alpha",256,0,256);
+  hID = new TH1I("ID","hID",256,0,256);
+  hID_Raw = new TH1I("ID_raw","hID_raw",256,0,256);
+  hID_Invalid = new TH1I("ID_invalid","hID_invalid",256,0,256);
+  hID_gamma = new TH1I("ID_gamma","ID_gamma",256,0,256);
+  hID_alpha = new TH1I("ID_alpha","ID_alpha",256,0,256);
 #ifdef InvalidDetails
-  hID_gamma_Invalid = new TH1I("hID_Gamma_Invalid","hID_Gamma_Invalid",256,0,256);
-  hID_alpha_Invalid = new TH1I("hID_Alpha_Invalid","hID_Alpha_Invalid",256,0,256);
-  hID_invalid_Invalid = new TH1I("hID_Invalid_Invalid","hID_Invalid_Invalid",256,0,256);
+  hID_gamma_Invalid = new TH1I("ID_invalidAfterGamma","ID_invalidAfterGamma",256,0,256);
+  hID_alpha_Invalid = new TH1I("ID_invalidAfterAlpha","ID_invalidAfterAlpha",256,0,256);
+  hID_invalid_Invalid = new TH1I("ID_invalidAfterInvalid","ID_invalidAfterInvalid",256,0,256);
 #endif
 
   //Raw Energy
-  Energy_raw_ID =  new TH2F("Energy_raw_ID","Energy_raw_ID",3500,0.0,70000,162,0,162);
+  Energy_raw_ID =  new TH2F("ISlow_ID","ISlow_ID",3500,0.0,70000,162,0,162);
   
   //PSD Histograms
-  ADC_raw = new TH2F("ADC_raw","ADC_raw",1800,0.,72000.,180,0.,7200);
-  ADC_calib = new TH2F("ADC_calib","ADC_calib",2400,0.,24.,1000,0.,10.);
-  ADC_raw_ID = new TH3F("ADC_raw_ID","ADC_raw_ID",1800,0.0,72000.0,180,0.0,7200,162,0,162);
-  ADC_calib_ID = new TH3F("ADC_calib_ID","ADC_calib_ID",600,0,24,250,0,10,162,0,162);
-  ADC_calib_Invalid = new TH2F("ADC_calib_Invalid","ADC_calib_Invalid",2400,0,24,1000,0,10);
-    ADC_calib_Pileup = new TH2F("ADC_calib_Pileup","ADC_calib_Pileup",2400,0,24,1000,0,10);
-    ADC_calib_Pileup_Removed = new TH2F("ADC_calib_Pileup_Removed","ADC_calib_Pileup_Removed",2400,0,24,1000,0,10);
+  ADC_raw = new TH2F("ISlow_IFast","ISlow_IFast",1800,0.,72000.,180,0.,7200);
+  ADC_calib = new TH2F("ESlow_EFast","ESlow_EFast",2400,0.,24.,1000,0.,10.);
+  ADC_raw_ID = new TH3F("ISlow_IFast_ID","ISlow_IFast_ID",1800,0.0,72000.0,180,0.0,7200,162,0,162);
+  ADC_calib_ID = new TH3F("ESlow_EFast_ID","ESlow_EFast_ID",600,0,24,250,0,10,162,0,162);
+  ADC_calib_Invalid = new TH2F("ESlow_EFast_invalid","ESlow_EFast_invalid",2400,0,24,1000,0,10);
+    ADC_calib_Pileup = new TH2F("ESlow_EFast_PU","ESlow_EFast_PU",2400,0,24,1000,0,10);
+    ADC_calib_Pileup_Removed = new TH2F("ESlow_EFast_noPU","ESlow_EFast_noPU",2400,0,24,1000,0,10);
 
 #ifdef HighRateDebug
-   SlowID = new TH2F("SlowID","SlowID",3500,0,70000,162,0,162);
-   FastID = new TH2F("FastID","FastID",3500,0,70000,162,0,162);
+   SlowID = new TH2F("ISlow_ID","ISlow_ID",3500,0,70000,162,0,162);
+   FastID = new TH2F("IFast_ID","IFast_ID",3500,0,70000,162,0,162);
 #endif
 
   //Gamma Histograms
-  ADC_gamma = new TH2F("ADC_gamma","ADC_gamma",2400,0,24,1000,0,10);	// JU
-  hGamma = new TH2F("hGamma","hGamma",3500,0,70000,162,0,162);
-  hGammaCalib = new TH2F("hGammaCalib","hGammaCalib",2400,0,24,162,0,162);
-  hGammaCalib_PU = new TH2F("hGammaCalib_PU","hGammaCalib_PU",2400,0,24,162,0,162);
+  ADC_gamma = new TH2F("ESlow_EFast_gamma","ESlow_EFast_gamma",2400,0,24,1000,0,10);	// JU
+  hGamma = new TH2F("ISlow_ID_gamma","ISlow_ID_gamma",3500,0,70000,162,0,162);
+  hGammaCalib = new TH2F("ESlow_ID_gammaNoPU","ESlow_ID_gammaNoPU",2400,0,24,162,0,162);
+  hGammaCalib_PU = new TH2F("ESlow_ID_gammaPU","ESlow_ID_gammaPU",2400,0,24,162,0,162);
 
   //Alpha Histograms
-  ADC_alpha = new TH2F("ADC_alpha","ADC_alpha",2400,0.0,24.0,1000,0.0,10.0);	// JU
-  hAlpha = new TH2F("hAlpha","hAlpha",1500,0,30000,162,0,162);
-  hAlphaCalib = new TH2F("hAlphaCalib","hAlphaCalib",500,0.0,5.0,162,0,162);
+  ADC_alpha = new TH2F("ESlow_EFast_alpha","ESlow_EFast_alpha",2400,0.0,24.0,1000,0.0,10.0);	// JU
+  hAlpha = new TH2F("ISlow_ID_alpha","ISlow_ID_alpha",1500,0,30000,162,0,162);
+  hAlphaCalib = new TH2F("ESlow_ID_alpha","ESlow_ID_alpha",500,0.0,5.0,162,0,162);
 
   //Crystal Diagnostics
   hTimeBetweenCrystals = new TH2F("TimeBetweenCrystals","TimeBetweenCrystals",10000,0,10000,162,0,162);
-  hTimeBetweenCrystals_EnergyRatio = new TH2F("TimeBetweenCrystals_EnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
-  hTimeBetweenCrystals_FastEnergyRatio = new TH2F("TimeBetweenCrystals_FastEnergyRatio","TimeBetweenCrystals_EnergyRatio",1250,0,10000,1000,0,20);
-  hTimeBetweenCrystals_LongShortRatio = new TH2F("TimeBetweenCrystals_LongShortRatio","TimeBetweenCrystals_LongShortRatio",1250,0,10000,1000,0,100);
+  hTimeBetweenCrystals_EnergyRatio = new TH2F("TimeBetweenCrystals_SlowRatio","TimeBetweenCrystals_SlowRatio",1250,0,10000,1000,0,20);
+  hTimeBetweenCrystals_FastEnergyRatio = new TH2F("TimeBetweenCrystals_FastRatio","TimeBetweenCrystals_FastRatio",1250,0,10000,1000,0,20);
+  hTimeBetweenCrystals_LongShortRatio = new TH2F("TimeBetweenCrystals_SlowFastRatio","TimeBetweenCrystals_SlowFastRatio",1250,0,10000,1000,0,100);
 
   hFastSlowRatio_ID = new TH2F("FastSlowRatio_ID","FastSlowRatio_ID",1000,0,1,162,0,162);
 
@@ -696,12 +696,12 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   
   if(input_params.Read_Simulation==0) {
     hDetectorLoad = new TH1F("DetectorLoad","DetectorLoad",10000000,0,10000000);
-    hDetectorLoad_perT0 = new TH1F("DetectorLoad_perT0","DetectorLoad_perT0",10000000,0,10000000);
+    hDetectorLoad_perT0 = new TH1F("DetectorLoadPerT0","DetectorLoadPerT0",10000000,0,10000000);
     hDetectorLoad_En = new TH1F("DetectorLoad_En","DetectorLoad_En",NEbins,x);
-    hDetectorLoad_En_perT0 = new TH1F("DetectorLoad_En_perT0","DetectorLoad_En_perT0",NEbins,x);
+    hDetectorLoad_En_perT0 = new TH1F("DetectorLoadPerT0_En","DetectorLoadPerT0_En",NEbins,x);
   }
 
-  hEn_BinWidth = new TH1F("En_BinWidth","En_BinWidth",NEbins,x);
+  hEn_BinWidth = new TH1F("EnBinWidth","En_BinWidth",NEbins,x);
 
 
 #endif

@@ -350,7 +350,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   //Diagnostics
   hEventLength = new TH1D("EventLength","EventLength",10000,0,100);
   hEventLength_Etot = new TH2D("EventLength_Etot","EventLength_Etot",1000,0,10,400,0,20);
-  hEventLength_MCr = new TH2D("EventLength_MCr","EventLength_MCr",1000,0,10,30,0,30);
+  hEventLength_MCr = new TH2D("EventLength_Mcr","EventLength_Mcr",1000,0,10,30,0,30);
   hEventTimeDist_Etot = new TH2D("EventTimeDist_Etot","EventTimeDist_Etot",1000,0,10,400,0,20);
 
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
@@ -358,26 +358,26 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   
   //RAW TOF
-  hCrystalIDvsTOF = new TH2D("CrystalIDvsTOF","CrystalIDvsTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
+  hCrystalIDvsTOF = new TH2D("ID_CrystalTOF","ID_CrystalTOF",10000,0,1000000,162,0,162); //TOF for each crystal 
   hCrystalTOF = new TH1D("CrystalTOF","CrystalTOF",6000000,0,60000000);
   hTOF = new TH1D("TOF","TOF",6000000,0,60000000);
   //2D out to 1 ms
   hTOF_Mcl = new TH2D("Mcl_TOF","Mcl_TOF",10000,0,1000000,8,0,8);
 
   //Corrected TOF
-  hCrystalIDvsTOF_Corr = new TH2D("CrystalIDvsTOF_Corrected","CrystalIDvsTOF_Corrected",10000,0,10000000,162,0,162); //TOF for each crystal 
-  hCrystalTOF_Corr = new TH1D("CrystalTOF_Corrected","CrystalTOF_Corrected",600000,0,60000000);
-  hTOF_Corr = new TH1D("TOF_Corrected","TOF_Corrected",6000000,0,60000000);
+  hCrystalIDvsTOF_Corr = new TH2D("ID_CrystalTOF_corr","ID_CrystalTOF_corr",10000,0,10000000,162,0,162); //TOF for each crystal 
+  hCrystalTOF_Corr = new TH1D("CrystalTOF_corr","CrystalTOF_corr",600000,0,60000000);
+  hTOF_Corr = new TH1D("TOF_corr","TOF_corr",6000000,0,60000000);
   //2D out to 1 ms
-  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_Corrected","Mcl_TOF_Corrected",10000,0,1000000,8,0,8);
+  hTOF_Mcl_Corr = new TH2D("Mcl_TOF_corr","Mcl_TOF_corr",10000,0,1000000,8,0,8);
 
 
 
-  hDANCE_Entries_per_T0 = new TH1D("DANCE_Entries_per_T0","DANCE_Entries_per_T0",100000,0,100000);
-  hDANCE_Events_per_T0 = new TH1D("DANCE_Events_per_T0","DANCE_Events_per_T0",100000,0,100000);
+  hDANCE_Entries_per_T0 = new TH1D("DEntriesPerT0","DANCE_Entries_per_T0",100000,0,100000);
+  hDANCE_Events_per_T0 = new TH1D("DEventsPerT0","DANCE_Events_per_T0",100000,0,100000);
   
   //Gamma gated on Crystal Mult 1
-  hGamma_Mcr1 = new TH2D("hGamma_Mcr1","hGamma_Mcr1",3500,0,70000,162,0,162);
+  hGamma_Mcr1 = new TH2D("Gamma_ID_mcr1","Gamma_ID_mcr1",3500,0,70000,162,0,162);
   hGammaCalib_Mcr1 = new TH2D("hGammaCalib_Mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
 
     
@@ -439,37 +439,37 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   
   //Beam Monitors
   hU235_TOF = new TH1D("U235_TOF","U235_TOF",600000,0,60000000);  //Raw TOF for U235 Monitor
-  hU235_TOF_Corr = new TH1D("U235_TOF_Corrected","U235_TOF_Corrected",600000,0,60000000); //Corrected TOF for U235 Monitor
+  hU235_TOF_Corr = new TH1D("U235_TOF_corr","U235_TOF_corr",600000,0,60000000); //Corrected TOF for U235 Monitor
 
-  hU235_PH_TOF = new TH2D("U235_PH_TOF","U235_PH_TOF",6000,0,60000000,250,0,100000);  //Raw PH vs TOF for U235 Monitor
+  hU235_PH_TOF = new TH2D("U235_ISlow_TOF","U235_ISlow_TOF",6000,0,60000000,250,0,100000);  //Raw PH vs TOF for U235 Monitor
 
   
 
-  hU235_PulseHeight = new TH1D("U235_PulseHeight","U235_PulseHeight",10000,0,100000);  //Energy for U235 Monitor
+  hU235_PulseHeight = new TH1D("U235_ISlow","U235_ISlow",10000,0,100000);  //Energy for U235 Monitor
   hU235_En = new TH1D("U235_En","U235_En",NEbins,x);  //Neutron Energy for U235 Monitor 
-  hU235_En_Corr = new TH1D("U235_En_Corrected","U235_En_Corrected",NEbins,x);  //Neutron Energy for U235 Monitor (From Corrected TOF)
+  hU235_En_Corr = new TH1D("U235_En_corr","U235_En_corr",NEbins,x);  //Neutron Energy for U235 Monitor (From Corrected TOF)
   hU235_Time_Between_Events = new TH1D("TimeBetweenU235Events","TimeBetweenU235Events",100000,0,10000000);
 
   hHe3_TOF = new TH1D("He3_TOF","He3_TOF",600000,0,60000000);  //Raw TOF for He3 Monitor
-  hHe3_TOF_Corr = new TH1D("He3_TOF_Corrected","He3_TOF_Corrected",600000,0,60000000); //Corrected TOF for He3 Monitor
-  hHe3_PulseHeight = new TH1D("He3_PulseHeight","He3_PulseHeight",10000,0,100000);  //Energy for He3 Monitor
+  hHe3_TOF_Corr = new TH1D("He3_TOF_corr","He3_TOF_corr",600000,0,60000000); //Corrected TOF for He3 Monitor
+  hHe3_PulseHeight = new TH1D("He3_ISlow","He3_ISlow",10000,0,100000);  //Energy for He3 Monitor
   hHe3_En = new TH1D("He3_En","He3_En",NEbins,x);  //Neutron Energy for He3 Monitor 
-  hHe3_En_Corr = new TH1D("He3_En_Corrected","He3_En_Corrected",NEbins,x);  //Neutron Energy for He3 Monitor (From Corrected TOF)
+  hHe3_En_Corr = new TH1D("He3_En_corrd","He3_En_corr",NEbins,x);  //Neutron Energy for He3 Monitor (From Corrected TOF)
   hHe3_Time_Between_Events = new TH1D("TimeBetweenHe3Events","TimeBetweenHe3Events",100000,0,10000000);
 
   hLi6_TOF = new TH1D("Li6_TOF","Li6_TOF",600000,0,60000000);  //Raw TOF for Li6 Monitor
-  hLi6_TOF_Corr = new TH1D("Li6_TOF_Corrected","Li6_TOF_Corrected",600000,0,60000000); //Corrected TOF for Li6 Monitor
-  hLi6_PulseHeight = new TH1D("Li6_PulseHeight","Li6_PulseHeight",10000,0,100000);  //Energy for Li6 Monitor
-  hLi6_PSD = new TH2D("Li6_PSD","Li6_PSD",600,0,60000,600,0,60000);  //Ifast vs late for Li6 Monitor
+  hLi6_TOF_Corr = new TH1D("Li6_TOF_corr","Li6_TOF_corr",600000,0,60000000); //Corrected TOF for Li6 Monitor
+  hLi6_PulseHeight = new TH1D("Li6_ISlow","Li6_ISlow",10000,0,100000);  //Energy for Li6 Monitor
+  hLi6_PSD = new TH2D("Li6_ISlow_IFast","Li6_ISlow_IFast",600,0,60000,600,0,60000);  //Ifast vs late for Li6 Monitor
   hLi6_En = new TH1D("Li6_En","Li6_En",NEbins,x);  //Neutron Energy for Li6 Monitor 
-  hLi6_En_Corr = new TH1D("Li6_En_Corrected","Li6_En_Corrected",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
+  hLi6_En_Corr = new TH1D("Li6_En_corr","Li6_En_corr",NEbins,x);  //Neutron Energy for Li6 Monitor (From Corrected TOF)
   hLi6_Time_Between_Events = new TH1D("TimeBetweenLi6Events","TimeBetweenLi6Events",100000,0,10000000);
 
   hBkg_TOF = new TH1D("Bkg_TOF","Bkg_TOF",600000,0,60000000);  //Raw TOF for Bkg Monitor
-  hBkg_TOF_Corr = new TH1D("Bkg_TOF_Corrected","Bkg_TOF_Corrected",600000,0,60000000); //Corrected TOF for Bkg Monitor
-  hBkg_PulseHeight = new TH1D("Bkg_PulseHeight","Bkg_PulseHeight",10000,0,100000);  //Energy for Bkg Monitor
+  hBkg_TOF_Corr = new TH1D("Bkg_TOF_corr","Bkg_TOF_corr",600000,0,60000000); //Corrected TOF for Bkg Monitor
+  hBkg_PulseHeight = new TH1D("Bkg_ISlow","Bkg_ISlow",10000,0,100000);  //Energy for Bkg Monitor
   hBkg_En = new TH1D("Bkg_En","Bkg_En",NEbins,x);  //Neutron Energy for Bkg Monitor 
-  hBkg_En_Corr = new TH1D("Bkg_En_Corrected","Bkg_En_Corrected",NEbins,x);  //Neutron Energy for Bkg Monitor (From Corrected TOF)
+  hBkg_En_Corr = new TH1D("Bkg_En_corr","Bkg_En_corr",NEbins,x);  //Neutron Energy for Bkg Monitor (From Corrected TOF)
   hBkg_Time_Between_Events = new TH1D("TimeBetweenBkgEvents","TimeBetweenBkgEvents",100000,0,10000000);
 
 
@@ -487,21 +487,21 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   if(input_params.Analysis_Stage==1 || input_params.Read_Simulation==1) {
 
     hEn = new TH1D("En","En",NEbins,x); //Raw En
-    hEn_Corr = new TH1D("En_Corr","En_Corr",NEbins,x);  //Corrected En 
-    hCrystal_En_Corr = new TH1D("Crystal_En_Corr","Crystal_En_Corr",NEbins,x);  //Corrected En 
-    hECrystal_En_Corr = new TH2D("ECrystal_En_Corr","ECrystal_En_Corr",NEbins,x,NoOfEnergyBins,EtotBins);  //Corrected En vs ECrystal
+    hEn_Corr = new TH1D("En_corr","En_corr",NEbins,x);  //Corrected En 
+    hCrystal_En_Corr = new TH1D("CrystalEn_corr","CrystalEn_corr",NEbins,x);  //Corrected En 
+    hECrystal_En_Corr = new TH2D("Ecr_En_corr","Ecr_En_corr",NEbins,x,NoOfEnergyBins,EtotBins);  //Corrected En vs ECrystal
 
 #ifdef HighRateDebug
-    hID_backgroundgated = new TH1F("hID_backgroundgated","hID_backgroundgated",162,0,162); 
-    hID_resonancegated = new TH1F("hID_resonancegated","hID_resonancegated",162,0,162);  
+    hID_backgroundgated = new TH1F("ID_background","hID_backgroundgated",162,0,162); 
+    hID_resonancegated = new TH1F("ID_resonance","hID_resonancegated",162,0,162);  
     //En_ID=new TH2F("En_ID","En_ID",NEbins,x,162,IDbins);
     //this is broken a little and I don't know why 
 #endif
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     En_Esum_Mcr=new TH3F("En_Etot_Mcr","En_Etot_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    En_Esum_Mcr_Pileup=new TH3F("En_Etot_Mcr_Pileup","En_Etot_Mcr_Pileup",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
-    En_Esum_Mcr_NoPileup=new TH3F("En_Etot_Mcr_NoPileup","En_Etot_Mcr_NoPileup",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Esum_Mcr_Pileup=new TH3F("En_Etot_Mcr_PU","En_Etot_Mcr_PU",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    En_Esum_Mcr_NoPileup=new TH3F("En_Etot_Mcr_noPU","En_Etot_Mcr_noPU",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
 
     hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
@@ -510,48 +510,44 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     En_Ecr1_Ecr2_mcr2 = new TH3F("En_Ecr1_Ecr2_mcr2","En_Ecr1_Ecr2_mcr2",NEbins,x,NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins);
 
     //cout << En_Ecr1_Ecr2_mcr2->GetSize() << "\t" << (NEbins+2)*(NoOfEnergyBins+2)*(NoOfEnergyBins+2) << endl;
-    if (En_Ecr1_Ecr2_mcr2->GetSize()*sizeof(float)>1073741822-1041) //is this a root 5 artifact? maybe
-    {
-      DANCE_Error("Analyzer","Too many bins, reduce number of gamma bins, neutron bins per decade, or neutron energy range in global.h");
-      //return -1;  
-    }
+
     En_Ecr1_mcr1 = new TH2F("En_Ecr1_mcr1","En_Ecr1_mcr1",NEbins,x,NoOfEnergyBins,EtotBins);
 
     hEn_TimeBetweenCrystals_Mcr = new TH3F("En_TimeBetweenCrystals_Mcr","En_TimeBetweenCrystals_Mcr",NEbins,x,3000,Tbins,20,Mbins);
 
-    hEn_Eg_Mcr = new TH3F("En_Eg_Mcr","En_Eg_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+    hEn_Eg_Mcr = new TH3F("En_Ecr_Mcr","En_Ecr_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     
 #ifdef Make_Removed_Spectra
     for(int kay=0; kay<Max_Gamma_Removed; kay++) {
       //Same spectra but with one gamma ray at random thrown away
-      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%d_Removed",kay),Form("TOF_Etot_Mcr_%d_Removed",kay),2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-      hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%d_Removed",kay),Form("En_Etot_Mcr_%d_Removed",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+      hTOF_Esum_Mcr_Removed[kay]=new TH3F(Form("TOF_Etot_Mcr_%dremoved",kay),Form("TOF_Etot_Mcr_%dremoved",kay),2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
+      hEn_Esum_Mcr_Removed[kay]=new TH3F(Form("En_Etot_Mcr_%dremoved",kay),Form("En_Etot_Mcr_%dremoved",kay),NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
     } 
 #endif
 
     if(input_params.QGatedSpectra) {
       
       for (int kay=0; kay<input_params.NQGates; kay++) {
-	En_Ecl_Mcl_QGated[kay]=new TH3F(Form("En_Ecl_Mcl_ESum_Gated_%d",kay),
-					Form("En_Ecl_Mcl_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
+	En_Ecl_Mcl_QGated[kay]=new TH3F(Form("En_Ecl_Mcl_esum%d",kay),
+					Form("En_Ecl_Mcl_esum_gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
       }
 
       for (int kay=0; kay<input_params.NQGates; kay++) {
-	En_Ecr_Mcr_QGated[kay]=new TH3F(Form("En_Ecr_Mcr_ESum_Gated_%d",kay),
-					Form("En_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
+	En_Ecr_Mcr_QGated[kay]=new TH3F(Form("En_Ecr_Mcr_esum%d",kay),
+					Form("En_Ecr_Mcr_esum_gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
       }
       
       for (int kay=0; kay<input_params.NQGates; kay++) {
-	ID_Ecr_Mcr_QGated[kay]=new TH3F(Form("ID_Ecr_Mcr_ESum_Gated_%d",kay),
-					Form("ID_Ecr_Mcr_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
+	ID_Ecr_Mcr_QGated[kay]=new TH3F(Form("ID_Ecr_Mcr_esum%d",kay),
+					Form("ID_Ecr_Mcr_esum_gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					162,0,162,400,0,20,20,0,20);
       }
       
       //QGated Mcl_TOF out to 1 ms
       for (int kay=0; kay<input_params.NQGates; kay++) {
-	hTOF_Mcl_QGated[kay] = new TH2D(Form("Mcl_TOF_ESum_Gated_%d",kay),
+	hTOF_Mcl_QGated[kay] = new TH2D(Form("Mcl_TOF_esum%d",kay),
 					Form("Mcl_TOF_ESum_Gated_%2.2f_%2.2f",input_params.QGates[2*kay],input_params.QGates[2*kay+1]),
 					2000,0,1000000,8,0,8);
       }
@@ -561,7 +557,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     if(input_params.IsomerSpectra) {
       
       for(int isom=0; isom<input_params.NIsomers; isom++) {
-	hIsomer_Prompt[isom] = new TH1D(Form("Isomer_Prompt_%d",isom),
+	hIsomer_Prompt[isom] = new TH1D(Form("Isomer_prompt%d",isom),
 					Form("Isomer_Prompt_QGated_%2.2f_%2.2f_MclGated_%d_%d_TOFGated_%2.2f_%2.2f",
 					     input_params.IsomerPromptQGates[isom*2],input_params.IsomerPromptQGates[isom*2+1],
 					     input_params.IsomerPromptMclGates[isom*2],input_params.IsomerPromptMclGates[isom*2+1],
@@ -571,7 +567,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
 					input_params.IsomerPromptTOFGates[isom*2+1]);
 	  
 	  
-	hIsomer_Delayed[isom] = new TH1D(Form("Isomer_Delayed_%d",isom),
+	hIsomer_Delayed[isom] = new TH1D(Form("Isomer_delayed%d",isom),
 					 Form("Isomer_Delayed_QGated_%2.2f_%2.2f_MclGated_%d_%d_TOFGated_%2.2f_%2.2f",
 					      input_params.IsomerDelayedQGates[isom*2],input_params.IsomerDelayedQGates[isom*2+1],
 					      input_params.IsomerDelayedMclGates[isom*2],input_params.IsomerDelayedMclGates[isom*2+1],
@@ -580,7 +576,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
 					 input_params.IsomerDelayedTOFGates[isom*2],
 					 input_params.IsomerDelayedTOFGates[isom*2+1]);
 	  
-	hIsomer_TDiff[isom] = new TH1D(Form("Isomer_TDiff_%d",isom),
+	hIsomer_TDiff[isom] = new TH1D(Form("Isomer_timeDiff%d",isom),
 				       Form("Isomer_TDiff_Delayed_%d_minus_Prompt_%d",isom,isom),
 				       (input_params.IsomerDelayedTOFGates[isom*2+1] - input_params.IsomerPromptTOFGates[isom*2+1])-(input_params.IsomerDelayedTOFGates[isom*2] - input_params.IsomerPromptTOFGates[isom*2]),
 				       input_params.IsomerDelayedTOFGates[isom*2] - input_params.IsomerPromptTOFGates[isom*2],

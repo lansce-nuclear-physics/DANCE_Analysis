@@ -4,7 +4,7 @@
 #./Copy_Automated.sh
 
 #where the data are
-#input=hygelac24
+#input=hygelac26
 input=./stage0_bin_automated
 #input=./stage0_bin
 #sh gates2019.sh
@@ -51,8 +51,8 @@ do
     currentstop=$(expr $startrun + $(expr $counter \* $nrunsperxterm))
    # echo $currentstart"  "$currentstop
 
-    #xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
-     ./RunAnalysis_Slave.sh $input $currentstart $currentstop $nucleus &
+    #xterm -e ./RunAnalysis_Minion.sh $input $currentstart $currentstop &
+     ./RunAnalysis_Minion.sh $input $currentstart $currentstop $nucleus &
 
 
     sleep 10
@@ -63,8 +63,8 @@ currentstart=$(( $startrun + $(expr $counter \* $nrunsperxterm ) ))
 currentstop=$(( $endrun + 1 ))
 # echo $currentstart"  "$currentstop
 
-#xterm -e ./RunAnalysis_Slave.sh $input $currentstart $currentstop &
-./RunAnalysis_Slave.sh $input $currentstart $currentstop $nucleus &
+#xterm -e ./RunAnalysis_Minion.sh $input $currentstart $currentstop &
+./RunAnalysis_Minion.sh $input $currentstart $currentstop $nucleus &
 
 
 exit 0
