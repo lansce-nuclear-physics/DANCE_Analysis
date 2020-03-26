@@ -677,7 +677,7 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   //Alpha Histograms
   ADC_alpha = new TH2F("ESlow_EFast_alpha","ESlow_EFast_alpha",2400,0.0,24.0,1000,0.0,10.0);	// JU
   hAlpha = new TH2F("ISlow_ID_alpha","ISlow_ID_alpha",1500,0,30000,162,0,162);
-  hAlpha_noPU = new TH2F("ISlow_ID_alphaNoPU",1500,0,30000,162,0,162);
+  hAlpha_noPU = new TH2F("ISlow_ID_alphaNoPU","ISlow_ID_alphaNoPU",1500,0,30000,162,0,162);
   hAlphaCalib = new TH2F("ESlow_ID_alpha","ESlow_ID_alpha",500,0.0,5.0,162,0,162);
 
   //Crystal Diagnostics

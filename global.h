@@ -14,7 +14,7 @@
 #include <string>
 
 //Switches
-//#define Histogram_DetectorLoad     //Thes turns on the detector load histograms for the dead time and pileup analysis
+#define Histogram_DetectorLoad     //Thes turns on the detector load histograms for the dead time and pileup analysis
 //#define Make_Removed_Spectra       //This turns on the gamma removed spectra for the dead time and pileup analysis
 //#define CheckTheDeque              //This turns on time integrity checks of the Buffer
 #define Histogram_Waveforms        //This turns on histogramming of waveforms
@@ -78,12 +78,12 @@
 #define RETRIGGERGATE "Retrigger.dat"
 
 //retrigger waveform ratio gates
-//#define wf_ratio_low 0.05  //2019
-//#define wf_ratio_high 0.09 //2019
+#define wf_ratio_low 0.055  //2019
+#define wf_ratio_high 0.095 //2019
 //#define wf_ratio_low 0.06  //2018
 //#define wf_ratio_high 0.12 //2018
-#define wf_ratio_low 0.01  //Tl 2019
-#define wf_ratio_high 0.03 //Tl 2019
+//#define wf_ratio_low 0.01  //Tl 2019
+//#define wf_ratio_high 0.03 //Tl 2019
 
 //Physics Stuff
 #define neutronmass 939.565379e6  //Mass of the neutron in eV/c^2

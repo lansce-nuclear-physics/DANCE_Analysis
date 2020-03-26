@@ -454,7 +454,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hHe3_TOF_Corr = new TH1D("He3_TOF_corr","He3_TOF_corr",600000,0,60000000); //Corrected TOF for He3 Monitor
   hHe3_PulseHeight = new TH1D("He3_ISlow","He3_ISlow",10000,0,100000);  //Energy for He3 Monitor
   hHe3_En = new TH1D("He3_En","He3_En",NEbins,x);  //Neutron Energy for He3 Monitor 
-  hHe3_En_Corr = new TH1D("He3_En_corrd","He3_En_corr",NEbins,x);  //Neutron Energy for He3 Monitor (From Corrected TOF)
+  hHe3_En_Corr = new TH1D("He3_En_corr","He3_En_corr",NEbins,x);  //Neutron Energy for He3 Monitor (From Corrected TOF)
   hHe3_Time_Between_Events = new TH1D("TimeBetweenHe3Events","TimeBetweenHe3Events",100000,0,10000000);
 
   hLi6_TOF = new TH1D("Li6_TOF","Li6_TOF",600000,0,60000000);  //Raw TOF for Li6 Monitor
@@ -1407,9 +1407,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	}     
 
 #endif
-      } //end check of stage and simulation
+      } //end check valid dance event
 
-    } //End of checking valid DANCE event
+    } //End of stage and simulation
 
 
 
