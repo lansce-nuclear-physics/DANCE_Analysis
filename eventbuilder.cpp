@@ -77,6 +77,7 @@ TH2F *Energy_raw_ID;
 
 //PSD Histograms
 TH2F *ADC_calib;  //2D PSD Plot (calibrated)
+TH2F* ADC_calib_noPU; //pileup gated PSD
 TH2F *ADC_raw;    //2D PSD Plot (uncalibrated)
 
 TH3F *ADC_raw_ID;    //3D Plot of 2D PSD plot (uncalibrated) vs DANCE Crystal ID (z)
@@ -89,6 +90,7 @@ TH2F *ADC_calib_Pileup_Removed;  //2D PSD Plot of invalid events (calibrated)
 //Alpha Spectra
 TH2F *ADC_alpha;
 TH2F *hAlpha;
+TH2F* hAlpha_noPU;
 TH2F *hAlphaCalib;
 
 //Gamma Spectra
@@ -361,6 +363,9 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	   
 	  if(datadeque[0].IsAlpha) {
 	    hAlpha->Fill(datadeque[0].Islow, datadeque[0].ID,1);
+	    if(datadeque[0].pileup_detected==0){
+              hAlpha_noPU->Fill(datadeque[0].Islow,datadeque[0].ID,1);
+	    }
 	    hAlphaCalib->Fill(datadeque[0].Eslow, datadeque[0].ID,1);
 	    ADC_alpha->Fill(datadeque[0].Eslow, datadeque[0].Efast,1);	// JU diagnostic histogram
 	    hID_alpha->Fill(datadeque[0].ID,1);
@@ -672,6 +677,7 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   //Alpha Histograms
   ADC_alpha = new TH2F("ESlow_EFast_alpha","ESlow_EFast_alpha",2400,0.0,24.0,1000,0.0,10.0);	// JU
   hAlpha = new TH2F("ISlow_ID_alpha","ISlow_ID_alpha",1500,0,30000,162,0,162);
+  hAlpha_noPU = new TH2F("ISlow_ID_alphaNoPU",1500,0,30000,162,0,162);
   hAlphaCalib = new TH2F("ESlow_ID_alpha","ESlow_ID_alpha",500,0.0,5.0,162,0,162);
 
   //Crystal Diagnostics
@@ -746,6 +752,7 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
     
   ADC_alpha -> Write();
   hAlpha->Write();
+  hAlpha_noPU->Write();
   hAlphaCalib->Write();
     
   ADC_gamma -> Write();
