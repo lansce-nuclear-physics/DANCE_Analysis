@@ -1,0 +1,27 @@
+# This is just a place to keep track of files that will get changed, but
+# where we don't want to track the changes, even though we need the file
+# in the repo.
+#
+# NB:  This is just a file for dumb humans.  Git doesn't know about it.
+#
+# To add a file
+#
+#   git update-index --assume-unchanged <file>
+#
+# to make a change to an "untracked file"
+#
+#   git update-index --no-assume-unchanged <file>
+# commit changes, then issue the assume-unchanged again
+#
+
+
+global.h
+cfg_files/stage0_caen2015.cfg
+cfg_files/stage0_caen2018.cfg
+cfg_files/stage1.cfg
+cfg_files/stage1_mid.cfg
+cfg_files/stage1_simulated.cfg
+Config/TMatrix_2019.txt
+Gates/Alpha.dat
+Gates/Gamma.dat
+Gates/Retrigger.dat
