@@ -1,0 +1,116 @@
+analyzer.cpp - int Make_Time_Deviations(int RunNumber) 
+
+This function determines the channel to channel time offsets for the DANCE crystals and writes them in a file.
+
+
+analyzer.cpp - int Read_Moderation_Time_Graphs() {
+
+This function makes TGraphs later used to correct for the neutron-energy dependent moderation time.  It reads in a list of the actual time-of-flight for a given  measured time of flight for DANCE and each beam monitor.  For each device a graph of actual time-of-flight vs measured time-of-flight is created. 
+
+
+analyzer.cpp - int Make_Output_Binfile(int RunNumber, bool read_binary)
+
+This function creats a file for the binary version output of the data analyzed by the program
+
+
+analyzer.cpp - int Read_Energy_Calibrations(int RunNumber, bool read_binary, bool read_simulation)
+
+This function reads in the energy calibration files for the DANCE crystals and stores them into arrays
+
+
+analyzer.cpp - int Read_PI_Gates()
+
+This function reads textfiles containing x,y coordinates of points comprising cuts for alpha / gamma descrimination in the DANCE crystals.  These points are stored as TCutG objects
+
+
+analyzer.cpp - int Read_DMatrix() 
+
+This function reads in a textfile with the relative position information of the DANCE crystals.  It fills seven arrays with this information.  The first array is the crystal ID of interest and the remaining 6 are the neighboring crystal IDs.  In the case of pentagonal crystals the sixth neighbor ID is set to 200.
+
+
+analyzer.cpp - int Read_TMatrix() 
+
+This function reads in a textfile with a list of pairs of adjacent crystals.  This information is stored into arrays of neighboring crystals used later to account for the channel-to-channel time offsets.
+
+
+analyzer.cpp - int Create_Analyzer_Histograms(bool read_binary, bool read_simulation, int NQGates, double QGates[])
+
+This function creates the analyzer ROOT histograms containing the results of the analysis.  
+
+
+analyzer.cpp - int Write_Analyzer_Histograms(TFile *fout, bool read_binary, bool read_simulation, int NQGates, double QGates[])
+
+This function writes the analyzer ROOT histograms to the output ROOT file
+
+
+analyzer.cpp - int Initialize_Analyzer(bool read_binary, bool write_binary, bool read_simulation, int NQGates, double QGates[])
+
+This function calls several of the functions described above and zeros some diagnostics for the analyzer.  Its purpose is to initialize the analyzer.
+
+ 
+analyzer.cpp - int Analyze_Data(std::vector<DEVT_BANK> eventvector, bool read_binary, bool write_binary, bool read_simulation, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, int NQGates, double QGates[]) 
+
+This function does the bulk of the analysis.  It takes an eventvector (a time ordered vector of entries of some time width) and processes them into physics events for the DANCE ball, T0, beam monitors, and any other ancillary detectors.  It determines things like crystal multiplicities, neutron energies from time-of-flights and applies gates and cuts to the data.  It packages this information into histograms as well as a compacted binary output for use in later stages of analysis.
+
+
+
+main.cpp - int main(int argc, char *argv[])
+
+This function is the main function.  Its job is to take command line arguments, read in salient parameters pertaining to the analysis, read in the raw data file, initilaize the analyzer and unpacker, send the raw data for analysis, and write the output of the analysis to file.   
+
+
+sort_functions.cpp - void heapify(DEVT_BANK arr[], int n, int i)
+
+This function is part of the heapsort and orders the data to satisfy the heap condition
+
+
+sort_functions.cpp - void heapSort(DEVT_BANK arr[], int n)
+
+This function performs the heapsort of the data using the heapify function to build the heap
+
+
+
+unpacker.cpp - int Create_Unpacker_Histograms(bool read_binary)
+
+This funciton makes the ROOT histograms for the storage of information from the unpacker
+
+
+unpacker.cpp - int Write_Unpacker_Histograms(TFile *fout, bool read_binary)
+
+This function writes the ROOT histograms of the unpacker to the output ROOT file
+
+
+unpacker.cpp - int Make_DANCE_Map()
+
+This function makes the map of board and channel numbers to detector IDs 
+
+
+unpacker.cpp - int Make_Output_Diagnostics_File(int RunNumber)
+
+This function makes the output text file that stores the information from the diagnostics registers
+
+
+unpacker.cpp - int Read_TimeDeviations(int runnum, bool FitTimeDev, bool read_simulations)
+
+This function reads in a text file with the time offsets for each crystal of DANCE and stores them in an array
+
+
+unpacker.cpp - int Unpack_Data(gzFile &gz_in, double begin, int runnum, bool read_binary, bool write_binary, bool read_simulation, double CoincidenceWindow, double Crystal_Blocking_Time, double DEvent_Blocking_Time, bool HAVE_Threshold, double Energy_Threshold, bool FitTimeDev, string DataFormat, int NQGates, double QGates[])
+
+This function is responsible for unpacking and decoding the raw MIDAS data filling event structs with physics information such as times, energies, detector IDs, etc.  It also time sorts all of the data, builds physics events, and calls the analyzer to analyze those events. 
+
+  
+
+./TOF_Corrections/TOF_Corrections.C - void TOF_Corrections() 
+
+This function reads in a 2D histogram that contain the dTOF/TOF as a function of neutron energy for a 10-m flight path.  The function uses the flight path length for DANCE and the beam monitors to calculate the "real" time of flight given the actutal neutron energy and also the measured time of flight given the dTOF/TOF.  This information is then stored in a file and read by the analysis to correct the measured TOF.
+
+
+
+
+
+
+
+
+
+

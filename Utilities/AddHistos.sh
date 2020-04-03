@@ -1,0 +1,5 @@
+#!/bin/bash
+
+#Sum of all Pb208
+histoAdd Sum_Stage1_Histograms_Pb208_60622_60811__62695_62735__63650_64136__64834_64987__68040_68103.root Sum_Stage1_Histograms_Pb208_60622_60811.root Sum_Stage1_Histograms_Pb208_62695_62735.root Sum_Stage1_Histograms_Pb208_63650_64136.root Sum_Stage1_Histograms_Pb208_64834_64987.root Sum_Stage1_Histograms_Pb208_68040_68103.root
+

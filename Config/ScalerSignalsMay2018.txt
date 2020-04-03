@@ -1,0 +1,41 @@
+DANCE Scaler Signals 04 May 2018
+
+No Veto
+sclr[0]         0x0010
+0/00            Raw T0
+0/01            
+0/02            
+0/03            
+0/04            
+0/05            Proton Scaler
+0/06            LiGlass Background (Gated 4ms @ 4ms)
+0/07            Si (Gated 4ms @ 4ms)
+0/08            U235 Fission (Gated 4ms @ 4ms)
+0/09            3He (Gated 4ms @ 4ms)
+0/10            
+0/11            LiGlass Background (Ungated)
+0/12
+0/13
+0/14
+0/15
+
+
+No Veto
+sclr[1]		0x0020
+1/00            Raw T0
+1/01		
+1/02		
+1/03
+1/04            
+1/05            
+1/06            
+1/07            
+1/08
+1/09
+1/10            
+1/11		
+1/12
+1/13
+1/14
+1/15
+

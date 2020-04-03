@@ -1,0 +1,17 @@
+Run: 106273 Failed due to insufficient buffer depth...  Add: 2494.17 seconds
+Run: 105151 Failed due to insufficient buffer depth...  Add: 232.322 seconds
+Run: 105151 Failed due to insufficient buffer depth...  Add: 232.322 seconds
+Run: 105158 Failed due to insufficient buffer depth...  Add: 162.647 seconds
+Run: 105158 Failed due to insufficient buffer depth...  Add: 162.647 seconds
+Run: 105110 Failed due to insufficient buffer depth...  Add: 142.701 seconds
+Run: 105110 Failed due to insufficient buffer depth...  Add: 142.701 seconds
+Run: 105207 Failed due to insufficient buffer depth...  Add: 214.633 seconds
+Run: 105207 Failed due to insufficient buffer depth...  Add: 214.633 seconds
+Run: 105218 Failed due to insufficient buffer depth...  Add: 1241.58 seconds
+Run: 105218 Failed due to insufficient buffer depth...  Add: 1241.58 seconds
+Run: 106186 Failed due to insufficient buffer depth...  Add: 60.9431 seconds
+Run: 106186 Failed due to insufficient buffer depth...  Add: 60.9431 seconds
+Run: 113812 Failed due to insufficient buffer depth...  Add: 7.94073e+82 seconds
+Run: 113816 Failed due to insufficient buffer depth...  Add: 3.48373e+241 seconds
+Run: 113819 Failed due to insufficient buffer depth...  Add: 3.1889e+174 seconds
+Run: 114271 Failed due to insufficient buffer depth...  Add: 3018.81 seconds

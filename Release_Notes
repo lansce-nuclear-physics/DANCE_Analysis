@@ -1,0 +1,101 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
+//*  Release_Notes          *// 
+//*  Last Edit: 01/24/20    *//  
+//***************************//
+
+The purpose of this document is to allow users to more efficiently track and understand changes made to the DANCE Analysis software.
+
+
+Version 3.0.0 - Start of the release notes.  Added the caen2018 data format to the unpacker.  Requires a statement of 'DataFormat caen2018' or 'DataFormat caen2015' to be placed in the .cfg file.  
+
+Version 3.0.1 - Minor efficieny upgrades to waveform unpacking in the caen2018 data format.
+
+Version 3.1.0 - Changed the way the Crystal and DEvent Blocking Times are done.  Before this change the last_timestamp variable in each respective case was updated regardless of the event being valid or invalid.  This is incorrect because a blocked entry or event should not be recorded in the first place and thus the timestamp shouldn't update.
+
+Version 3.1.1 - Added unpacking of 0x8500 + 4n diagnostic register in the scalers
+
+Version 3.1.2 - Added checking of bit 26 (CAEN Board Fail Bit) in the second board aggregate header word.  Result is a warning if it is found high.  Also removed unpacking of channelmask2 since it does not make sense with the data format of our hardware.
+
+Version 3.1.3 - Added time between beam monitor events to look into possible dead time for beam monitors
+
+Version 3.1.4 - Fixed #define statements in the scaler part of the caen2018 unpacker.  They were outside of brackets of for loops causing the code to not compile when #define ScalerVerbose was off
+
+Version 3.2.0 - Added output txt file for diagnostics information in caen2018 format.
+
+Version 3.3.0 - Changed DANCE, U235, and Li6 flight path lengths and time offsets.
+
+Version 3.4.0 - Added waveform hisograms for all IDs in one TH3I. X_Y_Z SampleNumber_WaveformValue_ID.  Also added the hID_Raw spectrum which fills the number of counts for each channel +board*16 up to 256 (14 boards).  This aids in debugging the channel drop problem for non dance crystal channels.  Slight changes to the order of output root file creation in main.cpp
+
+Version 3.4.1 - Changed the location of the Q-Value gates to the .cfg file for stage 1. Hardcoded maximum of 10 Q-value gates.  Can't imagine a reasonable scenario where someone needs more.  To change this the number of TH3F histograms needs to be changed and the array size of QGates in main.cpp needs to be changed. 
+
+Version 3.4.2 - Added the path for the TimeDeviations and Calibrations to global.h and moved the folders one directory back for my version of the code.
+
+Version 3.5.0 - Changed the unpacker to reflect the new caen2018 data format with the "user extras" word and the placeholders for the vme and hv event types. 
+
+Version 4.0.0 - Added the ability to run simulated data through the analysis.  More features added to hCrID_Diagnostics in utilities.
+
+Version 4.1.0 - Added the vme scalers to the unpacker for both caen2015 and caen2018 formats. Scaler description file is now in the Config directory.
+
+Version 4.1.1 - Changed the verobosity flags for scalers adding on for diagnostics. 
+
+Version 5.0.0 - Changed the way the main is invoked removing extra command line options.  For Stage0: \"./DANCE_Analysis pathtodata runnumber cfgfile.cfg \",for Stage1: \"./DANCE_Analysis runnumber cfgfile.cfg \" and for Simulations: \"./DANCE_Analysis cfgfile.cfg \".  Minor changes in unpacker so variables that dont matter at a particular stage are not output to screen.
+
+Version 5.1.0 - Changed the time deviations such that it looks for a wider window for the mean and progressively closes in.  It was possible for low stats channels with larger backgrounds that it missed entirely.   
+
+Version 5.2.0 - Changed the gates slightly. First one checks to see if it is in the alpha gate then if not checks to see if its in the gamma gate.  Should be a minor performace improvement and allow for a gamma gate that overlaps with the alpha gate.     
+
+Version 5.2.0 - Fixed coding error in analyzer.cpp and changed the range of ADC_calib and ADC_calib_invalid from 800,0,16,1000,0,10 to 2400,0,24,800,0,8.
+
+Version 5.2.1 - Made some of the diagnostics such as Waveform Histograms and Detector Load enabled or disabled via #defines. 
+
+Version 6.0.0 - Changed the stage1 analysis commands again.  Since I have been making an automated DANCE analysis on hygelac.  The command is identical to stage0 but pathtodata needs to point to a binary file directory.  The sym link to stage0_bin is still needed for the output of stage0. 
+
+Version 6.0.1 - Changed the order of the else if statements in stage0 unpacking such that it takes the most probable types first.  Data (1), Diagnostics (8), Scalers (2), then begin and end of runs.  Should be an efficiency improvement. 
+
+Version 7.0.0 - Changed the energy calculation for the slow integral.  It is now the same as it is in the caen2015 unpacker where the short gate is subtracted from the long gate.  This is important because the alphas and gammas have differing amounts of light in the slow components and thus the gain extracted from the alpha calibrator on the caen2018 data was inconsistent with the caen2015.  
+
+Version 7.0.1 - Removed the cout statements in the Make_Time_Deviations function.  These were just adding more lines of output for the automated analysis on hugelac with no real benefit. 
+
+Version 7.1.1 - Fixed a coding error filling the hID_Raw histogram and added beam monitor waveform histograms 
+
+Version 7.1.2 - Made some changes to the unpacker histograms and added histograms for the digital probes.  Increased the max devt array size to 5e8 to accomodate the large 10GB files with > 1e8 events in them.  In the analyzer I changed the TOF_ESum_MCl histogram TOF range to 51 ms.  
+
+Version 7.2.2 - Added some histograms and additional support for PHA unpacking.
+
+Version 7.3.2 - Added a better way of rejecting the retrigger.  There is now a 2D gate on the space of (Energy of crsytal n hit[m] / Energy of crystal n hit[m-1] as a function of time difference between the two hits in crystal n.  The low time differnce low energy ratio events are all retrigger.  This is better than the time cut across all energies because it rejects far fewer real short time-difference events. 
+
+Version 8.0.0 - This represents another major change to the unpacker (Sorry John but a I think it will be easier to follow all of it now).  This is a fidelity upgrade that was primarily  motivated by the need to unpack the analog and digital probes both acurrately and more efficiently to take full advantage of the raw data from the boards.  What has now been created is a new set of files for unpacking the Vx725/Vx730 digitizers.  unpack_vx725_vx730.h has function prototypes for unpacking the board header, channel aggregate header, and each member of the channel aggregate.  There are also a series of bit masks and structures to store the information defined in this file.  unpack_vx725_vx730 has the actual C/C++ code to unpack the data and store it in the structures.  The nice thing is that these files can be included into any framework now to quickly unpack raw digitizer data.   
+
+Version 8.1.0 - Added the histograms to the analyzer from John Ullmann's version of the code.
+
+Version 8.2.0 - Turned off the calculation of the fine time stamp for IDs above 200 for the caen2015 unpacker.  The waveforms were completely useless (ended before the rise of the signal) from those detectors and calculating a fine time from them would likely cause problems. 
+
+Version 8.2.1 - Added a hTOF_Mcl_QGated spectra out to 1ms in time of flight.
+
+Version 8.2.2 - Added some more 3D histograms gated on Q-Value
+
+Version 9.0.0 - Added a struct for parameters from .cfg file and added the histograms needed for deadtime analysis.
+
+Version 9.1.0 - Added the Long Gate to the input struct. Changed the time deviations algorithm.  Fixed a coding error in the unpacker for the read_binary option that wasn't updated to the struct.
+
+Version 10.0 - Changed the version scheme to not have a minor subrevision since it is essentially meaningless.  Now the Major version will be major changes, and the minor version will be minor changes.  Moved the time sort of the block buffer to a function in sort_functions.cpp instead of repeating the same code 3 times in unpacker.cpp.  Moved the eventbuilding code to a build_events function in a new file called evenbuilder.cpp.  Made the block buffering work for the stage 1 replay.  Made the stage of replay a variable in the .cfg files as well as the buffer depth and the block buffer size.  Allowed for stage1 to read in the MIDAS format eliminating the need for a binary input created from stage0 replay.
+
+Version 10.1 - Fixed an issue with the detector load histogram in the presence of Crystal Blocking.  The long gate and the crystal blocking time should not add together. 
+
+Version 10.2 - Added tracking of header files in the Makefile.
+
+Version 10.3 - Added upper level discriminator for rejecting the events with negative slow integrals that are converted to a large number due to unsigned to signed integer conversion.
+
+Version 10.4 - Added an invalid entry counter output to the analyzer.
+
+Version 11.0 - This is another major change.  Several new files.  There is also a philosophical change to how data flows through the program.  There have been no substantive changes to the main, unpacker, or event sorting codes.  There are large changes to the eventbuilder and analyzer codes.  There are new files for calibrating, and validating data.  There is also a minor change in feedback from the code.  The validator code checks for things like thresholds, retrigger, upper level discriminator, alpha gate, and gamma gate.  The calibrator calibrates the energy of the detectors.  The eventbuilder now takes the sorted data stream and builds different events based off IDs for analysis.  Now only DANCE crystals are grouped into one type of event, Beam monitors each have their own event. T0 has its own event.  In this way they are more accurately treated as seperate detector systems and events do not contain all IDs that fire in a specific window.  The analyzer has changed as well.  Some of the histograms it used to contain are now in the eventbuilder and the removed spectra for the deadtime and pileup codes are fixed such that it truely is random which gamma ray(s) is(are) removed from the original event (before it was just the last one in the event). There is a message file that contains the colored output for INFO, SUCCESS, ERROR, and INIT.  #define statements have been consolodated into global.h.  The block buffer size has been removed from the config files and placed back into global.h.  The "large number suggestion for the MaxDEVTArraySize is now removed and set in global.h due to the obvious correlation between that and the block buffer size.  Hopefully this is an accurate overview of the changes made to the analysis. 
+
+Version 11.1 - This adds some histograms and analysis for the pileup technique presented on the 6/26/19 DANCE Meeting.  Integration of the tail of the waveform compared with the long-short integral to look for pileup. 
+
+Version 11.2 - Added subrun capability, ignoring PDG events, timestamp histogram option, and an option for more detailed invalid histograms.  Currently subruns share a calibration file within the run.  Stage 0 root files are produced by subrun, while stage 0 bin is produced for the whole run.  Therefore, stage 1 from binary will include a whole run, stage 1 from midas will currently analyze by subrun, ignoring the details of building across boundaries.
+
+Version 11.3 - All subruns are now by default sorted into a single stage0 bin/root file.  If this behavior is not desired, specify a subrun number after the run number in the argument list. Added script to automate creation of necessary symlinks on dance-crunchers and hygelac.

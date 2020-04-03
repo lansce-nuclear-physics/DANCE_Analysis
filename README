@@ -1,0 +1,63 @@
+//***************************//
+//*  Christopher J. Prokop  *//
+//*  cprokop@lanl.gov       *//
+//*  Cathleen E. Fry        *//
+//*  cfry@lanl.gov          *//
+//*  README                 *// 
+//*  Last Edit: 03/03/20   *//  
+//***************************//
+
+The purpose of this document is to explain how the program works.
+
+
+1) Prerequisites 
+
+   At the same level as the DANCE_Analysis directory make two directories for Time Deviations and Energy Calibrations.  The names of these don't matter but they have to match what is being looked for by the code in global.h
+
+   In the Calibrations directory sym link the calib_ideal.dat file
+
+   One will need to make symbolic links for:
+   'stage0_root' (the location of the root output from stage 0), 
+   'stage0_bin' (the location of the binary output from stage 0 and potentially the input for stage 1), 
+   'stage1_root' (the location of the root output from stage 1), and 
+   'stage1_bin' (if wanted the binary output from stage 1)
+   'stage0_simulated' (the location of .bin files made by the GEANT4 simulation)
+
+   There also needs to be a symbolic link or local directory containing MIDAS data
+
+   Compile the code by typing make.  
+
+
+2) Running the DANCE Analysis 
+
+   The code is invoked by the following command and arguments:
+
+FOR STAGE0 and STAGE1 ANALYSIS
+
+   "./DANCE_Analysis /pathtodata runnumber (optional subrunnumber) cfgfile.cfg"
+   
+   The argument 'pathtodata' is either a symbolic link to the location or the location of the .mid or .mid.gz files. 
+
+   The runnumber is padded with 6 zeros and other padding formats would require a minor change in main.cpp
+
+   The subrunnumber is padded with 3 zeros and other padding formats would require a minor change in main.cpp, if a subrunnumber is not specified, all subruns of a run are sorted
+
+   Sample .cfg files are included when you clone the package and can be modified thereafter.
+
+
+FOR SIMULATION ANLYSIS
+
+   "./DANCE_Analysis cfgfile.cfg"
+
+   Here the path to the data is whatever the symbolic link "stage0_simulated" points to
+
+
+3) What Stage 0 does
+
+   Stage 0 is responsible for unpacking and time sorting the data from either MIDAS format and performing analysis on the waveforms.  A variety of diagnostic histograms are made, time deviations are calculated, and a output binary file of the salient quantities of the data is produced.  These quantities are Ifast (the fast or short integral from the PSD firmware), Islow (the slow or long integral from the PSD firmware), the Time-Of-Flight (this is a bit of a misnomer because its actually the 31 bits of the trigger timestamp + the 16 bits (shifted up 31 bits) of the extended time stamp + the CFD timestamp from the waveform analysis), and the ID obtained from mapping the board and channel with the DANCE map.
+
+
+4) What Stage 1 does
+
+   Stage 1 is responsible for physics analysis.  The binary format written by stage 0 is read in and events are built for DANCE, T0, and the beam monitors.  More to come on this later.  For pileup corrections right now, do stage 1 from midas, not binary.  Updates to come on this. To do pileup corrections, run with #define Histogram_Waveforms, then edit the gate in global.h. Be careful with your pileup gate, and know that not all histograms that are gated on no pileup have explicit labeling. 
+

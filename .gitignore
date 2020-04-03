@@ -1,3 +1,26 @@
+# DANCE_Analysis specific ignores
+
+diagnostics/*
+!diagnostics/.gitkeep
+*.root
+rootlogon.C
+Failed_Analysis.txt
+Readout_Status_Failures.txt
+AutoDict*
+calib_ideal_*.dat
+!calib_ideal_20??.dat
+cfg_files/stage1_*.cfg
+!cfg_files/stage1_mid.cfg
+!cfg_files/stage1_simulated.cfg
+
+# And we ignore common editor backups
+*~
+*.bak
+.*.sw?
+
+
+# general programming ignores suggested from GitHub
+
 # Prerequisites
 *.d
 
