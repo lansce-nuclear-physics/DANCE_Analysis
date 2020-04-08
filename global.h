@@ -53,10 +53,10 @@
 #include <string>
 
 //Switches
-#define Histogram_DetectorLoad     //Thes turns on the detector load histograms for the dead time and pileup analysis
+//#define Histogram_DetectorLoad     //Thes turns on the detector load histograms for the dead time and pileup analysis
 //#define Make_Removed_Spectra       //This turns on the gamma removed spectra for the dead time and pileup analysis
 //#define CheckTheDeque              //This turns on time integrity checks of the Buffer
-#define Histogram_Waveforms        //This turns on histogramming of waveforms
+//#define Histogram_Waveforms        //This turns on histogramming of waveforms
 //#define Histogram_Digital_Probes   //This turns on histogramming of digital probes (Not applicable to CAEN2015 format)
 //#define CheckBufferDepth           //This turns on a check of how much of the buffer is being used
 //#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
