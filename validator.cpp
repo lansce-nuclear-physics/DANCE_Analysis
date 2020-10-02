@@ -194,7 +194,7 @@ int Check_ULD(DEVT_BANK *devt_bank) {
 
   if(devt_bank->Islow > 62500 || devt_bank->Ifast > 31000) {
     devt_bank->Valid=0;
-    devt_bank->InvalidReason += 2;
+    devt_bank->InvalidReason += 32;
 #ifdef Validator_Verbose
     cout<<RED<<"Validator: Event Invalid from ULD"<<RESET<<endl;
 #endif

@@ -210,6 +210,7 @@ TH2D* hGammaCalib_Mcr2_1stex;
 // HighRateDebug histos
 TH1F* hID_resonancegated;
 TH1F* hID_backgroundgated;
+TH2F* ISlow_ID_mcr2;
 //TH2F* En_ID;
 
 /* VARIABLES */
@@ -534,6 +535,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     hID_resonancegated = new TH1F("ID_resonance","hID_resonancegated",162,0,162);  
     //En_ID=new TH2F("En_ID","En_ID",NEbins,x,162,IDbins);
     //this is broken a little and I don't know why 
+    ISlow_ID_mcr2 = new TH2F("ISlow_ID_mcr2","ISlow_ID_mcr2",3500,0.0,70000,162,0,162);
 #endif
 
     En_Esum_Mcl=new TH3F("En_Etot_Mcl","En_Etot_Mcl",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
@@ -663,6 +665,7 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
     hID_backgroundgated->Write();
     hID_resonancegated->Write();
     //En_ID->Write();
+    ISlow_ID_mcr2->Write();
 #endif
 
     hGamma_Mcr1->Write();
@@ -1106,6 +1109,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
             hID_backgroundgated->Fill(devent.Crystal_ID[kay]);
           }
        //   En_ID->Fill(devent.En[kay],devent.Crystal_ID[kay],1);
+          if (devent.Crystal_mult==2) {
+            ISlow_ID_mcr2->Fill(devent.Islow[kay],devent.Crystal_ID[kay]);
+          }
 #endif
 	
 	  //Fill the 2D spectrum of Corrected TOF vs Crystal

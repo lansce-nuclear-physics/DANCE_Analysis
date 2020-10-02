@@ -4,12 +4,12 @@
 #./Copy_Automated.sh
 
 #where the data are
-input=hygelac24
+input=hygelac26
 #input=./stage0_bin_automated
 #input=./stage0_bin
 #sh gates2019.sh
 #input=data6
-#input=data7
+#input=data4
 
 #Get the start and end run from the command line args
 startrun=$1;
