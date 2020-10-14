@@ -42,7 +42,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  eventbuilder.cpp       *// 
-//*  Last Edit: 01/22/20    *//  
+//*  Last Edit: 10/14/20    *//  
 //***************************//
 
 //File includes
@@ -485,6 +485,9 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 #endif
 
       //Update analysis params
+      if (datadeque[0].ID == T0_ID) {
+        analysis_params->last_last_T0=analysis_params->last_timestamp[T0_ID];
+      }
       analysis_params->last_timestamp[datadeque[0].ID] = datadeque[0].timestamp;
       analysis_params->last_Islow[datadeque[0].ID] = datadeque[0].Islow;
       analysis_params->last_Eslow[datadeque[0].ID] = datadeque[0].Eslow;

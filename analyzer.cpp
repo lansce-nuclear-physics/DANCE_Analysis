@@ -962,7 +962,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
       
       //Do some T0 diagnostics
       if(analysis_params->last_timestamp[T0_ID] > 0) {
-	hTimeBetweenT0s->Fill(eventvector[eye].TOF-analysis_params->last_timestamp[T0_ID]);
+	hTimeBetweenT0s->Fill(eventvector[eye].timestamp-analysis_params->last_last_T0);
       }
       
       //Fill Histos

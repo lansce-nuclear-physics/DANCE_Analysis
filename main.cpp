@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
   DANCE_Init("Main",mmsg.str());
 
   Analysis_Parameters analysis_params;
+  analysis_params.last_last_T0=0;
   for(int eye=0; eye<256; eye++) {
     analysis_params.last_timestamp[eye]=0;
     analysis_params.last_Islow[eye]=65535;
