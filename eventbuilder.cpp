@@ -103,6 +103,7 @@ TH1I *hInvalid_Reason;
 TH1I *hID;
 TH1I *hID_Raw;
 TH1I *hID_Invalid; //fill this when detectors are not valid after event processing
+TH1I *hID_Invalid_Retrigger;
 TH1I *hID_gamma; //fill this when detectors have gammas
 TH1I *hID_alpha; //fill this when detectors have alphas
 TH1I *hID_gamma_Invalid; //fill this when detectors have gammas that are invalid
@@ -500,6 +501,9 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
       if(datadeque[0].Valid != 1) {
 	analysis_params->entries_invalid++;
 	hID_Invalid->Fill(datadeque[0].ID);
+        if ((datadeque[0].InvalidReason >= 8 && datadeque[0].InvalidReason <32) || datadeque[0].InvalidReason >= 40) {
+          hID_Invalid_Retrigger->Fill(datadeque[0].ID);
+        }
 
 	hInvalid_Reason->Fill(datadeque[0].InvalidReason);
 #ifdef Eventbuilder_Verbose
@@ -684,6 +688,7 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   hID = new TH1I("ID","hID",256,0,256);
   hID_Raw = new TH1I("ID_raw","hID_raw",256,0,256);
   hID_Invalid = new TH1I("ID_invalid","hID_invalid",256,0,256);
+  hID_Invalid_Retrigger = new TH1I("ID_invalidRetrigger","ID_invalidRetrigger",256,0,256);
   hID_gamma = new TH1I("ID_gamma","ID_gamma",256,0,256);
   hID_alpha = new TH1I("ID_alpha","ID_alpha",256,0,256);
 #ifdef InvalidDetails
@@ -767,6 +772,7 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   hID->Write();
   hID_Raw->Write();
   hID_Invalid->Write();
+  hID_Invalid_Retrigger->Write();
   hID_gamma->Write();
   hID_alpha->Write();
 #ifdef InvalidDetails
