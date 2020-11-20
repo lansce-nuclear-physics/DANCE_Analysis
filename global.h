@@ -117,12 +117,12 @@
 #define RETRIGGERGATE "Retrigger.dat"
 
 //retrigger waveform ratio gates
-#define wf_ratio_low 0.055  //2019
-#define wf_ratio_high 0.095 //2019
+//#define wf_ratio_low 0.055  //2019
+//#define wf_ratio_high 0.095 //2019
 //#define wf_ratio_low 0.06  //2018
 //#define wf_ratio_high 0.12 //2018
-//#define wf_ratio_low 0.01  //Tl 2019
-//#define wf_ratio_high 0.03 //Tl 2019
+#define wf_ratio_low 0.01  //Tl 2019
+#define wf_ratio_high 0.03 //Tl 2019
 
 //Physics Stuff
 #define neutronmass 939.565379e6  //Mass of the neutron in eV/c^2

@@ -44,7 +44,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  structures.h           *// 
-//*  Last Edit: 01/24/20    *//  
+//*  Last Edit: 10/14/20    *//  
 //***************************//
 
 #ifndef STRUCTURES_H
@@ -306,6 +306,7 @@ typedef struct{
   double last_valid_timestamp[256];
   double last_valid_Islow[256];
   double last_valid_Eslow[256];
+  double last_last_T0;
 
   uint32_t entries_unpacked;            //Entries that have been unpacked
   uint32_t entries_awaiting_timesort;   //Entries in the devt array waiting for timesort
