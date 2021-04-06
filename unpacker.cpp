@@ -66,6 +66,7 @@
 #include <sys/time.h>
 #include <iomanip>
 #include <string>
+#include <fstream>
 
 //ROOT includes
 #include "TH1.h"
@@ -534,7 +535,24 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
   uint32_t Failure_Status[20];       //0x8178 Board Failure Status
   uint32_t Readout_Status[20];       //0xEF04 Readout Status
   uint32_t Register_0x8504n[20][8];  //0x8500 + 4n (Tells how many buffers are left to readout in each pair)
-  uint32_t Register_0x1n2C[20][16]; 
+  uint32_t Register_0x1n2C[20][16];
+
+  //waveform ratio gates
+  char gatename[200]; 
+  double wf_ratio_low, wf_ratio_high;
+  sprintf(gatename,"Gates/%s",PILEUPGATE);
+  ifstream pileupcutin(gatename);
+  if(pileupcutin.is_open()){
+    pileupcutin >> wf_ratio_low >> wf_ratio_high;
+  }
+  else {
+    umsg.str("");
+    umsg<<"Failed to Load waveform ratio Cut " << gatename;
+    DANCE_Error("Unpacker",umsg.str());
+    return -1;
+  }
+  pileupcutin.close();  
+
 
   //channel vector
   vector<int> channels;

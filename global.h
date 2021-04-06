@@ -43,7 +43,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  global.h               *// 
-//*  Last Edit: 01/24/20    *//  
+//*  Last Edit: 04/06/21    *//  
 //***************************//
 
 #ifndef GLOBAL_H
@@ -62,6 +62,7 @@
 //#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
 //#define InvalidDetails             // histograms that are separated by event type before the invalid event
 //#define HighRateDebug		    // histograms useful for debugging in weird conditions, normally not so useful
+//#define TurnOffGoFast		    // turns off some of the debugging 3D histos, not super helpful
 
 //Verbosity
 //#define Calibrator_Verbose       //This turns on the messages from the calibrator
@@ -78,7 +79,7 @@
 #define EventLimit 4294967295  //Event limit to shut off the unpacker (2^32 -1)
 //#define EventLimit 50000000  //Event limit to shut off the unpacker (2^32 -1)
 //#define EventLimit 1000000  //Event limit to shut off the unpacker (2^32 -1)
-#define ProgressInterval 1000000  //Progress bar incriments
+#define ProgressInterval 1000000  //Progress bar increments
 
 //Some Global Unpacker Variables (DONT CHANGE UNLESS NEEDED)
 //size of the block buffer (this has implications for unpacking speed.  Too many sorts and there will be too much overhead.  Not enough and NlogN is too big.  N*log(N) vs k*n*log(n) where k*n=N)
@@ -115,14 +116,9 @@
 #define GAMMAGATE "Gamma.dat"
 #define ALPHAGATE "Alpha.dat"
 #define RETRIGGERGATE "Retrigger.dat"
+#define PILEUPGATE "Pileup.dat"
 
-//retrigger waveform ratio gates
-#define wf_ratio_low 0.055  //2019
-#define wf_ratio_high 0.095 //2019
-//#define wf_ratio_low 0.06  //2018
-//#define wf_ratio_high 0.12 //2018
-//#define wf_ratio_low 0.01  //Tl 2019
-//#define wf_ratio_high 0.03 //Tl 2019
+//retrigger waveform ratio gates now in PILEUPGATE above
 
 //Physics Stuff
 #define neutronmass 939.565379e6  //Mass of the neutron in eV/c^2
@@ -147,7 +143,7 @@
 
 #define	GammaE_From 0.0 //Gamma energy [MeV] - low limit
 #define	GammaE_To 20.0 //Gamma energy [MeV] - upper limit
-#define	GammaE_NoOfBins 220.0 //Number of bins
+#define	GammaE_NoOfBins 200.0 //Number of bins
 
 
 

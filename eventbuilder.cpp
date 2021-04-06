@@ -42,7 +42,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  eventbuilder.cpp       *// 
-//*  Last Edit: 10/14/20    *//  
+//*  Last Edit: 04/06/21    *//  
 //***************************//
 
 //File includes
@@ -389,9 +389,10 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  }
 
 	  //Fill 3D ADC Calib vs Detector
+#ifdef TurnOffGoFast
 	  ADC_calib_ID->Fill(datadeque[0].Eslow, datadeque[0].Efast, datadeque[0].ID,1);
 	  ADC_raw_ID->Fill(datadeque[0].Islow, datadeque[0].Ifast,datadeque[0].ID,1);
-	    
+#endif	    
 	  //Check to see if it is an Alpha
 	  Check_Alpha(&datadeque[0]);
 	    
@@ -703,8 +704,10 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   //PSD Histograms
   ADC_raw = new TH2F("ISlow_IFast","ISlow_IFast",1800,0.,72000.,180,0.,7200);
   ADC_calib = new TH2F("ESlow_EFast","ESlow_EFast",2400,0.,24.,1000,0.,10.);
+#ifdef TurnOffGoFast
   ADC_raw_ID = new TH3F("ISlow_IFast_ID","ISlow_IFast_ID",1800,0.0,72000.0,180,0.0,7200,162,0,162);
   ADC_calib_ID = new TH3F("ESlow_EFast_ID","ESlow_EFast_ID",600,0,24,250,0,10,162,0,162);
+#endif
   ADC_calib_Invalid = new TH2F("ESlow_EFast_invalid","ESlow_EFast_invalid",2400,0,24,1000,0,10);
     ADC_calib_Pileup = new TH2F("ESlow_EFast_PU","ESlow_EFast_PU",2400,0,24,1000,0,10);
     ADC_calib_Pileup_Removed = new TH2F("ESlow_EFast_noPU","ESlow_EFast_noPU",2400,0,24,1000,0,10);
@@ -793,10 +796,10 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   ADC_calib_Invalid->Write();
       ADC_calib_Pileup->Write();
       ADC_calib_Pileup_Removed->Write();
-
+#ifdef TurnOffGoFast
   ADC_raw_ID->Write();
   ADC_calib_ID->Write();
-    
+#endif    
   ADC_alpha -> Write();
   hAlpha->Write();
   hAlpha_noPU->Write();

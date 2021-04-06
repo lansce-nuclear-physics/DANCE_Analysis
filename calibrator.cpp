@@ -132,7 +132,7 @@ int Read_Energy_Calibrations(Input_Parameters input_params) {
     stringstream idealcal_name;
     idealcal_name.str();
     idealcal_name << CALIB_DIR << "/calib_ideal.dat";
-  
+
     ifstream idealcal;
     idealcal.open(idealcal_name.str().c_str());
   

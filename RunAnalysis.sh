@@ -4,7 +4,7 @@
 #./Copy_Automated.sh
 
 #where the data are
-input=hygelac27
+input=hygelac13
 #input=./stage0_bin_automated
 #input=./stage0_bin
 #sh gates2019.sh

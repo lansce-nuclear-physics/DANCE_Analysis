@@ -42,7 +42,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  analyzer.cpp           *// 
-//*  Last Edit: 01/24/20    *//  
+//*  Last Edit: 04/06/21    *//  
 //***************************//
 
 //File includes
@@ -393,7 +393,9 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hEventTimeDist_Etot = new TH2D("EventTimeDist_Etot","EventTimeDist_Etot",1000,0,10,400,0,20);
 
   hTimeBetweenDEvents = new TH1D("TimeBetweenDEvents","TimeBetweenDEvents",1000,0,10000);
+#ifdef TurnOffGoFast
   hTimeBetweenDEvents_ESum_Mcr = new TH3D("TimeBetweenDEvents_ESum_Mcr","TimeBetweenDEvents_ESum_Mcr",1000,0,10000,500,0,10,20,0,20);
+#endif
   hTimeBetweenT0s = new TH1D("TimeBetweenT0s","TimeBetweenT0s",1000000,0,100000000);  //Time difference between T0 in ns
   
   //RAW TOF
@@ -545,7 +547,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
 
     hTOF_Esum_Mcl=new TH3F("TOF_Etot_Mcl","TOF_Etot_Mcl",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
     hTOF_Esum_Mcr=new TH3F("TOF_Etot_Mcr","TOF_Etot_Mcr",2000,0,1000000,NoOfEnergyBins,GammaE_From,GammaE_To,20,0,20);
-    
+#ifdef TurnOffGoFast    
     //Make a plot of energy 1 vs energy 2 for mcr==2 as a function of energy
     En_Ecr1_Ecr2_mcr2 = new TH3F("En_Ecr1_Ecr2_mcr2","En_Ecr1_Ecr2_mcr2",NEbins,x,NoOfEnergyBins,EtotBins,NoOfEnergyBins,EtotBins);
 
@@ -556,6 +558,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
     hEn_TimeBetweenCrystals_Mcr = new TH3F("En_TimeBetweenCrystals_Mcr","En_TimeBetweenCrystals_Mcr",NEbins,x,3000,Tbins,20,Mbins);
 
     hEn_Eg_Mcr = new TH3F("En_Ecr_Mcr","En_Ecr_Mcr",NEbins,x,NoOfEnergyBins,EtotBins,20,Mbins);
+#endif
     
 #ifdef Make_Removed_Spectra
     for(int kay=0; kay<Max_Gamma_Removed; kay++) {
@@ -653,8 +656,9 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
     hEventLength_MCr->Write();
     hEventTimeDist_Etot->Write();
     hTimeBetweenDEvents->Write();
+#ifdef TurnOffGoFast
     hTimeBetweenDEvents_ESum_Mcr->Write();
-
+#endif
     hCrystalIDvsTOF_Corr->Write();
     hCrystalTOF_Corr->Write();
     hCrystalIDvsTOF->Write();
@@ -688,13 +692,14 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     hTOF_Esum_Mcl->Write();
     hTOF_Esum_Mcr->Write();
-
+#ifdef TurnOffGoFast
     En_Ecr1_Ecr2_mcr2->Write();;
     En_Ecr1_mcr1->Write();
       
     hEn_TimeBetweenCrystals_Mcr->Write();
 
     hEn_Eg_Mcr->Write();
+#endif
 
 #ifdef Make_Removed_Spectra
     for(int kay=0; kay<Max_Gamma_Removed; kay++) {
@@ -1072,8 +1077,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    // cin>>stuff;
 	  }
 	  hTimeBetweenDEvents->Fill(devent.timestamp[0]-last_valid_devent_timestamp);
-	  hTimeBetweenDEvents_ESum_Mcr->Fill(devent.timestamp[0]-last_valid_devent_timestamp,devent.ESum,devent.Crystal_mult);
-
+#ifdef TurnOffGoFast	  
+          hTimeBetweenDEvents_ESum_Mcr->Fill(devent.timestamp[0]-last_valid_devent_timestamp,devent.ESum,devent.Crystal_mult);
+#endif
 	  //Update the last valid devent timestamp.  Same non-paralyzable model
 	  last_valid_devent_timestamp=devent.timestamp[0];
 	}
@@ -1090,9 +1096,9 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	  devent.En[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof[kay])/1e9)/((devent.tof[kay])/1e9)/(2.997924589e8*2.997924589e8); 
 	  //Calculate corrrected nuetron energy
 	  devent.En_corr[kay] = 0.5*939.565379e6*DANCE_FlightPath*DANCE_FlightPath/((devent.tof_corr[kay])/1e9)/((devent.tof_corr[kay])/1e9)/(2.997924589e8*2.997924589e8); 
-
+#ifdef TurnOffGoFast
 	  hEn_Eg_Mcr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],devent.Crystal_mult,1);
-
+#endif
 	  //Fill TOF for each crystal
 	  hCrystal_En_Corr->Fill(devent.En_corr[kay],1);
 	  hECrystal_En_Corr->Fill(devent.En_corr[kay],devent.Ecrystal[kay],1);
@@ -1217,14 +1223,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	else {
 	  En_Esum_Mcr_NoPileup->Fill(devent.En_corr[0],devent.ESum,devent.Crystal_mult);
 	}
-      
+#ifdef TurnOffGoFast      
 	if(devent.Crystal_mult == 1) {
 	  En_Ecr1_mcr1->Fill(devent.En_corr[0],devent.Ecrystal[0]);
 	}
 	if(devent.Crystal_mult == 2) {
 	  En_Ecr1_Ecr2_mcr2->Fill(devent.En_corr[0],devent.Ecrystal[0],devent.Ecrystal[1]);
 	}
-
+#endif
 	//Mults vs ESum vs TOF
 	hTOF_Esum_Mcl->Fill(devent.tof_corr[0],devent.ESum,devent.Cluster_mult);
 	hTOF_Esum_Mcr->Fill(devent.tof_corr[0],devent.ESum,devent.Crystal_mult);

@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  README                 *// 
-//*  Last Edit: 03/03/20   *//  
+//*  Last Edit: 04/06/21   *//  
 //***************************//
 
 The purpose of this document is to explain how the program works.
@@ -61,3 +61,4 @@ FOR SIMULATION ANLYSIS
 
    Stage 1 is responsible for physics analysis.  The binary format written by stage 0 is read in and events are built for DANCE, T0, and the beam monitors.  More to come on this later.  For pileup corrections right now, do stage 1 from midas, not binary.  Updates to come on this. To do pileup corrections, run with #define Histogram_Waveforms, then edit the gate in global.h. Be careful with your pileup gate, and know that not all histograms that are gated on no pileup have explicit labeling. 
 
+SetupAttempt.sh will give you an idea of the gates and configuration options to worry about and may allow you to automate some of this setup.
