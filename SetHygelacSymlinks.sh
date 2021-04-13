@@ -29,8 +29,8 @@ if [ ! -d $HYGELAC$VOLUME$DANCE$UDIR ]; then
   exit 1
 fi
  
-ln -s /mnt/hygelac-data/29/dance/Automated_DANCE_Analysis_Results/stage0_bin stage0_bin_automated
-ln -s /mnt/hygelac-data/29/dance/Automated_DANCE_Analysis_Results/stage0_root stage0_root_automated
+ln -s /mnt/hygelac-data/31/dance/Automated_DANCE_Analysis_Results/stage0_bin stage0_bin_automated
+ln -s /mnt/hygelac-data/31/dance/Automated_DANCE_Analysis_Results/stage0_root stage0_root_automated
 
 R0="stage0_root"
 B0="stage0_bin"
