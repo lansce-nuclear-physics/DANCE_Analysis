@@ -62,7 +62,7 @@
 //#define MakeTimeStampHistogram     // make histogram of timestamps (very big 1D, only use for debugging)
 //#define InvalidDetails             // histograms that are separated by event type before the invalid event
 //#define HighRateDebug		    // histograms useful for debugging in weird conditions, normally not so useful
-//#define TurnOffGoFast		    // turns off some of the debugging 3D histos, not super helpful
+#define TurnOffGoFast		    // turns off some of the debugging 3D histos, not super helpful
 
 //Verbosity
 //#define Calibrator_Verbose       //This turns on the messages from the calibrator

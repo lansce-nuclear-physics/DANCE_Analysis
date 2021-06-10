@@ -109,7 +109,7 @@ TH1I *hID_alpha; //fill this when detectors have alphas
 TH1I *hID_gamma_Invalid; //fill this when detectors have gammas that are invalid
 TH1I *hID_alpha_Invalid; //fill this when detectors have alphas that are invalid
 TH1I *hID_invalid_Invalid;
-
+TH2I *InvalidReason_ID;
 
 //Raw Slow Intergral - Fast Integral
 TH2F *Energy_raw_ID; 
@@ -483,6 +483,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
          if (analysis_params->last_InvalidReason[datadeque[0].ID]>1){
            hID_invalid_Invalid->Fill(datadeque[0].ID,1);
          }
+        InvalidReason_ID->Fill(datadeque[0].InvalidReason,datadeque[0].ID,1); 
       }
 #endif
 
@@ -696,6 +697,7 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   hID_gamma_Invalid = new TH1I("ID_invalidAfterGamma","ID_invalidAfterGamma",256,0,256);
   hID_alpha_Invalid = new TH1I("ID_invalidAfterAlpha","ID_invalidAfterAlpha",256,0,256);
   hID_invalid_Invalid = new TH1I("ID_invalidAfterInvalid","ID_invalidAfterInvalid",256,0,256);
+  InvalidReason_ID = new TH2I("InvalidReason_ID","InvalidReason_ID",64,0,64,256,0,256);
 #endif
 
   //Raw Energy
@@ -782,6 +784,7 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   hID_gamma_Invalid->Write();
   hID_alpha_Invalid->Write();
   hID_invalid_Invalid->Write();
+  InvalidReason_ID->Write();
 #endif
 
 #ifdef HighRateDebug
