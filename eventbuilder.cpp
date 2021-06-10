@@ -433,11 +433,11 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  datadeque[0].Valid = 0;
 	  //Its either an alpha
 	  if(datadeque[0].IsAlpha) {
-	    datadeque[0].InvalidReason += 1;
+	    datadeque[0].InvalidReason |= Invalid::Alpha;
 	  }
 	  //or not an alpha or a gamma
 	  else { 
-            datadeque[0].InvalidReason += 2;
+            datadeque[0].InvalidReason |= Invalid::UnknownPSD;
 	  }
 	}
 

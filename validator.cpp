@@ -209,7 +209,7 @@ int Check_Threshold(DEVT_BANK *devt_bank, Input_Parameters input_params) {
   if(input_params.HAVE_Threshold==1) {
     if(devt_bank->Eslow < input_params.Energy_Threshold) {
       devt_bank->Valid=0;
-      devt_bank->InvalidReason += 4;
+      devt_bank->InvalidReason |= Invalid::Threshold;
 #ifdef Validator_Verbose
       cout<<RED<<"Validator: Invalid from Threshold"<<RESET<<endl;
 #endif
@@ -229,7 +229,7 @@ int Check_Crystal_Blocking(DEVT_BANK *devt_bank, Analysis_Parameters *analysis_p
   //Blocking Time to avoid retrigger problems
   if(timediff < input_params.Crystal_Blocking_Time) {
     devt_bank->Valid=0;
-    devt_bank->InvalidReason += 32;
+    devt_bank->InvalidReason |= Invalid::CrystalBlocking;
 #ifdef Validator_Verbose
     cout<<RED<<"Validator: Invalid from Blocking Time"<<RESET<<endl;
 #endif
@@ -263,7 +263,7 @@ int Check_Retrigger(DEVT_BANK *devt_bank, Analysis_Parameters *analysis_params) 
 
   if(Retrigger_Gate->IsInside(timediff,fastratio)) {
     devt_bank->Valid=0;
-    devt_bank->InvalidReason += 16;
+    devt_bank->InvalidReason |= Invalid::RetriggerFast;
 #ifdef Validator_Verbose
     cout<<RED<<"Validator: Invalid from fast Retrigger"<<RESET<<endl;
 #endif

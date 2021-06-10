@@ -344,6 +344,19 @@ typedef struct{
   double wf_integral;
 
 } Analysis_Parameters;
+
+// Namespace for Invalid types
+namespace Invalid
+{
+  const uint8_t Alpha = 1 << 1;
+  const uint8_t UnknownPSD = 1 << 2;
+  const uint8_t Threshold = 1 << 3;
+  const uint8_t RetriggerSlow = 1 << 4;
+  const uint8_t RetriggerFast = 1 << 5;
+  const uint8_t CrystalBlocking = 1 << 6;
+  const uint8_t Other = 1 << 7;
+}
+
   
 
 
