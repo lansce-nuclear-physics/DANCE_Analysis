@@ -1,8 +1,10 @@
 unlink stage0_root
 unlink stage0_bin
 unlink stage0_simulated
-unlink stage0_root_automated
-unlink stage0_bin_automated
+unlink stage0_root_automated1
+unlink stage0_bin_automated1
+unlink stage0_root_automated2
+unlink stage0_bin_automated2
 unlink stage1_root
 unlink stage1_bin
 
