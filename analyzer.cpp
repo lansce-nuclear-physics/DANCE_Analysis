@@ -419,7 +419,7 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   
   //Gamma gated on Crystal Mult 1
   hGamma_Mcr1 = new TH2D("Gamma_ID_mcr1","Gamma_ID_mcr1",3500,0,70000,162,0,162);
-  hGammaCalib_Mcr1 = new TH2D("hGammaCalib_Mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
+  hGammaCalib_Mcr1 = new TH2D("GammaCalib_ID_mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
 
     
   //Physics Histograms
@@ -1289,11 +1289,7 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	    } //Done Looping over QGates
 	  } //Done looping over cluster mult
 	
-	  //Crystal mult 1
-	  if(devent.Crystal_mult == 1) {
-	    hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
-	    hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
-	  }
+
 	  
 	  //Loop over the crystal mult
 	  for(int jay=0; jay<devent.Crystal_mult; jay++ )  {
@@ -1304,6 +1300,12 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	      } //Done Checking QGates
 	    } //Done Looping over QGates
 	  } //Done looping over crystal mult
+	}
+
+	//Crystal mult 1
+	if(devent.Crystal_mult == 1) {
+	  hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
+	  hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
 	}
 	
 	double largesttimediff=0;
