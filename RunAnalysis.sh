@@ -43,28 +43,28 @@ echo "Starting: "$nxterms" terminals with "$nrunsperxterm" runs each"
 #Start the various analysis jobs
 counter=0;
 currentstart=$startrun
-
-for (( j=0; j<$(expr $nxterms - 1); j++))
+#subtract one for both doing the remainder separate and counting from 0 
+for j in $(seq 0 $(expr $nxterms - 2));
 do
-    currentstart=$(( $startrun + $(expr $counter \* $nrunsperxterm ) ))
+    currentstart=$(( $startrun + $(expr $counter \* $nrunsperxterm) ))
     counter=$(( $counter+1 ))  
     currentstop=$(expr $startrun + $(expr $counter \* $nrunsperxterm))
-   # echo $currentstart"  "$currentstop
+    #echo $j"  "$currentstart"  "$currentstop
 
     #xterm -e ./RunAnalysis_Minion.sh $input $currentstart $currentstop &
-     ./RunAnalysis_Minion.sh $input $currentstart $currentstop $nucleus &
+     ./RunAnalysis_Minion.sh $input $currentstart $currentstop &
 
 
     sleep 10
 done
 
 #the last one gets the remainder
-currentstart=$(( $startrun + $(expr $counter \* $nrunsperxterm ) ))
-currentstop=$(( $endrun + 1 ))
-# echo $currentstart"  "$currentstop
+currentstart=$(( $startrun + $(expr $counter \* $nrunsperxterm + 1) ))
+currentstop=$(( $endrun ))
+ #echo $currentstart"  "$currentstop
 
 #xterm -e ./RunAnalysis_Minion.sh $input $currentstart $currentstop &
-./RunAnalysis_Minion.sh $input $currentstart $currentstop $nucleus &
+./RunAnalysis_Minion.sh $input $currentstart $currentstop &
 
 
 exit 0

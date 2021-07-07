@@ -3,7 +3,8 @@ if [ "$#" -ne 3 ]; then
   echo "missing command line argument"
   exit
 fi
-for (( i=$2; i<$3; i++))
+#for (( i=$2; i<$3; i++))
+for i in $(seq $2 $3)
 do
   # echo Processing Run: $i from $1"
  # ./DANCE_Analysis $1 $i stage0_caen2018.cfg;
