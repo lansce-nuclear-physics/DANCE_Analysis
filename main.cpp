@@ -395,7 +395,7 @@ int main(int argc, char *argv[]) {
     midassubrunname << ".mid";
 
     mmsg.str("");
-    mmsg<<"Checking for: "<<midassubrunname.str();
+    mmsg<<"Checking for: "<<midassubrunname.str() << endl;
     DANCE_Info("Main",mmsg.str());
     
     //Look for uncompressed .mid subrun files
@@ -403,6 +403,7 @@ int main(int argc, char *argv[]) {
     
     //check to see if its open
     if (input_params.SingleSubrun){
+      input_params.SubRunNumber=SubRunNum;
        if(gz_in) {
          mmsg.str("");
          mmsg<<"File "<<midassubrunname.str().c_str()<<" Found";
@@ -413,9 +414,8 @@ int main(int argc, char *argv[]) {
       }
       else { //particular subrun gz
         midassubrunname << ".gz";         
-        mmsg<<"Checking for: "<<midassubrunname.str();
+        mmsg<<"Checking for: "<<midassubrunname.str() << endl;
         DANCE_Info("Main",mmsg.str());
-        input_params.SubRunNumber=0;
         
         gz_in=gzopen(midassubrunname.str().c_str(),"rb");
         if (gz_in) {
@@ -450,7 +450,7 @@ int main(int argc, char *argv[]) {
         midassubrunname << ".gz";
         
         mmsg.str("");
-        mmsg<<"Checking for: "<<midassubrunname.str();
+        mmsg<<"Checking for: "<<midassubrunname.str()<< endl;
         DANCE_Info("Main",mmsg.str());
         input_params.SubRunNumber=0;
         
@@ -509,7 +509,7 @@ int main(int argc, char *argv[]) {
     binarysubrunname.str();
     binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
     mmsg.str("");
-    mmsg<<"Checking for: "<<binarysubrunname.str();
+    mmsg<<"Checking for: "<<binarysubrunname.str()<<endl;
     DANCE_Info("Main",mmsg.str());
     
     //Look for uncompressed .bin subrun files
@@ -535,7 +535,7 @@ int main(int argc, char *argv[]) {
       //look for compressed .bin.gz subrun files
       binarysubrunname << ".gz";
       mmsg.str("");
-      mmsg<<"Checking for: "<<binarysubrunname.str();
+      mmsg<<"Checking for: "<<binarysubrunname.str()<<endl;
       DANCE_Info("Main",mmsg.str());
       gz_in=gzopen(binarysubrunname.str().c_str(),"rb");
 
@@ -557,7 +557,7 @@ int main(int argc, char *argv[]) {
       }
       else {
         mmsg.str("");
-        mmsg<<"Checking for: "<<binaryrunname.str().c_str();
+        mmsg<<"Checking for: "<<binaryrunname.str().c_str()<<endl;
         DANCE_Info("Main",mmsg.str());
         gz_in=gzopen(binaryrunname.str().c_str(),"rb");
         if (gz_in) {
@@ -571,7 +571,7 @@ int main(int argc, char *argv[]) {
         else {
           binaryrunname << ".gz";
           mmsg.str("");
-          mmsg<<"Checking for: "<<binaryrunname.str().c_str();
+          mmsg<<"Checking for: "<<binaryrunname.str().c_str()<<endl;
           gz_in=gzopen(binaryrunname.str().c_str(),"rb");
           if(gz_in) {
             DANCE_Info("Main",mmsg.str());
@@ -593,7 +593,7 @@ int main(int argc, char *argv[]) {
     simulationrunname << STAGE0_SIM << "/"<< input_params.Simulation_File_Name <<".bin";
 
     mmsg.str("");
-    mmsg<<"Checking for: "<<simulationrunname.str();
+    mmsg<<"Checking for: "<<simulationrunname.str()<<endl;
     DANCE_Info("Main",mmsg.str());
     
     //Look for uncompressed .bin files
@@ -612,7 +612,7 @@ int main(int argc, char *argv[]) {
       //look for compressed .bin.gz files
       simulationrunname << ".gz";
       mmsg.str("");
-      mmsg<<"Checking for: "<<simulationrunname.str();
+      mmsg<<"Checking for: "<<simulationrunname.str()<<endl;
       DANCE_Info("Main",mmsg.str());
       gz_in=gzopen(simulationrunname.str().c_str(),"rb");
       if(gz_in) {

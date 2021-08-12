@@ -538,7 +538,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	      DANCE_eventvector.push_back(datadeque[0]); //put the first event in the events vector
 	      datadeque.pop_front();  //remove the first entry in the deque     
 	      analysis_params->entries_built++;
-         if (DANCE_eventvector.size()>160) {cout <<setprecision(14)<< datadeque[0].timestamp-DANCE_eventvector[0].timestamp<<" " << DANCE_eventvector.size() << endl;} 
+         if (DANCE_eventvector.size()>160) {cout << "event vector is huge " << setprecision(14)<< datadeque[0].timestamp-DANCE_eventvector[0].timestamp<<" " << DANCE_eventvector.size() << endl;} 
 	    }
 	    //Out of the window
 	    else {

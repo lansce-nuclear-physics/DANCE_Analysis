@@ -105,6 +105,7 @@ TH2C *hDigital_Probe2_ID;
 
 TH2F *hID_vs_WFRatio;
 TH3F *hID_vs_WFInt_vs_Islow;
+TH3F* hID_vs_WFRatio_vs_Islow;
 TH1I *hScalers;
 
 TH1D* hTimestamps;
@@ -142,7 +143,8 @@ int Create_Unpacker_Histograms(Input_Parameters input_params) {
     hWaveform_He3 = new TH2S("He3_Waveform","He3_Waveform_He3",600,0,600,2000,0,20000);
     hID_vs_WFRatio = new TH2F("WFRatio_ID","WFRatio_ID",1000,-0.2,0.8,162,0,162);
     hID_vs_WFInt_vs_Islow = new TH3F("WFInt_Islow_ID","WFInt_Islow_ID",500,-1000,4000,2000,0,40000,162,0,162);
-
+    hID_vs_WFRatio_vs_Islow = new TH3F("WFRatio_Islow_ID","WFRatio_Islow_ID",500,-0.2,0.8,2000,0,40000,162,0,162);
+  
 #endif
 
 #ifdef MakeTimeStampHistogram
@@ -187,6 +189,7 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
     hWaveform_Bkg->Write();
     hWaveform_He3->Write();
     hID_vs_WFRatio->Write();
+    hID_vs_WFRatio_vs_Islow->Write();
     hID_vs_WFInt_vs_Islow->Write();
 #endif
 
@@ -237,6 +240,9 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==1) {
     rootfilename << "./stage1_root/Stage1_Histograms_";
     rootfilename << input_params.Simulation_File_Name;
+  }
+  else if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==1) {
+    rootfilename << "test"; //get rid of this!!
   }
   else {
     DANCE_Error("Unpacker","Cannot understand options for making rootfile. Exiting!");
@@ -1368,7 +1374,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
  
                           hID_vs_WFInt_vs_Islow->Fill(analysis_params->wf_integral,db_arr[EVTS].Islow,db_arr[EVTS].ID);
  
- 
+			  hID_vs_WFRatio_vs_Islow->Fill(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow),db_arr[EVTS].Islow,db_arr[EVTS].ID);
                           //        cout<<db_arr[EVTS].ID<<"  "<<analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow)<<endl;
  
                               if(waveform_counter < 20) {
