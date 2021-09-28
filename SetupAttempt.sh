@@ -38,42 +38,49 @@ echo "setting up gates"
 unlink Alpha.dat
 unlink Gamma.dat
 unlink Retrigger.dat
-
+unlink Pileup.dat
 #2018
 if [ $RUNNUM -le 111878 ]; then
   ln -s Alpha_109430.dat Alpha.dat
   ln -s Gamma_109430.dat Gamma.dat
   ln -s Retrigger_105138.dat Retrigger.dat
+  ln -s Pileup2018.dat Pileup.dat
 #2019 normal
 elif [ $RUNNUM -le 117260 ]; then
   ln -s Alpha_112775.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_113341.dat Retrigger.dat
+  ln -s Pileup2019.dat Pileup.dat
 #2019 Tl
 elif [ $RUNNUM -le 117640 ]; then
   ln -s Alpha_tl.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_Tl.dat Retrigger.dat
+  ln -s PileupTl.dat Pileup.dat
 #2020 normal
 elif [ $RUNNUM -le 118734 ]; then 
   ln -s Alpha_112775.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_113341.dat Retrigger.dat
+  ln -s Pileup2019.dat Pileup.dat
 #2020 Tl
 elif [ $RUNNUM -le 119056 ]; then  
   ln -s Alpha_tl.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_Tl.dat Retrigger.dat
+  ln -s PileupTl.dat Pileup.dat
 #2020 normal
 elif [ $RUNNUM -le 119796 ]; then
   ln -s Alpha_112775.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_113341.dat Retrigger.dat
+  ln -s Pileup2019.dat Pileup.dat
 #2020 neuance
 else
   ln -s Alpha_112775.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_113341.dat Retrigger.dat
+  ln -s Pileup2019.dat Pileup.dat
 fi  
 
 echo "setting up config"
@@ -84,13 +91,13 @@ unlink TMatrix.txt
 
 if [ $RUNNUM -le 108028 ]; then
   ln -s DanceMap_23Nov15.txt DanceMap.txt
-elif [ $RUNNUM -gt 119796 ]; then
+elif [ $RUNNUM -gt 119796 ] && [ $RUNNUM -lt 121564 ]; then
   ln -s DanceMap_19Nov2020_neuance.txt DanceMap.txt
 else
   ln -s DanceMap_7Nov18.txt DanceMap.txt
 fi
 
-if [ $RUNNUM -gt 119796 ]; then
+if [ $RUNNUM -gt 119796 ] && [ $RUNNUM -lt 121564 ]; then
   ln -s TMatrix_2020_neuance.txt TMatrix.txt
 else
   ln -s TMatrix_2019.txt TMatrix.txt

@@ -115,6 +115,8 @@ TH2D *hTOF_Mcl_Corr;         //MCl vs TOF for dance events
 
 TH2D *hGamma_Mcr1;
 TH2D *hGammaCalib_Mcr1;
+TH2D* hGammaCalib_Mcr2_late;
+TH2D* hGammaCalib_Mcr1_late;
 
 TH2D* ID_TOF;
 
@@ -418,9 +420,10 @@ int Create_Analyzer_Histograms(Input_Parameters input_params) {
   hDANCE_Events_per_T0 = new TH1D("DEventsPerT0","DANCE_Events_per_T0",100000,0,100000);
   
   //Gamma gated on Crystal Mult 1
-  hGamma_Mcr1 = new TH2D("Gamma_ID_mcr1","Gamma_ID_mcr1",3500,0,70000,162,0,162);
-  hGammaCalib_Mcr1 = new TH2D("GammaCalib_ID_mcr1","hGammaCalib_Mcr1",2000,0.0,20.0,162,0,162);
-
+  hGamma_Mcr1 = new TH2D("ISlow_ID_mcr1","ISlow_ID_mcr1",3500,0,70000,162,0,162);
+  hGammaCalib_Mcr1 = new TH2D("ESlow_ID_mcr1","ESlow_ID_mcr1",2000,0.0,20.0,162,0,162);
+   hGammaCalib_Mcr1_late = new TH2D("ESlow_ID_mcr1LateTOF","ESlow_ID_mcr1LateTOF",2000,0.0,20.0,162,0,162);
+   hGammaCalib_Mcr2_late = new TH2D("ESlow_ID_mcr2LateTOF","ESlow_ID_mcr1LateTOF",2000,0.0,20.0,162,0,162);
     
   //Physics Histograms
   double x[5000];
@@ -674,6 +677,8 @@ int Write_Analyzer_Histograms(TFile *fout, Input_Parameters input_params) {
 
     hGamma_Mcr1->Write();
     hGammaCalib_Mcr1->Write();
+    hGammaCalib_Mcr1_late->Write();
+    hGammaCalib_Mcr2_late->Write();
 
     hTOF->Write();
     hTOF_Corr->Write();
@@ -1308,6 +1313,14 @@ int Analyze_Data(std::vector<DEVT_BANK> eventvector, Input_Parameters input_para
 	if(devent.Crystal_mult == 1) {
 	  hGamma_Mcr1->Fill(devent.Islow[0], devent.Crystal_ID[0],1);
 	  hGammaCalib_Mcr1->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+          if (devent.tof_corr[0] > 14000000){
+            hGammaCalib_Mcr1_late->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+          }
+	}
+        if(devent.Crystal_mult == 2) {
+          if (devent.tof_corr[0] > 14000000){
+            hGammaCalib_Mcr1_late->Fill(devent.Ecrystal[0],devent.Crystal_ID[0],1);
+          }
 	}
 	
 	double largesttimediff=0;

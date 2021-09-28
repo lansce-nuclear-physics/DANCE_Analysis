@@ -14,5 +14,5 @@ do
    # ./DANCE_Analysis $1 $i stage1_Eu152.cfg
    #./DANCE_Analysis $1 $i cfg_files/stage1_Co59.cfg
 #  ./DANCE_Analysis $1 $i cfg_files/stage1_testnothresh.cfg
-     ./DANCE_Analysis $1 $i cfg_files/stage1_mid.cfg
+     ./DANCE_Analysis $1 $i cfg_files/stage1_mid18Pt.cfg
 done
