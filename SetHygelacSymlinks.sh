@@ -62,4 +62,6 @@ echo "setting up links to hygelac data"
 for HVOL in $(seq 11 19); do
   ln -s $HYGELAC$HVOL$DANCE$DDEND hygelac$HVOL
 done
-
+ for HVOL in $(seq 21 21); do
+  ln -s $HYGELAC$HVOL$DANCE$DDEND hygelac$HVOL
+done 

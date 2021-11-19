@@ -53,10 +53,10 @@ elif [ $RUNNUM -le 117260 ]; then
   ln -s Pileup2019.dat Pileup.dat
 #2019 Tl
 elif [ $RUNNUM -le 117640 ]; then
-  ln -s Alpha_tl.dat Alpha.dat
+  ln -s Alpha_Tl.dat Alpha.dat
   ln -s Gamma_113158.dat Gamma.dat
   ln -s Retrigger_Tl.dat Retrigger.dat
-  ln -s PileupTl.dat Pileup.dat
+  ln -s PileupTl204.dat Pileup.dat
 #2020 normal
 elif [ $RUNNUM -le 118734 ]; then 
   ln -s Alpha_112775.dat Alpha.dat
