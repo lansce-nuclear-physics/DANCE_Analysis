@@ -4,7 +4,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  README                 *// 
-//*  Last Edit: 04/06/21   *//  
+//*  Last Edit: 05/18/22   *//  
 //***************************//
 
 The purpose of this document is to explain how the program works.
@@ -27,6 +27,7 @@ The purpose of this document is to explain how the program works.
 
    Compile the code by typing make.  
 
+   There also needs to be a stack size of at least 16384 kB. There is a fix for this that as so far tested works on linux but not other platforms. In Mac, use 'ulimit -s 16384'.
 
 2) Running the DANCE Analysis 
 

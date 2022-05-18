@@ -59,6 +59,8 @@
 
 //C/C++ includes
 #include <sys/time.h>
+#include <sys/resource.h>
+#include <errno.h>
 #include <queue>
 
 using namespace std;
@@ -66,6 +68,33 @@ using namespace std;
 stringstream mmsg;
 
 int main(int argc, char *argv[]) {
+
+  struct rlimit old_lim, lim, new_lim;
+  
+    // Get old limits
+    if( getrlimit(RLIMIT_STACK, &old_lim) == 0)
+        printf("Old limits -> soft limit= %ld \t"
+           " hard limit= %ld \n", old_lim.rlim_cur, 
+                                 old_lim.rlim_max);
+    else
+        fprintf(stderr, "%s\n", strerror(errno));
+      
+    // Set new value
+    lim.rlim_cur = 16777216;
+    lim.rlim_max = old_lim.rlim_max;
+  
+    // Set limits
+    if(setrlimit(RLIMIT_STACK, &lim) == -1)
+        fprintf(stderr, "%s\n", strerror(errno));
+      
+    // Get new limits
+    if( getrlimit(RLIMIT_STACK, &new_lim) == 0)
+        printf("New limits -> soft limit= %ld "
+         "\t hard limit= %ld \n", new_lim.rlim_cur, 
+                                  new_lim.rlim_max);
+    else
+        fprintf(stderr, "%s\n", strerror(errno));
+
 
   int func_ret=0;
 
