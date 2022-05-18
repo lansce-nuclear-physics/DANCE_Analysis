@@ -1,5 +1,6 @@
 #I make no guarantees this is complete, but an attempt was made.
-#Feel free to tell me I'm wrong or add granularity
+#Feel free to add things or fix mistakes.
+#This is mostly correct through end of 2021, I think, minus neuance calibration.
 if [ -z $1 ]; then
   echo "give me a run number"
   exit 1

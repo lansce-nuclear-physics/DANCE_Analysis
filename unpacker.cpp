@@ -43,7 +43,7 @@
 //*  Cathleen E. Fry        *//
 //*  cfry@lanl.gov          *//
 //*  unpacker.cpp           *// 
-//*  Last Edit: 01/24/20    *//  
+//*  Last Edit: 05/18/22    *//  
 //***************************//
 
 //File includes
@@ -213,14 +213,14 @@ int Write_Unpacker_Histograms(TFile *fout, Input_Parameters input_params) {
 }
 
 int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis_params){
-  //oputput the rootfile
+  //output the rootfile
   //Name of the output root file
   stringstream rootfilename;
   rootfilename.str();
   
   //stage 0
   if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==0) {
-    rootfilename << "./stage0_root/Stage0_Histograms_Run_";
+    rootfilename << STAGE0_ROOT << "/Stage0_Histograms_Run_";
     rootfilename << input_params.RunNumber;
     if (input_params.SingleSubrun){
       rootfilename << "_";
@@ -229,7 +229,7 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   }
   //stage 1
   else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==0) {
-    rootfilename << "./stage1_root/Stage1_Histograms_Run_";
+    rootfilename << STAGE1_ROOT << "/Stage1_Histograms_Run_";
     rootfilename << input_params.RunNumber;
     if (input_params.SingleSubrun){
       rootfilename << "_";
@@ -238,11 +238,8 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   }
   //simulation
   else if(input_params.Analysis_Stage==1 && input_params.Read_Simulation==1) {
-    rootfilename << "./stage1_root/Stage1_Histograms_";
+    rootfilename << STAGE1_ROOT << "/Stage1_Histograms_";
     rootfilename << input_params.Simulation_File_Name;
-  }
-  else if(input_params.Analysis_Stage==0 && input_params.Read_Simulation==1) {
-    rootfilename << "test"; //get rid of this!!
   }
   else {
     DANCE_Error("Unpacker","Cannot understand options for making rootfile. Exiting!");
@@ -349,7 +346,7 @@ int Read_TimeDeviations(Input_Parameters input_params) {
     stringstream fname;
     fname.str();
     
-    fname<<TIMEDEV_DIR"/TimeDeviations_Run_" << input_params.RunNumber << ".txt";
+    fname<<TIMEDEV_DIR <<"/TimeDeviations_Run_" << input_params.RunNumber << ".txt";
     
     ifstream fdata;
     fdata.open(fname.str().c_str());

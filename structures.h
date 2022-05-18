@@ -174,8 +174,8 @@ typedef struct {
   uint16_t Ifast;            // short integral
   uint16_t Islow;            // long integral
   double timestamp;                // Time-Of-Flight in ns
-  uint8_t ID;                // ID from DANCE Map 0 to 161 are dance //241 to 244 are beam monitors //200 is t0
-  //put normalized waveform integral in here once I sort that out
+  uint8_t ID;                // ID from DANCE Map 0 to 161 are dance, monitors and T0 defined in global.h
+  //put normalized waveform integral in here if we ever break backwards compatibility
 } DEVT_STAGE1;
 
 

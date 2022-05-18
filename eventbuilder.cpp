@@ -389,7 +389,7 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 	  }
 
 	  //Fill 3D ADC Calib vs Detector
-#ifdef TurnOffGoFast
+#ifdef TurnOffGoSmall
 	  ADC_calib_ID->Fill(datadeque[0].Eslow, datadeque[0].Efast, datadeque[0].ID,1);
 	  ADC_raw_ID->Fill(datadeque[0].Islow, datadeque[0].Ifast,datadeque[0].ID,1);
 #endif	    
@@ -706,7 +706,7 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   //PSD Histograms
   ADC_raw = new TH2F("ISlow_IFast","ISlow_IFast",1800,0.,72000.,180,0.,7200);
   ADC_calib = new TH2F("ESlow_EFast","ESlow_EFast",2400,0.,24.,1000,0.,10.);
-#ifdef TurnOffGoFast
+#ifdef TurnOffGoSmall
   ADC_raw_ID = new TH3F("ISlow_IFast_ID","ISlow_IFast_ID",1800,0.0,72000.0,180,0.0,7200,162,0,162);
   ADC_calib_ID = new TH3F("ESlow_EFast_ID","ESlow_EFast_ID",600,0,24,250,0,10,162,0,162);
 #endif
@@ -797,9 +797,9 @@ int Write_Eventbuilder_Histograms(TFile *fout,Input_Parameters input_params, Ana
   ADC_calib->Write();
   ADC_raw->Write();
   ADC_calib_Invalid->Write();
-      ADC_calib_Pileup->Write();
-      ADC_calib_Pileup_Removed->Write();
-#ifdef TurnOffGoFast
+  ADC_calib_Pileup->Write();
+  ADC_calib_Pileup_Removed->Write();
+#ifdef TurnOffGoSmall
   ADC_raw_ID->Write();
   ADC_calib_ID->Write();
 #endif    

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#firstRun lastRun are now command line arguments
+
 #PATHTODATA=caen2018
 #PATHTODATA=stage0_bin_automated
 #PATHTODATA=stage0_bin

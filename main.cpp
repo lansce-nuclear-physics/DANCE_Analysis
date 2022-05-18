@@ -68,7 +68,9 @@ using namespace std;
 stringstream mmsg;
 
 int main(int argc, char *argv[]) {
-
+//you need a stack that's at least 16 MiB to run the analyzer now
+//this fixes any issues there on linux
+//NB ulimit uses kiB, rlimit uses B
   struct rlimit old_lim, lim, new_lim;
   
     // Get old limits
