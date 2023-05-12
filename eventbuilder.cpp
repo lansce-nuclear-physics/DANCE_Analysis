@@ -1,4 +1,4 @@
-
+\
 ////////////////////////////////////////////////////////////////////////
 //                                                                    //
 //   Software Name: DANCE Data Acquisition and Analysis Package       //
@@ -62,7 +62,7 @@ std::vector<DEVT_BANK> BM_eventvector;      //Vector to store beam monitor event
 std::vector<DEVT_BANK> T0_eventvector;      //Vector to store T0 monitor events for analysis
 
 std::ofstream outputbinfile;                //Ouput binary file
-DEVT_STAGE1 devt_out;                       //Ouput struct
+DEVT_STAGE1_WF devt_out;                       //Ouput struct
 
 //Graphs of TOF Corrections
 TGraph *gr_DANCE_TOF_Corr;
@@ -243,11 +243,13 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 
       //First write the data to the output binary file if needed
       if(input_params.Write_Binary==1 && outputbinfile.is_open()) {
-	devt_out.Ifast = datadeque[0].Ifast;
+        devt_out.Ifast = datadeque[0].Ifast;
+	//cout << "Ifast=" << devt_out.Ifast << endl;
 	devt_out.Islow = datadeque[0].Islow;
-	devt_out.timestamp = datadeque[0].timestamp;
-	devt_out.ID = datadeque[0].ID;
-	outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_STAGE1));
+        devt_out.timestamp = datadeque[0].timestamp;
+	devt_out.wfintegral = datadeque[0].wfintegral;
+        devt_out.ID = datadeque[0].ID;
+        outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_STAGE1_WF));
 	analysis_params->entries_written_to_binary++;
       }    
       
@@ -738,7 +740,6 @@ int Create_Eventbuilder_Histograms(Input_Parameters input_params) {
   hTimeBetweenCrystals_LongShortRatio = new TH2F("TimeBetweenCrystals_SlowFastRatio","TimeBetweenCrystals_SlowFastRatio",1250,0,10000,1000,0,100);
 
   hFastSlowRatio_ID = new TH2F("FastSlowRatio_ID","FastSlowRatio_ID",1000,0,1,162,0,162);
-
 
   //Detector Load
 #ifdef Histogram_DetectorLoad

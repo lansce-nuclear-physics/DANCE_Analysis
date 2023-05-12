@@ -106,6 +106,7 @@ TH2C *hDigital_Probe2_ID;
 TH2F *hID_vs_WFRatio;
 TH3F *hID_vs_WFInt_vs_Islow;
 TH3F* hID_vs_WFRatio_vs_Islow;
+//TH2F *hID_vs_WFRatio_check = new TH2F("WFRatio_ID_check","WFRatio_ID_check",1000,-0.2,0.8,162,0,162); //IK added
 TH1I *hScalers;
 
 TH1D* hTimestamps;
@@ -259,6 +260,7 @@ int Write_Root_File(Input_Parameters input_params, Analysis_Parameters *analysis
   DANCE_Success("Unpacker","Rootfile Created");
   
   //Write histograms
+  //hID_vs_WFRatio_check->Write(); //IK added
   Write_Unpacker_Histograms(fout, input_params);
   Write_PI_Gates(fout);
   Write_Eventbuilder_Histograms(fout, input_params, analysis_params);
@@ -489,7 +491,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
   CEVT_BANK *evinfo = new CEVT_BANK();                //caen event info
   test_struct_cevt *evaggr = new test_struct_cevt();  //event aggregate
   DEVT_BANK *db_arr = new DEVT_BANK[MaxDEVTArrSize];  //Storage array for entries
-  DEVT_STAGE1 devt_stage1;                            //Stage1 format for reading binary
+  DEVT_STAGE1_WF devt_stage1;                            //Stage1 format for reading binary
 
   //CAEN 2018 unpacking
   User_Data_t user_data;                              //This is the fw version and user extra word storage
@@ -1291,6 +1293,7 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                           else {
                             db_arr[EVTS].pileup_detected=0;                                                         //Full timestamp in ns
                           }
+			  db_arr[EVTS].wfintegral = analysis_params->wf_integral; //IK
                           
                           if(input_params.Analysis_Stage > 0) {
                             //need to add the time deviations before time sorting
@@ -2185,7 +2188,10 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
           time_elapsed_old = time_elapsed;
         }
         
-        gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));
+	
+        gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1_WF));
+	//ifstream inputfile("output.bin", ios::binary);
+	//inputfile.read(gz_in, sizeof(DEVT_STAGE1));
         // gzseek(gz_in,devt_padding,SEEK_CUR);
         
         if(gzret!=0) {
@@ -2198,6 +2204,10 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
           db_arr[EVTS].Ifast = devt_stage1.Ifast;
           db_arr[EVTS].Islow = devt_stage1.Islow;
           db_arr[EVTS].ID = devt_stage1.ID;
+	  db_arr[EVTS].wfintegral = devt_stage1.wfintegral;
+	 // if(devt_stage1.ID<162){
+	 // 	hID_vs_WFRatio_check->Fill(devt_stage1.wfintegral/(1.0*devt_stage1.Islow),devt_stage1.ID);
+	 // }
           db_arr[EVTS].Valid = 1; //Everything starts valid
           db_arr[EVTS].InvalidReason = 0; //Everything starts valid
  
