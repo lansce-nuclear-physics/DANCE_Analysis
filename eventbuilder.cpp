@@ -62,7 +62,8 @@ std::vector<DEVT_BANK> BM_eventvector;      //Vector to store beam monitor event
 std::vector<DEVT_BANK> T0_eventvector;      //Vector to store T0 monitor events for analysis
 
 std::ofstream outputbinfile;                //Ouput binary file
-DEVT_STAGE1_WF devt_out;                       //Ouput struct
+DEVT_STAGE1_WF devt_out_wf;                 //Ouput struct for binaries with WF integral
+DEVT_STAGE1 devt_out;                       //Ouput struct for binaries without WF integral
 
 //Graphs of TOF Corrections
 TGraph *gr_DANCE_TOF_Corr;
@@ -183,13 +184,20 @@ int Initialize_Eventbuilder(Input_Parameters input_params) {
     
     //stage0 
     if(input_params.Analysis_Stage==0) {
-      outfilename << STAGE0_BIN; 
-      outfilename <<"/stage0_run_";
+      outfilename << STAGE0_BIN;
+      if(input_params.WF_Integral){	 
+        outfilename <<"/stage0_2023_run_";  //binary output with WF Integral
+      }
+      else outfilename <<"/stage0_run_";   //binary output without WF Integral
     }
     //stage1
     if(input_params.Analysis_Stage==1) {
       outfilename << STAGE1_BIN;
-      outfilename <<"/stage1_run_";
+      if(input_params.WF_Integral){      
+        outfilename <<"/stage1_2023_run_";
+      }
+      else outfilename <<"/stage1_run_";
+
     }
     outfilename << input_params.RunNumber;
     if (input_params.SingleSubrun){
@@ -243,13 +251,21 @@ int Build_Events(deque<DEVT_BANK> &datadeque, Input_Parameters input_params, Ana
 
       //First write the data to the output binary file if needed
       if(input_params.Write_Binary==1 && outputbinfile.is_open()) {
-        devt_out.Ifast = datadeque[0].Ifast;
-	//cout << "Ifast=" << devt_out.Ifast << endl;
-	devt_out.Islow = datadeque[0].Islow;
-        devt_out.timestamp = datadeque[0].timestamp;
-	devt_out.wfintegral = datadeque[0].wfintegral;
-        devt_out.ID = datadeque[0].ID;
-        outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_STAGE1_WF));
+	if(input_params.WF_Integral){      	//if specified in cfg file, writing WF Integral to binaries
+	  devt_out_wf.Ifast = datadeque[0].Ifast;
+	  devt_out_wf.Islow = datadeque[0].Islow;
+       	  devt_out_wf.timestamp = datadeque[0].timestamp;
+	  devt_out_wf.wfintegral = datadeque[0].wfintegral;
+       	  devt_out_wf.ID = datadeque[0].ID;
+          outputbinfile.write(reinterpret_cast<char*>(&devt_out_wf),sizeof(DEVT_STAGE1_WF));
+	}
+	else{                                  //not writing WF Integral to binaries
+	  devt_out.Ifast = datadeque[0].Ifast;
+          devt_out.Islow = datadeque[0].Islow;
+          devt_out.timestamp = datadeque[0].timestamp;
+          devt_out.ID = datadeque[0].ID;
+          outputbinfile.write(reinterpret_cast<char*>(&devt_out),sizeof(DEVT_STAGE1));
+	}
 	analysis_params->entries_written_to_binary++;
       }    
       

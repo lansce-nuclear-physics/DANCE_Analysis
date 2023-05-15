@@ -172,11 +172,10 @@ typedef struct {
 
 //Output of stage 0 bin
 typedef struct {
-  double timestamp;                // Time-Of-Flight in ns
   uint16_t Ifast;            // short integral
   uint16_t Islow;            // long integral
-  uint8_t ID;                // ID from DANCE Map 0 to 161 are dance, monitors and T0 defined in global.h  
-//put normalized waveform integral in here if we e
+  double timestamp;                // Time-Of-Flight in ns
+  uint8_t ID;                // ID from DANCE Map 0 to 161 are dance, monitors and T0 defined in global.h
 } DEVT_STAGE1;
 
 //Output of stage 0 bin
@@ -262,6 +261,7 @@ typedef struct{
   //Bools
   bool Read_Binary;
   bool Write_Binary;
+  bool WF_Integral;
   bool Read_Simulation;
   bool HAVE_Threshold;
   bool FitTimeDev;

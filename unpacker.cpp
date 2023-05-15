@@ -491,7 +491,8 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
   CEVT_BANK *evinfo = new CEVT_BANK();                //caen event info
   test_struct_cevt *evaggr = new test_struct_cevt();  //event aggregate
   DEVT_BANK *db_arr = new DEVT_BANK[MaxDEVTArrSize];  //Storage array for entries
-  DEVT_STAGE1_WF devt_stage1;                            //Stage1 format for reading binary
+  DEVT_STAGE1_WF devt_stage1_wf;                      //Stage1 format for reading binary with WF Integral
+  DEVT_STAGE1 devt_stage1;                            //Stage1 format for reading binary without WF Integral
 
   //CAEN 2018 unpacking
   User_Data_t user_data;                              //This is the fw version and user extra word storage
@@ -2188,10 +2189,23 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
           time_elapsed_old = time_elapsed;
         }
         
-	
-        gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1_WF));
-	//ifstream inputfile("output.bin", ios::binary);
-	//inputfile.read(gz_in, sizeof(DEVT_STAGE1));
+	//Fill the array
+	if(input_params.WF_Integral){    //if WF integral read from binaries, fill DEVT_STAGE1_WF struct
+       	  gzret=gzread(gz_in,&devt_stage1_wf,sizeof(DEVT_STAGE1_WF));
+ 	  db_arr[EVTS].timestamp = devt_stage1_wf.timestamp;
+          db_arr[EVTS].wfintegral = devt_stage1_wf.wfintegral;
+          db_arr[EVTS].Ifast = devt_stage1_wf.Ifast;
+          db_arr[EVTS].Islow = devt_stage1_wf.Islow;
+          db_arr[EVTS].ID = devt_stage1_wf.ID;
+	}
+	else {
+	  gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));  //if no WF integral read from binaries, fill DEVT_STAGE1 struct
+	  db_arr[EVTS].timestamp = devt_stage1.timestamp;
+          db_arr[EVTS].Ifast = devt_stage1.Ifast;
+          db_arr[EVTS].Islow = devt_stage1.Islow;
+          db_arr[EVTS].ID = devt_stage1.ID;
+	}
+
         // gzseek(gz_in,devt_padding,SEEK_CUR);
         
         if(gzret!=0) {
@@ -2200,14 +2214,6 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
           TOTAL_BYTES += gzret;
           
           //Fill the array
-          db_arr[EVTS].timestamp = devt_stage1.timestamp;
-          db_arr[EVTS].Ifast = devt_stage1.Ifast;
-          db_arr[EVTS].Islow = devt_stage1.Islow;
-          db_arr[EVTS].ID = devt_stage1.ID;
-	  db_arr[EVTS].wfintegral = devt_stage1.wfintegral;
-	 // if(devt_stage1.ID<162){
-	 // 	hID_vs_WFRatio_check->Fill(devt_stage1.wfintegral/(1.0*devt_stage1.Islow),devt_stage1.ID);
-	 // }
           db_arr[EVTS].Valid = 1; //Everything starts valid
           db_arr[EVTS].InvalidReason = 0; //Everything starts valid
  
