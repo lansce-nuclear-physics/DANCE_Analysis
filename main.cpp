@@ -540,16 +540,14 @@ int main(int argc, char *argv[]) {
     
     stringstream binaryrunname;
     binaryrunname.str();
-    if(input_params.WF_Integral){  //different name of binary file when reading WF Integral
-      binaryrunname << pathtodata << "/stage0_2023_run_" << RunNum << ".bin";
-    }
-    else binaryrunname << pathtodata << "/stage0_run_" << RunNum << ".bin";
+    binaryrunname << pathtodata << "/stage0_run_" << RunNum << ".bin";
+    if(input_params.WF_Integral)  //different name of binary file when reading WF Integral
+      binaryrunname << "23";
     stringstream binarysubrunname;
     binarysubrunname.str();
-    if(input_params.WF_Integral){ //different name of binary subrun file when reading WF Integral
-      binarysubrunname << pathtodata << "/stage0_2023_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
-    }
-    else binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
+    binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
+    if(input_params.WF_Integral) //different name of binary subrun file when reading WF Integral
+      binarysubrunname << "23";
     mmsg.str("");
     mmsg<<"Checking for: "<<binarysubrunname.str()<<endl;
     DANCE_Info("Main",mmsg.str());
@@ -569,10 +567,9 @@ int main(int argc, char *argv[]) {
         input_params.NumSubRun++;
         gz_queue.push(gz_in);
         binarysubrunname.str("");
-	if(input_params.WF_Integral){
-       	  binarysubrunname << pathtodata << "/stage0_2023_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
-	}
-	else binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
+	binarysubrunname << pathtodata << "/stage0_run_" << RunNum << "_" <<input_params.NumSubRun<< ".bin";
+	if(input_params.WF_Integral)
+       	  binarysubrunname << "23";
         gz_in=gzopen(binarysubrunname.str().c_str(),"rb");
       } 
     }

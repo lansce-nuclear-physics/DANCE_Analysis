@@ -185,18 +185,12 @@ int Initialize_Eventbuilder(Input_Parameters input_params) {
     //stage0 
     if(input_params.Analysis_Stage==0) {
       outfilename << STAGE0_BIN;
-      if(input_params.WF_Integral){	 
-        outfilename <<"/stage0_2023_run_";  //binary output with WF Integral
-      }
-      else outfilename <<"/stage0_run_";   //binary output without WF Integral
+      outfilename <<"/stage0_run_";   
     }
     //stage1
     if(input_params.Analysis_Stage==1) {
       outfilename << STAGE1_BIN;
-      if(input_params.WF_Integral){      
-        outfilename <<"/stage1_2023_run_";
-      }
-      else outfilename <<"/stage1_run_";
+      outfilename <<"/stage1_run_";
 
     }
     outfilename << input_params.RunNumber;
@@ -204,6 +198,8 @@ int Initialize_Eventbuilder(Input_Parameters input_params) {
       outfilename << "_" << input_params.SubRunNumber; 
     }
     outfilename << ".bin";
+    if(input_params.WF_Integral)
+      outfilename << "23";  // With WF ratio
     
     outputbinfile.open(outfilename.str().c_str(), ios::out | ios::binary);
     
