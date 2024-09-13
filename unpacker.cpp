@@ -1271,7 +1271,8 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                           analysis_params->wf_integral=0;
  
                           //If the detector is not a DANCE crystal or the use fine time is off
-                          if ( ! input_params.Use_Firmware_FineTime || db_arr[EVTS].ID >= 162) {
+                          // NB: Calculate Frational time ALSO sets analysis_params->wf_integral
+			  if ( ! input_params.Use_Firmware_FineTime || db_arr[EVTS].ID >= 162) {
                             dT = Calculate_Fractional_Time(vx725_vx730_psd_data.analog_probe1,                 //Function that calculates the fine time stamp
                                                              db_arr[EVTS].Ns, 
                                                            vx725_vx730_psd_data.dual_trace, 
@@ -1289,10 +1290,10 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
                           db_arr[EVTS].timestamp += dT;                                                         //Full timestamp in ns
  
                           if(analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) < wf_ratio_low || analysis_params->wf_integral/(1.0*db_arr[EVTS].Islow) > wf_ratio_high ) { 
-                            db_arr[EVTS].pileup_detected=1;                                                         //Full timestamp in ns
+                            db_arr[EVTS].pileup_detected=1;
                           } 
                           else {
-                            db_arr[EVTS].pileup_detected=0;                                                         //Full timestamp in ns
+                            db_arr[EVTS].pileup_detected=0;
                           }
 			  db_arr[EVTS].wfintegral = analysis_params->wf_integral; //IK
                           
@@ -2197,6 +2198,15 @@ int Unpack_Data(queue<gzFile> &gz_queue, double begin, Input_Parameters input_pa
           db_arr[EVTS].Ifast = devt_stage1_wf.Ifast;
           db_arr[EVTS].Islow = devt_stage1_wf.Islow;
           db_arr[EVTS].ID = devt_stage1_wf.ID;
+	  // We need to actually check the wf integral to see if pileup
+          if ( devt_stage1_wf.wfintegral/(1.0*db_arr[EVTS].Islow) < wf_ratio_low 
+                || devt_stage1_wf.wfintegral/(1.0*db_arr[EVTS].Islow) > wf_ratio_high ) 
+          { 
+            db_arr[EVTS].pileup_detected=1;                                                         
+          } 
+          else {
+            db_arr[EVTS].pileup_detected=0;                                                         
+          }
 	}
 	else {
 	  gzret=gzread(gz_in,&devt_stage1,sizeof(DEVT_STAGE1));  //if no WF integral read from binaries, fill DEVT_STAGE1 struct
