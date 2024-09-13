@@ -13,14 +13,13 @@ cfg_files/stage1_*.cfg
 !cfg_files/stage1_mid.cfg
 !cfg_files/stage1_simulated.cfg
 DANCE_Analysis
+Readout_Status_Failures
 
 # symlinks made for usability
-stage0_bin
-stage0_root
-stage0_bin_automated
-stage0_root_automated
-stage1_bin
-stage1_root
+hygelac*
+data*
+stage*_bin
+stage*_root
 
 # And we ignore common editor backups
 *~
